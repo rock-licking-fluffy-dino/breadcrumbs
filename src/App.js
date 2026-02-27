@@ -1,4 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDI9GJYMVYofjWz6cJ027zZbwi6XMOsAOU",
+  authDomain: "breadcrumbs-0000.firebaseapp.com",
+  projectId: "breadcrumbs-0000",
+  storageBucket: "breadcrumbs-0000.firebasestorage.app",
+  messagingSenderId: "933716614684",
+  appId: "1:933716614684:web:a31b027b9b793841f709d9"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const DEFAULT_CATEGORIES = [
   { id: 'fruit-veg', name: 'Fruits & Vegetables' },
@@ -29,26 +45,10 @@ const triggerHaptic = (style = 'light') => {
   }
 };
 
-// Storage helper using localStorage
-const storage = {
-  get: (key) => {
-    try {
-      const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : null;
-    } catch { return null; }
-  },
-  set: (key, value) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch { return false; }
-  }
-};
-
 export default function App() {
   const [listId, setListId] = useState(() => {
-    const saved = storage.get('breadcrumbs-current-list');
-    return saved?.listId || null;
+    const saved = localStorage.getItem('breadcrumbs-current-list');
+    return saved ? JSON.parse(saved).listId : null;
   });
   const [items, setItems] = useState([]);
   const [joinCode, setJoinCode] = useState('');
@@ -63,6 +63,7 @@ export default function App() {
   const [checkingItems, setCheckingItems] = useState(new Set());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -76,66 +77,91 @@ export default function App() {
     };
   }, []);
 
-  const loadList = useCallback(() => {
+  // Real-time listener for list updates
+  useEffect(() => {
     if (!listId) return;
-    const data = storage.get(`breadcrumbs-list-${listId}`);
-    if (data) {
-      setItems(data.items || []);
-      if (data.categories) setCategories(data.categories);
-    }
+
+    setSyncing(true);
+    const unsubscribe = onSnapshot(
+      doc(db, 'lists', listId),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setItems(data.items || []);
+          if (data.categories) setCategories(data.categories);
+        }
+        setSyncing(false);
+      },
+      (error) => {
+        console.error('Error listening to list:', error);
+        setSyncing(false);
+      }
+    );
+
+    return () => unsubscribe();
   }, [listId]);
 
-  const saveList = useCallback((newItems, newCategories = categories) => {
+  const saveList = useCallback(async (newItems, newCategories = categories) => {
     if (!listId) return;
-    storage.set(`breadcrumbs-list-${listId}`, {
-      items: newItems,
-      categories: newCategories,
-      updatedAt: new Date().toISOString()
-    });
-    storage.set('breadcrumbs-current-list', { listId });
+    try {
+      await setDoc(doc(db, 'lists', listId), {
+        items: newItems,
+        categories: newCategories,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error saving list:', error);
+    }
   }, [listId, categories]);
-
-  useEffect(() => {
-    loadList();
-  }, [listId, loadList]);
 
   useEffect(() => {
     if (addingTo && inputRef.current) inputRef.current.focus();
   }, [addingTo]);
 
-  const createNewList = () => {
+  const createNewList = async () => {
     setCreateAnim(true);
     triggerHaptic('success');
-    setTimeout(() => {
+    setTimeout(async () => {
       const code = generateListCode();
       setListId(code);
       setItems([]);
       setCategories(DEFAULT_CATEGORIES);
-      storage.set(`breadcrumbs-list-${code}`, {
+      
+      // Save to Firebase
+      await setDoc(doc(db, 'lists', code), {
         items: [],
         categories: DEFAULT_CATEGORIES,
         updatedAt: new Date().toISOString()
       });
-      storage.set('breadcrumbs-current-list', { listId: code });
+      
+      // Remember locally
+      localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
       setShowOnboarding(true);
       setCreateAnim(false);
     }, 400);
   };
 
-  const joinList = () => {
+  const joinList = async () => {
     if (!joinCode.trim()) return;
     triggerHaptic('light');
     const code = joinCode.trim().toUpperCase();
-    const data = storage.get(`breadcrumbs-list-${code}`);
-    if (data) {
-      setListId(code);
-      setItems(data.items || []);
-      if (data.categories) setCategories(data.categories);
-      setJoinCode('');
-      storage.set('breadcrumbs-current-list', { listId: code });
-      if (!data.items?.length) setShowOnboarding(true);
-    } else {
-      alert('List not found. Note: In this version, lists are stored locally on each device.');
+    
+    try {
+      const docSnap = await getDoc(doc(db, 'lists', code));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setListId(code);
+        setItems(data.items || []);
+        if (data.categories) setCategories(data.categories);
+        setJoinCode('');
+        localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
+        if (!data.items?.length) setShowOnboarding(true);
+      } else {
+        alert('List not found. Check the code and try again.');
+      }
+    } catch (error) {
+      console.error('Error joining list:', error);
+      alert('Could not join list. Please try again.');
     }
   };
 
@@ -143,7 +169,7 @@ export default function App() {
     setListId(null);
     setItems([]);
     setCategories(DEFAULT_CATEGORIES);
-    storage.set('breadcrumbs-current-list', { listId: null });
+    localStorage.removeItem('breadcrumbs-current-list');
   };
 
   const startAdding = (categoryId) => {
@@ -152,7 +178,7 @@ export default function App() {
     setNewItemText('');
   };
 
-  const addItem = () => {
+  const addItem = async () => {
     if (!newItemText.trim() || !addingTo) return;
     triggerHaptic('success');
     const item = { id: generateId(), name: newItemText.trim(), category: addingTo, checked: false, addedAt: Date.now() };
@@ -160,7 +186,7 @@ export default function App() {
     setItems(newItems);
     setNewItemText('');
     setShowOnboarding(false);
-    saveList(newItems);
+    await saveList(newItems);
   };
 
   const cancelAdding = () => {
@@ -169,7 +195,7 @@ export default function App() {
     setNewItemText('');
   };
 
-  const toggleItem = (id) => {
+  const toggleItem = async (id) => {
     const item = items.find(i => i.id === id);
     const willCheck = !item.checked;
     triggerHaptic(willCheck ? 'success' : 'light');
@@ -185,34 +211,34 @@ export default function App() {
     }
     const newItems = items.map(i => i.id === id ? { ...i, checked: !i.checked } : i);
     setItems(newItems);
-    saveList(newItems);
+    await saveList(newItems);
   };
 
-  const deleteItem = (id) => {
+  const deleteItem = async (id) => {
     triggerHaptic('light');
     const newItems = items.filter(i => i.id !== id);
     setItems(newItems);
-    saveList(newItems);
+    await saveList(newItems);
   };
 
   const startEdit = (item) => { setEditingId(item.id); setEditText(item.name); };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (!editText.trim()) return;
     const newItems = items.map(i => i.id === editingId ? { ...i, name: editText.trim() } : i);
     setItems(newItems);
     setEditingId(null);
     setEditText('');
-    saveList(newItems);
+    await saveList(newItems);
   };
 
-  const moveCategory = (fromIdx, toIdx) => {
+  const moveCategory = async (fromIdx, toIdx) => {
     triggerHaptic('light');
     const newCats = [...categories];
     const [moved] = newCats.splice(fromIdx, 1);
     newCats.splice(toIdx, 0, moved);
     setCategories(newCats);
-    saveList(items, newCats);
+    await saveList(items, newCats);
   };
 
   const totalItems = items.length;
@@ -346,7 +372,7 @@ export default function App() {
               Join
             </button>
           </div>
-          <p className="text-center mt-10 text-xs" style={{ color: '#d6d3d1' }}>Lists are stored locally on this device</p>
+          <p className="text-center mt-10 text-xs" style={{ color: '#d6d3d1' }}>Share your code to shop together</p>
         </div>
       </div>
     );
@@ -358,7 +384,7 @@ export default function App() {
       <style>{styles}</style>
       {!isOnline && (
         <div className="px-4 py-2 text-center text-xs font-medium" style={{ backgroundColor: '#fef3c7', color: '#92400e' }}>
-          You're offline. Changes are saved locally.
+          You're offline. Changes will sync when you reconnect.
         </div>
       )}
       <div className="sticky top-0 z-40" style={{ backgroundColor: '#fafaf9', borderBottom: '1px solid #e7e5e4' }}>
@@ -374,6 +400,7 @@ export default function App() {
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ backgroundColor: '#f5f5f4' }}>
+                <span className={`w-1.5 h-1.5 rounded-full ${syncing ? 'sync-pulse' : ''}`} style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}></span>
                 <span className="text-xs font-mono" style={{ color: '#78716c' }}>{listId}</span>
               </div>
               <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ backgroundColor: '#f5f5f4' }}>
@@ -404,7 +431,7 @@ export default function App() {
             <div className="flex-1">
               <p className="text-sm font-medium mb-1" style={{ color: '#292524' }}>Getting started</p>
               <p className="text-xs leading-relaxed" style={{ color: '#78716c' }}>
-                Tap the <strong>+</strong> next to any category to add items. Your list is saved automatically.
+                Tap the <strong>+</strong> next to any category to add items. Share code <strong>{listId}</strong> with your partner to shop together!
               </p>
             </div>
             <button onClick={() => setShowOnboarding(false)} className="text-lg leading-none p-1" style={{ color: '#a8a29e' }}>×</button>
