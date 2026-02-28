@@ -66,14 +66,20 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const inputRef = useRef(null);
 
+  // Fixed online/offline detection
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
+    
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    
+    // Also check periodically in case events don't fire
+    const interval = setInterval(updateOnlineStatus, 3000);
+    
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+      clearInterval(interval);
     };
   }, []);
 
@@ -127,14 +133,12 @@ export default function App() {
       setItems([]);
       setCategories(DEFAULT_CATEGORIES);
       
-      // Save to Firebase
       await setDoc(doc(db, 'lists', code), {
         items: [],
         categories: DEFAULT_CATEGORIES,
         updatedAt: new Date().toISOString()
       });
       
-      // Remember locally
       localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
       setShowOnboarding(true);
       setCreateAnim(false);
@@ -165,7 +169,10 @@ export default function App() {
     }
   };
 
+  // Fixed leave list function
   const leaveList = () => {
+    triggerHaptic('light');
+    setShowSettings(false); // Close settings first
     setListId(null);
     setItems([]);
     setCategories(DEFAULT_CATEGORIES);
@@ -327,7 +334,7 @@ export default function App() {
               </div>
             ))}
           </div>
-          <button onClick={leaveList} className="w-full py-3 text-sm font-medium rounded-full" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
+          <button onClick={leaveList} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-transform" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
             Leave this list
           </button>
         </div>
@@ -347,7 +354,7 @@ export default function App() {
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
               <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
             </div>
-            <h1 className="text-3xl font-light tracking-tight lowercase mb-4" style={{ color: '#292524' }}>breadcrumbs</h1>
+            <h1 className="text-3xl font-light tracking-tight mb-4" style={{ color: '#292524' }}>Breadcrumbs</h1>
             <p className="text-sm font-light leading-relaxed" style={{ color: '#78716c' }}>Never get lost in the aisles again.</p>
             <p className="text-sm font-light" style={{ color: '#a8a29e' }}>The smartest path to a stocked home.</p>
           </div>
@@ -396,7 +403,7 @@ export default function App() {
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
                 <div className="w-1 h-1 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
               </div>
-              <h1 className="text-lg font-medium tracking-tight lowercase" style={{ color: '#292524' }}>breadcrumbs</h1>
+              <h1 className="text-lg font-medium tracking-tight" style={{ color: '#292524' }}>Breadcrumbs</h1>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ backgroundColor: '#f5f5f4' }}>
