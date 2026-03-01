@@ -473,11 +473,11 @@ export default function App() {
       placeholder={`Add to ${category.name}...`}
       className="flex-1 py-2 text-sm focus:outline-none bg-transparent"
       style={{ borderBottom: '1px solid #d6d3d1' }} />
-    <button onClick={addItem} disabled={!newItemText.trim()}
-      className="text-sm font-medium transition-all active:scale-95"
-      style={{ color: newItemText.trim() ? '#292524' : '#d6d3d1' }}>
-      Add
-    </button>
+   <button onClick={addItem} disabled={!newItemText.trim()}
+  className="text-sm font-medium transition-all active:scale-95"
+  style={{ backgroundColor: newItemText.trim() ? YELLOW : 'transparent', color: newItemText.trim() ? '#292524' : '#d6d3d1' }}>
+  Add
+</button>
   </div>
 </div>              )}
               {hasItems && (
