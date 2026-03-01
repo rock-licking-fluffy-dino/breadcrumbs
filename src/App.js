@@ -454,7 +454,7 @@ export default function App() {
           return (
             <div key={category.id} className="mb-3">
               <div className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all"
-                style={{ backgroundColor: hasItems ? '#fffef5' : 'transparent', boxShadow: hasItems ? '0 1px 3px rgba(0,0,0,0.04)' : 'none', borderLeft: hasItems ? `3px solid ${YELLOW}` : 'none' }}>
+                style={{ backgroundColor: hasItems ? '#fff' : 'transparent', boxShadow: hasItems ? '0 1px 3px rgba(0,0,0,0.04)' : 'none' }}>
                 <span className="text-sm font-medium" style={{ color: hasItems ? '#292524' : '#a8a29e' }}>
                   {category.name}
                   {hasItems && <span className="ml-2 font-normal" style={{ color: '#a8a29e' }}>{uncheckedCount}</span>}
