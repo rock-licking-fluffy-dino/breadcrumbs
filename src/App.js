@@ -652,8 +652,7 @@ export default function App() {
           return (
             <div key={category.id} className="mb-3">
               <div className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all"
-                style={{ backgroundColor: hasItems ? '#fffef5' : 'transparent', boxShadow: hasItems ? '0 1px 3px rgba(0,0,0,0.04)' : 'none', borderLeft: hasItems ? `3px solid ${YELLOW}` : 'none' }}>
-                <span className="text-sm font-medium" style={{ color: hasItems ? '#292524' : '#a8a29e' }}>
+                  style={{ backgroundColor: hasItems ? '#fff' : 'transparent', boxShadow: hasItems ? '0 1px 3px rgba(0,0,0,0.04)' : 'none' }}>                <span className="text-sm font-medium" style={{ color: hasItems ? '#292524' : '#a8a29e' }}>
                   {category.name}
                   {hasItems && <span className="ml-2 font-normal" style={{ color: '#a8a29e' }}>{uncheckedCount}</span>}
                 </span>
@@ -693,8 +692,8 @@ export default function App() {
                         <button onClick={() => toggleItem(item.id)}
                           className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-all active:scale-90 ${isChecking ? 'fill-check check-pop' : ''}`}
                           style={{
-                            border: `2px solid ${item.checked || isChecking ? YELLOW : YELLOW}`,
-                            backgroundColor: item.checked || isChecking ? YELLOW : '#fefce8'
+                            border: `2px solid ${item.checked || isChecking ? YELLOW : '#d6d3d1'}`,
+                            backgroundColor: item.checked || isChecking ? YELLOW : 'transparent'
                           }}>
                           {(item.checked || isChecking) && (
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
