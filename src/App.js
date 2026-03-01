@@ -466,21 +466,20 @@ export default function App() {
                 </button>
               </div>
               {isAdding && (
-                <div className="mt-2 ml-4 mr-4 fade-in">
-                  <div className="flex gap-2">
-                    <input ref={inputRef} type="text" value={newItemText} onChange={(e) => setNewItemText(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') addItem(); if (e.key === 'Escape') cancelAdding(); }}
-                      placeholder={`Add to ${category.name}...`}
-                      className="flex-1 px-4 py-3 text-sm rounded-full focus:outline-none"
-                      style={{ backgroundColor: '#fff', border: '1.5px solid #292524' }} />
-                    <button onClick={addItem} disabled={!newItemText.trim()}
-                      className="px-5 py-3 text-sm font-medium rounded-full transition-all active:scale-95"
-                      style={{ backgroundColor: newItemText.trim() ? YELLOW : '#e7e5e4', color: '#292524' }}>
-                      Add
-                    </button>
-                  </div>
-                </div>
-              )}
+                <div className="mt-1 ml-4 mr-4 fade-in">
+  <div className="flex items-center gap-3">
+    <input ref={inputRef} type="text" value={newItemText} onChange={(e) => setNewItemText(e.target.value)}
+      onKeyDown={(e) => { if (e.key === 'Enter') addItem(); if (e.key === 'Escape') cancelAdding(); }}
+      placeholder={`Add to ${category.name}...`}
+      className="flex-1 py-2 text-sm focus:outline-none bg-transparent"
+      style={{ borderBottom: '1px solid #d6d3d1' }} />
+    <button onClick={addItem} disabled={!newItemText.trim()}
+      className="text-sm font-medium transition-all active:scale-95"
+      style={{ color: newItemText.trim() ? '#292524' : '#d6d3d1' }}>
+      Add
+    </button>
+  </div>
+</div>              )}
               {hasItems && (
                 <div className="mt-1 ml-4 mr-4">
                   {categoryItems.map(item => {
