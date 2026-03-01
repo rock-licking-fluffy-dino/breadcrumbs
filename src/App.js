@@ -454,7 +454,7 @@ export default function App() {
           return (
             <div key={category.id} className="mb-3">
               <div className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all"
-                style={{ backgroundColor: hasItems ? '#fff' : 'transparent', boxShadow: hasItems ? '0 1px 3px rgba(0,0,0,0.04)' : 'none' }}>
+                style={{ backgroundColor: hasItems ? '#fffef5' : 'transparent', boxShadow: hasItems ? '0 1px 3px rgba(0,0,0,0.04)' : 'none', borderLeft: hasItems ? `3px solid ${YELLOW}` : 'none' }}>
                 <span className="text-sm font-medium" style={{ color: hasItems ? '#292524' : '#a8a29e' }}>
                   {category.name}
                   {hasItems && <span className="ml-2 font-normal" style={{ color: '#a8a29e' }}>{uncheckedCount}</span>}
@@ -466,20 +466,25 @@ export default function App() {
                 </button>
               </div>
               {isAdding && (
-                <div className="mt-1 ml-4 mr-4 fade-in">
+<div className="mt-1 ml-4 mr-4 fade-in">
   <div className="flex items-center gap-3">
     <input ref={inputRef} type="text" value={newItemText} onChange={(e) => setNewItemText(e.target.value)}
       onKeyDown={(e) => { if (e.key === 'Enter') addItem(); if (e.key === 'Escape') cancelAdding(); }}
       placeholder={`Add to ${category.name}...`}
       className="flex-1 py-2 text-sm focus:outline-none bg-transparent"
       style={{ borderBottom: '1px solid #d6d3d1' }} />
-   <button onClick={addItem} disabled={!newItemText.trim()}
-  className="text-sm font-medium transition-all active:scale-95"
-  style={{ backgroundColor: newItemText.trim() ? YELLOW : 'transparent', color: newItemText.trim() ? '#292524' : '#d6d3d1' }}>
-  Add
-</button>
+    <button onClick={addItem} disabled={!newItemText.trim()}
+      className="px-4 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95"
+      style={{ 
+        backgroundColor: newItemText.trim() ? YELLOW : 'transparent',
+        color: '#292524',
+        opacity: newItemText.trim() ? 1 : 0.3
+      }}>
+      Add
+    </button>
   </div>
-</div>              )}
+</div>
+            )}
               {hasItems && (
                 <div className="mt-1 ml-4 mr-4">
                   {categoryItems.map(item => {
@@ -487,11 +492,11 @@ export default function App() {
                     return (
                       <div key={item.id} className="flex items-center gap-3 py-3 item-row fade-in"
                         style={{ borderBottom: '1px solid #f5f5f4', opacity: item.checked ? 0.5 : 1, transition: 'opacity 0.3s ease' }}>
-                        <button onClick={() => toggleItem(item.id)}
+                       <button onClick={() => toggleItem(item.id)}
                           className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-all active:scale-90 ${isChecking ? 'fill-check check-pop' : ''}`}
                           style={{
-                            border: `2px solid ${item.checked || isChecking ? YELLOW : '#d6d3d1'}`,
-                            backgroundColor: item.checked || isChecking ? YELLOW : 'transparent'
+                             border: `2px solid ${item.checked || isChecking ? YELLOW : YELLOW}`,
+                             backgroundColor: item.checked || isChecking ? YELLOW : '#fefce8'
                           }}>
                           {(item.checked || isChecking) && (
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
