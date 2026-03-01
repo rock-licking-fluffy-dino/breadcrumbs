@@ -495,9 +495,9 @@ export default function App() {
                        <button onClick={() => toggleItem(item.id)}
                           className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-all active:scale-90 ${isChecking ? 'fill-check check-pop' : ''}`}
                           style={{
-                             border: `2px solid ${item.checked || isChecking ? YELLOW : YELLOW}`,
-                             backgroundColor: item.checked || isChecking ? YELLOW : '#fefce8'
-                          }}>
+                            border: `2px solid ${item.checked || isChecking ? YELLOW : '#d6d3d1'}`,
+                            backgroundColor: item.checked || isChecking ? YELLOW : 'transparent'
+                           }}>
                           {(item.checked || isChecking) && (
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                               <path className={isChecking ? 'draw-check' : ''} d="M4 12l6 6L20 6"/>
