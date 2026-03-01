@@ -45,6 +45,202 @@ const triggerHaptic = (style = 'light') => {
   }
 };
 
+// Onboarding Modal Component
+const OnboardingModal = ({ listCode, onComplete }) => {
+  const [currentCard, setCurrentCard] = useState(0);
+  const [slideDirection, setSlideDirection] = useState('right');
+
+  const cards = [
+    {
+      icon: '🏪',
+      title: 'Smart Organisation',
+      description: 'Your shopping list is automatically organised by store section — just like a real supermarket. Shop faster and never miss an aisle.',
+      visual: (
+        <div className="flex flex-col gap-2 mt-4">
+          {['🥬 Fruits & Veg', '🧀 Dairy', '🧊 Frozen'].map((cat, i) => (
+            <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: '#fffef5', borderLeft: `3px solid ${YELLOW}` }}>
+              <span className="text-sm">{cat}</span>
+            </div>
+          ))}
+        </div>
+      )
+    },
+    {
+      icon: '🔗',
+      title: 'Share in Seconds',
+      description: 'Invite anyone to shop together — no accounts needed. Just share your 6-character code and start collaborating instantly.',
+      visual: (
+        <div className="mt-4 flex flex-col items-center">
+          <div className="px-6 py-3 rounded-full text-2xl font-mono tracking-widest" style={{ backgroundColor: '#fefce8', border: `2px solid ${YELLOW}` }}>
+            {listCode || 'ABC123'}
+          </div>
+          <p className="text-xs mt-3" style={{ color: '#78716c' }}>You'll find your code at the top of your list</p>
+        </div>
+      )
+    },
+    {
+      icon: '⚡',
+      title: 'Shop Together, Live',
+      description: 'See items being ticked off in real-time as your group shops. Stay in sync across all devices — no refresh needed.',
+      visual: (
+        <div className="mt-4 flex justify-center gap-4">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-16 h-24 rounded-xl border-2 flex flex-col items-center justify-center gap-1" style={{ borderColor: '#e7e5e4' }}>
+              <div className="w-8 h-1 rounded" style={{ backgroundColor: '#e7e5e4' }}></div>
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: YELLOW }}></div>
+              <div className="w-8 h-1 rounded" style={{ backgroundColor: '#e7e5e4' }}></div>
+            </div>
+            <span className="text-xs" style={{ color: '#78716c' }}>You</span>
+          </div>
+          <div className="flex items-center">
+            <span style={{ color: YELLOW }}>⟷</span>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-16 h-24 rounded-xl border-2 flex flex-col items-center justify-center gap-1" style={{ borderColor: '#e7e5e4' }}>
+              <div className="w-8 h-1 rounded" style={{ backgroundColor: '#e7e5e4' }}></div>
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: YELLOW }}></div>
+              <div className="w-8 h-1 rounded" style={{ backgroundColor: '#e7e5e4' }}></div>
+            </div>
+            <span className="text-xs" style={{ color: '#78716c' }}>Them</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      icon: '✨',
+      title: 'Reorder Your Way',
+      description: 'Organise categories to match your local store layout. Head to Settings to drag and drop them into your perfect order.',
+      visual: (
+        <div className="mt-4 flex flex-col gap-2">
+          {['Bakery', 'Dairy', 'Frozen'].map((cat, i) => (
+            <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg" style={{ backgroundColor: '#f5f5f4' }}>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex gap-0.5">
+                  <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
+                  <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
+                </div>
+                <div className="flex gap-0.5">
+                  <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
+                  <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
+                </div>
+              </div>
+              <span className="text-sm" style={{ color: '#292524' }}>{cat}</span>
+            </div>
+          ))}
+        </div>
+      )
+    },
+    {
+      icon: '🎉',
+      title: "You're All Set!",
+      description: 'Your list is ready. Start adding items or invite others with the share code at the top.',
+      visual: (
+        <div className="mt-6 flex justify-center">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: YELLOW }}></div>
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
+          </div>
+        </div>
+      )
+    }
+  ];
+
+  const goNext = () => {
+    if (currentCard < cards.length - 1) {
+      setSlideDirection('right');
+      setCurrentCard(currentCard + 1);
+      triggerHaptic('light');
+    } else {
+      onComplete();
+    }
+  };
+
+  const goBack = () => {
+    if (currentCard > 0) {
+      setSlideDirection('left');
+      setCurrentCard(currentCard - 1);
+      triggerHaptic('light');
+    }
+  };
+
+  const skip = () => {
+    triggerHaptic('light');
+    onComplete();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+      <div className="w-full max-w-sm rounded-3xl overflow-hidden" style={{ backgroundColor: '#fff', maxHeight: '90vh' }}>
+        {/* Skip button */}
+        <div className="flex justify-end p-4 pb-0">
+          <button onClick={skip} className="text-sm" style={{ color: '#a8a29e' }}>
+            Skip
+          </button>
+        </div>
+
+        {/* Card content */}
+        <div className="px-6 pb-6 overflow-hidden">
+          <div 
+            key={currentCard}
+            className="text-center"
+            style={{
+              animation: `${slideDirection === 'right' ? 'slideInRight' : 'slideInLeft'} 0.3s ease-out`
+            }}
+          >
+            <div className="text-4xl mb-4">{cards[currentCard].icon}</div>
+            <h2 className="text-xl font-semibold mb-2" style={{ color: '#292524' }}>{cards[currentCard].title}</h2>
+            <p className="text-sm leading-relaxed" style={{ color: '#78716c' }}>{cards[currentCard].description}</p>
+            {cards[currentCard].visual}
+          </div>
+        </div>
+
+        {/* Progress dots */}
+        <div className="flex justify-center gap-2 pb-4">
+          {cards.map((_, i) => (
+            <div 
+              key={i} 
+              className="w-2 h-2 rounded-full transition-all duration-300"
+              style={{ backgroundColor: i === currentCard ? YELLOW : '#e7e5e4' }}
+            ></div>
+          ))}
+        </div>
+
+        {/* Navigation buttons */}
+        <div className="flex gap-3 p-4 pt-0">
+          {currentCard > 0 && (
+            <button 
+              onClick={goBack}
+              className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]"
+              style={{ border: '1.5px solid #e7e5e4', color: '#78716c' }}
+            >
+              Back
+            </button>
+          )}
+          <button 
+            onClick={goNext}
+            className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]"
+            style={{ backgroundColor: YELLOW, color: '#292524' }}
+          >
+            {currentCard === cards.length - 1 ? 'Start Shopping' : 'Next'}
+          </button>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes slideInRight {
+          from { opacity: 0; transform: translateX(30px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes slideInLeft {
+          from { opacity: 0; transform: translateX(-30px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
+    </div>
+  );
+};
+
 export default function App() {
   const [listId, setListId] = useState(() => {
     const saved = localStorage.getItem('breadcrumbs-current-list');
@@ -66,6 +262,20 @@ export default function App() {
   const [syncing, setSyncing] = useState(false);
   const inputRef = useRef(null);
 
+  // Check if user has seen onboarding
+  const checkOnboarding = useCallback(() => {
+    const hasSeenOnboarding = localStorage.getItem('breadcrumbs-has-seen-onboarding');
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const completeOnboarding = () => {
+    localStorage.setItem('breadcrumbs-has-seen-onboarding', 'true');
+    setShowOnboarding(false);
+    triggerHaptic('success');
+  };
+
   // Fixed online/offline detection
   useEffect(() => {
     const updateOnlineStatus = () => setIsOnline(navigator.onLine);
@@ -73,7 +283,6 @@ export default function App() {
     window.addEventListener('online', updateOnlineStatus);
     window.addEventListener('offline', updateOnlineStatus);
     
-    // Also check periodically in case events don't fire
     const interval = setInterval(updateOnlineStatus, 3000);
     
     return () => {
@@ -140,7 +349,7 @@ export default function App() {
       });
       
       localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
-      setShowOnboarding(true);
+      checkOnboarding();
       setCreateAnim(false);
     }, 400);
   };
@@ -159,7 +368,7 @@ export default function App() {
         if (data.categories) setCategories(data.categories);
         setJoinCode('');
         localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
-        if (!data.items?.length) setShowOnboarding(true);
+        checkOnboarding();
       } else {
         alert('List not found. Check the code and try again.');
       }
@@ -172,7 +381,7 @@ export default function App() {
   // Fixed leave list function
   const leaveList = () => {
     triggerHaptic('light');
-    setShowSettings(false); // Close settings first
+    setShowSettings(false);
     setListId(null);
     setItems([]);
     setCategories(DEFAULT_CATEGORIES);
@@ -192,7 +401,6 @@ export default function App() {
     const newItems = [...items, item];
     setItems(newItems);
     setNewItemText('');
-    setShowOnboarding(false);
     await saveList(newItems);
   };
 
@@ -389,6 +597,12 @@ export default function App() {
   return (
     <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: '#fafaf9' }}>
       <style>{styles}</style>
+      
+      {/* Onboarding Modal */}
+      {showOnboarding && (
+        <OnboardingModal listCode={listId} onComplete={completeOnboarding} />
+      )}
+      
       {!isOnline && (
         <div className="px-4 py-2 text-center text-xs font-medium" style={{ backgroundColor: '#fef3c7', color: '#92400e' }}>
           You're offline. Changes will sync when you reconnect.
@@ -429,22 +643,6 @@ export default function App() {
           )}
         </div>
       </div>
-      {showOnboarding && totalItems === 0 && (
-        <div className="mx-5 mt-4 p-4 rounded-2xl fade-in" style={{ backgroundColor: '#fefce8', border: `1px solid ${YELLOW}` }}>
-          <div className="flex items-start gap-3">
-            <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: YELLOW }}>
-              <span className="text-sm">💡</span>
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium mb-1" style={{ color: '#292524' }}>Getting started</p>
-              <p className="text-xs leading-relaxed" style={{ color: '#78716c' }}>
-                Tap the <strong>+</strong> next to any category to add items. Share code <strong>{listId}</strong> with your partner to shop together!
-              </p>
-            </div>
-            <button onClick={() => setShowOnboarding(false)} className="text-lg leading-none p-1" style={{ color: '#a8a29e' }}>×</button>
-          </div>
-        </div>
-      )}
       <div className="px-4 py-4 pb-20">
         {categories.map(category => {
           const categoryItems = items.filter(item => item.category === category.id);
@@ -454,7 +652,7 @@ export default function App() {
           return (
             <div key={category.id} className="mb-3">
               <div className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all"
-                style={{ backgroundColor: hasItems ? '#fff' : 'transparent', boxShadow: hasItems ? '0 1px 3px rgba(0,0,0,0.04)' : 'none' }}>
+                style={{ backgroundColor: hasItems ? '#fffef5' : 'transparent', boxShadow: hasItems ? '0 1px 3px rgba(0,0,0,0.04)' : 'none', borderLeft: hasItems ? `3px solid ${YELLOW}` : 'none' }}>
                 <span className="text-sm font-medium" style={{ color: hasItems ? '#292524' : '#a8a29e' }}>
                   {category.name}
                   {hasItems && <span className="ml-2 font-normal" style={{ color: '#a8a29e' }}>{uncheckedCount}</span>}
@@ -466,25 +664,25 @@ export default function App() {
                 </button>
               </div>
               {isAdding && (
-<div className="mt-1 ml-4 mr-4 fade-in">
-  <div className="flex items-center gap-3">
-    <input ref={inputRef} type="text" value={newItemText} onChange={(e) => setNewItemText(e.target.value)}
-      onKeyDown={(e) => { if (e.key === 'Enter') addItem(); if (e.key === 'Escape') cancelAdding(); }}
-      placeholder={`Add to ${category.name}...`}
-      className="flex-1 py-2 text-sm focus:outline-none bg-transparent"
-      style={{ borderBottom: '1px solid #d6d3d1' }} />
-    <button onClick={addItem} disabled={!newItemText.trim()}
-      className="px-4 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95"
-      style={{ 
-        backgroundColor: newItemText.trim() ? YELLOW : 'transparent',
-        color: '#292524',
-        opacity: newItemText.trim() ? 1 : 0.3
-      }}>
-      Add
-    </button>
-  </div>
-</div>
-            )}
+                <div className="mt-1 ml-4 mr-4 fade-in">
+                  <div className="flex items-center gap-3">
+                    <input ref={inputRef} type="text" value={newItemText} onChange={(e) => setNewItemText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') addItem(); if (e.key === 'Escape') cancelAdding(); }}
+                      placeholder={`Add to ${category.name}...`}
+                      className="flex-1 py-2 text-sm focus:outline-none bg-transparent"
+                      style={{ borderBottom: '1px solid #d6d3d1' }} />
+                    <button onClick={addItem} disabled={!newItemText.trim()}
+                      className="px-4 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95"
+                      style={{ 
+                        backgroundColor: newItemText.trim() ? YELLOW : 'transparent',
+                        color: '#292524',
+                        opacity: newItemText.trim() ? 1 : 0.3
+                      }}>
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
               {hasItems && (
                 <div className="mt-1 ml-4 mr-4">
                   {categoryItems.map(item => {
@@ -492,12 +690,12 @@ export default function App() {
                     return (
                       <div key={item.id} className="flex items-center gap-3 py-3 item-row fade-in"
                         style={{ borderBottom: '1px solid #f5f5f4', opacity: item.checked ? 0.5 : 1, transition: 'opacity 0.3s ease' }}>
-                       <button onClick={() => toggleItem(item.id)}
+                        <button onClick={() => toggleItem(item.id)}
                           className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-all active:scale-90 ${isChecking ? 'fill-check check-pop' : ''}`}
                           style={{
-                            border: `2px solid ${item.checked || isChecking ? YELLOW : '#d6d3d1'}`,
-                            backgroundColor: item.checked || isChecking ? YELLOW : 'transparent'
-                           }}>
+                            border: `2px solid ${item.checked || isChecking ? YELLOW : YELLOW}`,
+                            backgroundColor: item.checked || isChecking ? YELLOW : '#fefce8'
+                          }}>
                           {(item.checked || isChecking) && (
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                               <path className={isChecking ? 'draw-check' : ''} d="M4 12l6 6L20 6"/>
