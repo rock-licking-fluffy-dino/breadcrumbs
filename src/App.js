@@ -723,6 +723,24 @@ export default function App() {
             </div>
           );
         })}
+        
+        {/* Clear completed button */}
+        {checkedCount > 0 && (
+          <div className="fixed bottom-6 left-4 right-4 flex justify-center fade-in">
+            <button
+              onClick={async () => {
+                triggerHaptic('success');
+                const newItems = items.filter(i => !i.checked);
+                setItems(newItems);
+                await saveList(newItems);
+              }}
+              className="px-6 py-3 text-sm font-medium rounded-full shadow-lg transition-all active:scale-95"
+              style={{ backgroundColor: YELLOW, color: '#292524' }}
+            >
+              Clear {checkedCount} completed
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
