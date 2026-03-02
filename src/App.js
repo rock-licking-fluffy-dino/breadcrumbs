@@ -260,6 +260,7 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const inputRef = useRef(null);
 
   // Check if user has seen onboarding
@@ -728,11 +729,9 @@ export default function App() {
         {checkedCount > 0 && (
           <div className="fixed bottom-6 left-4 right-4 flex justify-center fade-in">
             <button
-              onClick={async () => {
-                triggerHaptic('success');
-                const newItems = items.filter(i => !i.checked);
-                setItems(newItems);
-                await saveList(newItems);
+              onClick={() => {
+                triggerHaptic('light');
+                setShowClearConfirm(true);
               }}
               className="px-6 py-3 text-sm font-medium rounded-full shadow-lg transition-all active:scale-95"
               style={{ backgroundColor: YELLOW, color: '#292524' }}
@@ -741,6 +740,44 @@ export default function App() {
             </button>
           </div>
         )}
+
+        {/* Clear confirmation modal */}
+        {showClearConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: '#fff' }}>
+              <div className="text-4xl mb-4">🧹</div>
+              <h2 className="text-lg font-semibold mb-2" style={{ color: '#292524' }}>Clear completed items?</h2>
+              <p className="text-sm mb-6" style={{ color: '#78716c' }}>
+                 This will remove {checkedCount} ticked {checkedCount === 1 ? 'item' : 'items'} from your list.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setShowClearConfirm(false);
+                  }}
+                  className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]"
+                  style={{ border: '1.5px solid #e7e5e4', color: '#78716c' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    triggerHaptic('success');
+                    const newItems = items.filter(i => !i.checked);
+                    setItems(newItems);
+                    await saveList(newItems);
+                    setShowClearConfirm(false);
+                  }}
+                  className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]"
+                  style={{ backgroundColor: YELLOW, color: '#292524' }}
+                 >
+                  Clear
+                </button>
+               </div>
+              </div>
+            </div>
+          )}
       </div>
     </div>
   );
