@@ -49,11 +49,11 @@ const OnboardingModal = ({ listCode, onComplete }) => {
   const [currentCard, setCurrentCard] = useState(0);
   const [slideDirection, setSlideDirection] = useState('right');
 
-  const cards = [
+ const cards = [
     {
       icon: '🏪',
       title: 'Smart Organisation',
-      description: 'Your shopping list is automatically organised by store section — just like a real supermarket. Shop faster and never miss an aisle.',
+      description: 'Your shopping list is organised by store section — just like a real supermarket. Shop faster and never miss an aisle.',
       visual: (
         <div className="flex flex-col gap-2 mt-4">
           {['🥬 Fruits & Veg', '🧀 Dairy', '🧊 Frozen'].map((cat, i) => (
@@ -106,33 +106,41 @@ const OnboardingModal = ({ listCode, onComplete }) => {
       )
     },
     {
-      icon: '✨',
-      title: 'Reorder Your Way',
-      description: 'Organise categories to match your local store layout. Head to Settings to drag and drop them into your perfect order.',
+      icon: '🎛️',
+      title: 'Make It Yours',
+      description: 'Reorder categories to match your store layout, hide ones you don\'t need, or create your own custom categories.',
       visual: (
         <div className="mt-4 flex flex-col gap-2">
-          {['Bakery', 'Dairy', 'Frozen'].map((cat, i) => (
-            <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg" style={{ backgroundColor: '#f5f5f4' }}>
-              <div className="flex flex-col gap-0.5">
-                <div className="flex gap-0.5">
-                  <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
-                  <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
-                </div>
-                <div className="flex gap-0.5">
-                  <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
-                  <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
-                </div>
-              </div>
-              <span className="text-sm" style={{ color: '#292524' }}>{cat}</span>
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: '#f5f5f4' }}>
+            <span className="text-sm">Pet Supplies</span>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#fefce8', color: '#a16207' }}>Custom</span>
+          </div>
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: '#f5f5f4' }}>
+            <span className="text-sm" style={{ color: '#a8a29e' }}>Alcohol</span>
+            <div className="w-8 h-5 rounded-full" style={{ backgroundColor: '#e7e5e4' }}>
+              <div className="w-3 h-3 rounded-full mt-1 ml-1" style={{ backgroundColor: '#fff' }}></div>
             </div>
-          ))}
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: '#f5f5f4' }}>
+            <div className="flex flex-col gap-0.5">
+              <div className="flex gap-0.5">
+                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
+                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
+              </div>
+              <div className="flex gap-0.5">
+                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
+                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: '#a8a29e' }}></div>
+              </div>
+            </div>
+            <span className="text-sm">Dairy</span>
+          </div>
         </div>
       )
     },
     {
       icon: '🎉',
       title: "You're All Set!",
-      description: 'Your list is ready. Start adding items or invite others with the share code at the top.',
+      description: 'Your list is ready. Tap + to add items, or head to Settings to customise your categories.',
       visual: (
         <div className="mt-6 flex justify-center">
           <div className="flex items-center gap-2">
