@@ -567,7 +567,7 @@ export default function App() {
                       ))}
                     </div>
                     <span className="text-sm flex-1" style={{ color: '#292524' }}>{cat.name}</span>
-                    {!cat.isDefault && (
+                    {cat.isDefault === false && (
                       <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#fefce8', color: '#a16207' }}>Custom</span>
                     )}
                   </div>
