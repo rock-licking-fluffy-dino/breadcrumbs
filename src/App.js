@@ -455,15 +455,9 @@ export default function App() {
     }
   };
 
-  const leaveList = () => {
-    triggerHaptic('light');
-    setShowLeaveConfirm(true);
-  };
-
   const confirmLeaveList = () => {
     triggerHaptic('light');
     setShowLeaveConfirm(false);
-    setShowSettings(false);
     setListId(null);
     setItems([]);
     setCategories(DEFAULT_CATEGORIES);
@@ -635,6 +629,7 @@ export default function App() {
                   className="w-full py-2 text-sm focus:outline-none bg-transparent"
                   style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }}
                 />
+                <p className="text-xs mt-2" style={{ color: theme.textTertiary }}>Give your list a name to easily identify it. Saved on this device only.</p>
               </div>
 
               {/* Share Code */}
@@ -676,10 +671,10 @@ export default function App() {
               </div>
 
               {/* Danger Zone */}
-              <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textTertiary }}>Danger Zone</h2>
+              <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textTertiary }}>⚠️ Danger Zone</h2>
               
               <button 
-                onClick={() => { triggerHaptic('light'); setShowClearAllConfirm(true); }}
+                onClick={() => { triggerHaptic('light'); setShowSettings(false); setTimeout(() => setShowClearAllConfirm(true), 100); }}
                 disabled={items.length === 0}
                 className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-transform mb-3" 
                 style={{ 
@@ -691,7 +686,7 @@ export default function App() {
                 Clear all items {items.length > 0 && `(${items.length})`}
               </button>
 
-              <button onClick={leaveList} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-transform" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
+              <button onClick={() => { triggerHaptic('light'); setShowSettings(false); setTimeout(() => setShowLeaveConfirm(true), 100); }} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-transform" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
                 Leave this list
               </button>
             </>
@@ -737,13 +732,13 @@ export default function App() {
                   className="w-full py-3 text-sm font-medium rounded-full mb-4 transition-all active:scale-[0.98]"
                   style={{ border: `1.5px dashed ${YELLOW}`, color: theme.text }}
                 >
-                  + Add Custom Category
+                  📦 Add Custom Category
                 </button>
               )}
 
               <p className="text-xs mb-3" style={{ color: theme.textTertiary }}>Use arrows to reorder. Toggle to show/hide.</p>
 
-              {/* Combined category list with arrows + toggle */}
+              {/* Combined category list with arrows on opposite sides + toggle */}
               <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                 {categories.map((cat, idx) => {
                   const isHidden = hiddenCategories.includes(cat.id);
@@ -755,44 +750,29 @@ export default function App() {
                   return (
                     <div 
                       key={cat.id} 
-                      className="flex items-center gap-2 px-3 py-3 transition-all"
+                      className="flex items-center gap-2 px-2 py-2 transition-all"
                       style={{ 
                         borderBottom: idx < categories.length - 1 ? `1px solid ${theme.borderLight}` : 'none',
                         opacity: isHidden ? 0.5 : 1
                       }}
                     >
-                      {/* Up/Down arrows */}
-                      <div className="flex flex-col gap-0.5">
-                        <button
-                          onClick={() => { if (!isFirst) moveCategory(idx, idx - 1); }}
-                          disabled={isFirst}
-                          className="w-6 h-6 rounded flex items-center justify-center transition-all active:scale-90"
-                          style={{ 
-                            color: isFirst ? theme.border : theme.textSecondary,
-                            backgroundColor: 'transparent'
-                          }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M18 15l-6-6-6 6"/>
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => { if (!isLast) moveCategory(idx, idx + 1); }}
-                          disabled={isLast}
-                          className="w-6 h-6 rounded flex items-center justify-center transition-all active:scale-90"
-                          style={{ 
-                            color: isLast ? theme.border : theme.textSecondary,
-                            backgroundColor: 'transparent'
-                          }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M6 9l6 6 6-6"/>
-                          </svg>
-                        </button>
-                      </div>
+                      {/* UP arrow on left */}
+                      <button
+                        onClick={() => { if (!isFirst) { triggerHaptic('light'); moveCategory(idx, idx - 1); } }}
+                        disabled={isFirst}
+                        className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90"
+                        style={{ 
+                          color: isFirst ? theme.border : theme.text,
+                          backgroundColor: isFirst ? 'transparent' : theme.bgTertiary
+                        }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 15l-6-6-6 6"/>
+                        </svg>
+                      </button>
                       
                       {/* Category name and info */}
-                      <div className="flex-1 min-w-0">
+                      <div className="flex-1 min-w-0 px-1">
                         <div className="flex items-center gap-2">
                           <span className="text-sm truncate" style={{ color: theme.text }}>{cat.name}</span>
                           {isCustom && (
@@ -808,7 +788,7 @@ export default function App() {
                       {isCustom && (
                         <button
                           onClick={() => deleteCustomCategory(cat.id)}
-                          className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
+                          className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
                           style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
                         >
                           <span className="text-sm">×</span>
@@ -825,6 +805,21 @@ export default function App() {
                           className="absolute top-0.5 w-5 h-5 rounded-full transition-all shadow-sm"
                           style={{ backgroundColor: '#fff', left: isHidden ? '2px' : 'calc(100% - 22px)' }}
                         ></div>
+                      </button>
+
+                      {/* DOWN arrow on right */}
+                      <button
+                        onClick={() => { if (!isLast) { triggerHaptic('light'); moveCategory(idx, idx + 1); } }}
+                        disabled={isLast}
+                        className="w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-90"
+                        style={{ 
+                          color: isLast ? theme.border : theme.text,
+                          backgroundColor: isLast ? 'transparent' : theme.bgTertiary
+                        }}
+                      >
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M6 9l6 6 6-6"/>
+                        </svg>
                       </button>
                     </div>
                   );
