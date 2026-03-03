@@ -49,7 +49,7 @@ const OnboardingModal = ({ listCode, onComplete }) => {
   const [currentCard, setCurrentCard] = useState(0);
   const [slideDirection, setSlideDirection] = useState('right');
 
- const cards = [
+  const cards = [
     {
       icon: '🏪',
       title: 'Smart Organisation',
@@ -108,18 +108,16 @@ const OnboardingModal = ({ listCode, onComplete }) => {
     {
       icon: '🎛️',
       title: 'Make It Yours',
-      description: 'Reorder categories to match your store layout, hide ones you don\'t need, or create your own custom categories.',
+      description: 'Name your list, reorder categories to match your store, hide ones you don\'t need, or create custom categories.',
       visual: (
         <div className="mt-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: '#fefce8', border: `1px solid ${YELLOW}` }}>
+            <span className="text-sm font-medium">Weekly Shop</span>
+            <span className="text-xs" style={{ color: '#78716c' }}>ABC123</span>
+          </div>
           <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: '#f5f5f4' }}>
             <span className="text-sm">Pet Supplies</span>
             <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#fefce8', color: '#a16207' }}>Custom</span>
-          </div>
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: '#f5f5f4' }}>
-            <span className="text-sm" style={{ color: '#a8a29e' }}>Alcohol</span>
-            <div className="w-8 h-5 rounded-full" style={{ backgroundColor: '#e7e5e4' }}>
-              <div className="w-3 h-3 rounded-full mt-1 ml-1" style={{ backgroundColor: '#fff' }}></div>
-            </div>
           </div>
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: '#f5f5f4' }}>
             <div className="flex flex-col gap-0.5">
@@ -140,7 +138,7 @@ const OnboardingModal = ({ listCode, onComplete }) => {
     {
       icon: '🎉',
       title: "You're All Set!",
-      description: 'Your list is ready. Tap + to add items, or head to Settings to customise your categories.',
+      description: 'Your list is ready. Tap + to add items, or head to Settings to name your list and customise categories.',
       visual: (
         <div className="mt-6 flex justify-center">
           <div className="flex items-center gap-2">
@@ -217,6 +215,8 @@ export default function App() {
     const saved = localStorage.getItem('breadcrumbs-current-list');
     return saved ? JSON.parse(saved).listId : null;
   });
+  const [listName, setListName] = useState('');
+  const [editingListName, setEditingListName] = useState('');
   const [items, setItems] = useState([]);
   const [joinCode, setJoinCode] = useState('');
   const [addingTo, setAddingTo] = useState(null);
@@ -224,7 +224,7 @@ export default function App() {
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsTab, setSettingsTab] = useState('reorder');
+  const [settingsTab, setSettingsTab] = useState('general');
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [hiddenCategories, setHiddenCategories] = useState(() => {
     const saved = localStorage.getItem('breadcrumbs-hidden-categories');
@@ -240,8 +240,29 @@ export default function App() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showAddCategory, setShowAddCategory] = useState(false);
   const inputRef = useRef(null);
+  const listNameInputRef = useRef(null);
 
-  // Get visible categories (not hidden)
+  // Load list name from localStorage when listId changes
+  useEffect(() => {
+    if (listId) {
+      const savedName = localStorage.getItem(`breadcrumbs-list-name-${listId}`);
+      setListName(savedName || '');
+      setEditingListName(savedName || '');
+    }
+  }, [listId]);
+
+  // Save list name to localStorage
+  const saveListName = (name) => {
+    const trimmedName = name.trim();
+    setListName(trimmedName);
+    if (trimmedName) {
+      localStorage.setItem(`breadcrumbs-list-name-${listId}`, trimmedName);
+    } else {
+      localStorage.removeItem(`breadcrumbs-list-name-${listId}`);
+    }
+    triggerHaptic('success');
+  };
+
   const visibleCategories = categories.filter(cat => !hiddenCategories.includes(cat.id));
 
   const checkOnboarding = useCallback(() => {
@@ -301,22 +322,17 @@ export default function App() {
     }
   }, [listId, categories]);
 
-  // Save hidden categories to localStorage
   const saveHiddenCategories = (hidden) => {
     localStorage.setItem('breadcrumbs-hidden-categories', JSON.stringify(hidden));
     setHiddenCategories(hidden);
   };
 
-  // Toggle category visibility
   const toggleCategoryVisibility = async (categoryId) => {
     triggerHaptic('light');
     const isCurrentlyHidden = hiddenCategories.includes(categoryId);
-    
     if (isCurrentlyHidden) {
-      // Show the category
       saveHiddenCategories(hiddenCategories.filter(id => id !== categoryId));
     } else {
-      // Hide the category and delete its items
       saveHiddenCategories([...hiddenCategories, categoryId]);
       const newItems = items.filter(item => item.category !== categoryId);
       if (newItems.length !== items.length) {
@@ -326,17 +342,14 @@ export default function App() {
     }
   };
 
-  // Add custom category
   const addCustomCategory = async () => {
     if (!newCategoryName.trim()) return;
     triggerHaptic('success');
-    
     const newCategory = {
       id: `custom-${generateId()}`,
       name: newCategoryName.trim(),
       isDefault: false
     };
-    
     const newCategories = [...categories, newCategory];
     setCategories(newCategories);
     await saveList(items, newCategories);
@@ -344,7 +357,6 @@ export default function App() {
     setShowAddCategory(false);
   };
 
-  // Delete custom category
   const deleteCustomCategory = async (categoryId) => {
     triggerHaptic('light');
     const newCategories = categories.filter(cat => cat.id !== categoryId);
@@ -366,6 +378,8 @@ export default function App() {
       setListId(code);
       setItems([]);
       setCategories(DEFAULT_CATEGORIES);
+      setListName('');
+      setEditingListName('');
       await setDoc(doc(db, 'lists', code), {
         items: [],
         categories: DEFAULT_CATEGORIES,
@@ -406,6 +420,8 @@ export default function App() {
     setListId(null);
     setItems([]);
     setCategories(DEFAULT_CATEGORIES);
+    setListName('');
+    setEditingListName('');
     localStorage.removeItem('breadcrumbs-current-list');
   };
 
@@ -524,6 +540,7 @@ export default function App() {
           {/* Tabs */}
           <div className="flex px-5 gap-2 pb-3">
             {[
+              { id: 'general', label: 'General' },
               { id: 'reorder', label: 'Reorder' },
               { id: 'visibility', label: 'Show/Hide' },
               { id: 'custom', label: 'Custom' }
@@ -544,6 +561,53 @@ export default function App() {
         </div>
 
         <div className="px-5 py-6">
+          {/* General Tab */}
+          {settingsTab === 'general' && (
+            <>
+              <h2 className="text-xs uppercase tracking-widest mb-4" style={{ color: '#78716c' }}>List Details</h2>
+              
+              {/* List Name */}
+              <div className="rounded-2xl p-4 mb-4" style={{ backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <label className="text-xs font-medium mb-2 block" style={{ color: '#78716c' }}>List Name</label>
+                <input
+                  ref={listNameInputRef}
+                  type="text"
+                  value={editingListName}
+                  onChange={(e) => setEditingListName(e.target.value)}
+                  onBlur={() => saveListName(editingListName)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { saveListName(editingListName); e.target.blur(); } }}
+                  placeholder="e.g. Weekly Shop, Party Supplies..."
+                  className="w-full py-2 text-sm focus:outline-none bg-transparent"
+                  style={{ borderBottom: '1px solid #e7e5e4' }}
+                />
+                <p className="text-xs mt-2" style={{ color: '#a8a29e' }}>Give your list a name to easily identify it. Saved on this device only.</p>
+              </div>
+
+              {/* Share Code */}
+              <div className="rounded-2xl p-4 mb-6" style={{ backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                <label className="text-xs font-medium mb-2 block" style={{ color: '#78716c' }}>Share Code</label>
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-mono tracking-widest" style={{ color: '#292524' }}>{listId}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(listId);
+                      triggerHaptic('success');
+                    }}
+                    className="px-4 py-2 text-xs font-medium rounded-full transition-all active:scale-95"
+                    style={{ backgroundColor: '#f5f5f4', color: '#292524' }}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-xs mt-2" style={{ color: '#a8a29e' }}>Share this code with others so they can join your list.</p>
+              </div>
+
+              <button onClick={leaveList} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-transform" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
+                Leave this list
+              </button>
+            </>
+          )}
+
           {/* Reorder Tab */}
           {settingsTab === 'reorder' && (
             <>
@@ -614,7 +678,6 @@ export default function App() {
             <>
               <p className="text-sm mb-4" style={{ color: '#a8a29e' }}>Create your own categories for items that don't fit elsewhere.</p>
               
-              {/* Add new category */}
               {showAddCategory ? (
                 <div className="rounded-2xl p-4 mb-4 fade-in" style={{ backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                   <input
@@ -655,10 +718,9 @@ export default function App() {
                 </button>
               )}
 
-              {/* List custom categories */}
-              {categories.filter(c => !c.isDefault).length > 0 && (
+              {categories.filter(c => c.isDefault === false).length > 0 && (
                 <div className="rounded-2xl overflow-hidden mb-6" style={{ backgroundColor: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                  {categories.filter(c => !c.isDefault).map((cat, idx, arr) => (
+                  {categories.filter(c => c.isDefault === false).map((cat, idx, arr) => (
                     <div key={cat.id} className="flex items-center gap-4 px-4 py-4" style={{ borderBottom: idx < arr.length - 1 ? '1px solid #f5f5f4' : 'none' }}>
                       <span className="text-sm flex-1" style={{ color: '#292524' }}>{cat.name}</span>
                       <button
@@ -673,7 +735,7 @@ export default function App() {
                 </div>
               )}
 
-              {categories.filter(c => !c.isDefault).length === 0 && !showAddCategory && (
+              {categories.filter(c => c.isDefault === false).length === 0 && !showAddCategory && (
                 <div className="text-center py-8">
                   <div className="text-3xl mb-2">📦</div>
                   <p className="text-sm" style={{ color: '#a8a29e' }}>No custom categories yet</p>
@@ -681,10 +743,6 @@ export default function App() {
               )}
             </>
           )}
-
-          <button onClick={leaveList} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-transform mt-4" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
-            Leave this list
-          </button>
         </div>
       </div>
     );
@@ -761,20 +819,21 @@ export default function App() {
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
                 <div className="w-1 h-1 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
               </div>
-              <h1 className="text-lg font-medium tracking-tight" style={{ color: '#292524' }}>Breadcrumbs</h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ backgroundColor: '#f5f5f4' }}>
-                <span className={`w-1.5 h-1.5 rounded-full ${syncing ? 'sync-pulse' : ''}`} style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}></span>
-                <span className="text-xs font-mono" style={{ color: '#78716c' }}>{listId}</span>
+              <div>
+                {listName && <h1 className="text-lg font-medium tracking-tight" style={{ color: '#292524' }}>{listName}</h1>}
+                <div className="flex items-center gap-2">
+                  {!listName && <span className="text-lg font-medium tracking-tight" style={{ color: '#292524' }}>Breadcrumbs</span>}
+                  <span className={`text-xs font-mono ${listName ? '' : 'ml-0'}`} style={{ color: '#78716c' }}>{listId}</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${syncing ? 'sync-pulse' : ''}`} style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}></span>
+                </div>
               </div>
-              <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ backgroundColor: '#f5f5f4' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#78716c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              </button>
             </div>
+            <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ backgroundColor: '#f5f5f4' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#78716c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
           </div>
           {totalItems > 0 && (
             <div className="flex items-center gap-3">
