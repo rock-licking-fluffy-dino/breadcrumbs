@@ -265,6 +265,8 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
@@ -455,6 +457,12 @@ export default function App() {
 
   const leaveList = () => {
     triggerHaptic('light');
+    setShowLeaveConfirm(true);
+  };
+
+  const confirmLeaveList = () => {
+    triggerHaptic('light');
+    setShowLeaveConfirm(false);
     setShowSettings(false);
     setListId(null);
     setItems([]);
@@ -462,6 +470,13 @@ export default function App() {
     setListName('');
     setEditingListName('');
     localStorage.removeItem('breadcrumbs-current-list');
+  };
+
+  const clearAllItems = async () => {
+    triggerHaptic('success');
+    setItems([]);
+    await saveList([]);
+    setShowClearAllConfirm(false);
   };
 
   const startAdding = (categoryId) => {
@@ -581,18 +596,16 @@ export default function App() {
             <div className="w-16"></div>
           </div>
           
-          {/* Tabs */}
+          {/* Tabs - Consolidated to 2 */}
           <div className="flex px-5 gap-2 pb-3">
             {[
               { id: 'general', label: 'General' },
-              { id: 'reorder', label: 'Reorder' },
-              { id: 'visibility', label: 'Show/Hide' },
-              { id: 'custom', label: 'Custom' }
+              { id: 'categories', label: 'Categories' }
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => { setSettingsTab(tab.id); triggerHaptic('light'); }}
-                className="flex-1 py-2 text-xs font-medium rounded-full transition-all"
+                className="flex-1 py-2.5 text-sm font-medium rounded-full transition-all"
                 style={{
                   backgroundColor: settingsTab === tab.id ? YELLOW : theme.bgTertiary,
                   color: settingsTab === tab.id ? '#292524' : theme.text
@@ -608,10 +621,8 @@ export default function App() {
           {/* General Tab */}
           {settingsTab === 'general' && (
             <>
-              <h2 className="text-xs uppercase tracking-widest mb-4" style={{ color: theme.textSecondary }}>List Details</h2>
-              
               {/* List Name */}
-              <div className="rounded-2xl p-4 mb-4" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>List Name</label>
                 <input
                   ref={listNameInputRef}
@@ -624,11 +635,10 @@ export default function App() {
                   className="w-full py-2 text-sm focus:outline-none bg-transparent"
                   style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }}
                 />
-                <p className="text-xs mt-2" style={{ color: theme.textTertiary }}>Give your list a name to easily identify it. Saved on this device only.</p>
               </div>
 
               {/* Share Code */}
-              <div className="rounded-2xl p-4 mb-4" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>Share Code</label>
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-mono tracking-widest" style={{ color: theme.text }}>{listId}</span>
@@ -643,15 +653,14 @@ export default function App() {
                     Copy
                   </button>
                 </div>
-                <p className="text-xs mt-2" style={{ color: theme.textTertiary }}>Share this code with others so they can join your list.</p>
+                <p className="text-xs mt-2" style={{ color: theme.textTertiary }}>Share this code so others can join your list.</p>
               </div>
 
               {/* Dark Mode Toggle */}
               <div className="rounded-2xl p-4 mb-6" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <label className="text-sm font-medium block" style={{ color: theme.text }}>Dark Mode</label>
-                    <p className="text-xs mt-1" style={{ color: theme.textTertiary }}>Easier on the eyes in low light</p>
+                    <span className="text-sm font-medium" style={{ color: theme.text }}>Dark Mode</span>
                   </div>
                   <button
                     onClick={toggleDarkMode}
@@ -666,82 +675,32 @@ export default function App() {
                 </div>
               </div>
 
+              {/* Danger Zone */}
+              <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textTertiary }}>Danger Zone</h2>
+              
+              <button 
+                onClick={() => { triggerHaptic('light'); setShowClearAllConfirm(true); }}
+                disabled={items.length === 0}
+                className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-transform mb-3" 
+                style={{ 
+                  border: '1.5px solid #ef4444', 
+                  color: items.length === 0 ? theme.textTertiary : '#ef4444',
+                  opacity: items.length === 0 ? 0.5 : 1
+                }}
+              >
+                Clear all items {items.length > 0 && `(${items.length})`}
+              </button>
+
               <button onClick={leaveList} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-transform" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
                 Leave this list
               </button>
             </>
           )}
 
-          {/* Reorder Tab */}
-          {settingsTab === 'reorder' && (
+          {/* Categories Tab - Combined reorder, visibility, and custom */}
+          {settingsTab === 'categories' && (
             <>
-              <p className="text-sm mb-4" style={{ color: theme.textTertiary }}>Drag to reorder categories to match your store layout.</p>
-              <div className="rounded-2xl overflow-hidden mb-6" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
-                {categories.map((cat, idx) => (
-                  <div key={cat.id} draggable
-                    onDragStart={() => setDraggedIdx(idx)}
-                    onDragEnd={() => setDraggedIdx(null)}
-                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }}
-                    onDragLeave={(e) => e.currentTarget.classList.remove('drag-over')}
-                    onDrop={(e) => { e.currentTarget.classList.remove('drag-over'); if (draggedIdx !== null) moveCategory(draggedIdx, idx); }}
-                    className={`flex items-center gap-4 px-4 py-4 transition-all ${draggedIdx === idx ? 'dragging' : ''}`}
-                    style={{ borderBottom: idx < categories.length - 1 ? `1px solid ${theme.borderLight}` : 'none', opacity: hiddenCategories.includes(cat.id) ? 0.4 : 1 }}>
-                    <div className="drag-handle flex flex-col gap-1 py-1">
-                      {[0,1,2].map(i => (
-                        <div key={i} className="flex gap-0.5">
-                          <div className="w-1 h-1 rounded-full" style={{ backgroundColor: theme.textTertiary }}></div>
-                          <div className="w-1 h-1 rounded-full" style={{ backgroundColor: theme.textTertiary }}></div>
-                        </div>
-                      ))}
-                    </div>
-                    <span className="text-sm flex-1" style={{ color: theme.text }}>{cat.name}</span>
-                    {cat.isDefault === false && (
-                      <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#fefce8', color: '#a16207' }}>Custom</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Visibility Tab */}
-          {settingsTab === 'visibility' && (
-            <>
-              <p className="text-sm mb-4" style={{ color: theme.textTertiary }}>Toggle categories on or off. Hidden categories and their items won't appear in your list.</p>
-              <div className="rounded-2xl overflow-hidden mb-6" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
-                {categories.map((cat, idx) => {
-                  const isHidden = hiddenCategories.includes(cat.id);
-                  const itemCount = items.filter(i => i.category === cat.id).length;
-                  return (
-                    <div key={cat.id} className="flex items-center gap-4 px-4 py-4" style={{ borderBottom: idx < categories.length - 1 ? `1px solid ${theme.borderLight}` : 'none' }}>
-                      <span className="text-sm flex-1" style={{ color: isHidden ? theme.textTertiary : theme.text }}>
-                        {cat.name}
-                        {itemCount > 0 && !isHidden && (
-                          <span className="ml-2 text-xs" style={{ color: theme.textTertiary }}>({itemCount} items)</span>
-                        )}
-                      </span>
-                      <button
-                        onClick={() => toggleCategoryVisibility(cat.id)}
-                        className="w-12 h-7 rounded-full transition-all relative"
-                        style={{ backgroundColor: isHidden ? theme.border : YELLOW }}
-                      >
-                        <div
-                          className="absolute top-1 w-5 h-5 rounded-full transition-all shadow-sm"
-                          style={{ backgroundColor: '#fff', left: isHidden ? '4px' : 'calc(100% - 24px)' }}
-                        ></div>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-
-          {/* Custom Categories Tab */}
-          {settingsTab === 'custom' && (
-            <>
-              <p className="text-sm mb-4" style={{ color: theme.textTertiary }}>Create your own categories for items that don't fit elsewhere.</p>
-              
+              {/* Add Custom Category Button */}
               {showAddCategory ? (
                 <div className="rounded-2xl p-4 mb-4 fade-in" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                   <input
@@ -782,29 +741,95 @@ export default function App() {
                 </button>
               )}
 
-              {categories.filter(c => c.isDefault === false).length > 0 && (
-                <div className="rounded-2xl overflow-hidden mb-6" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
-                  {categories.filter(c => c.isDefault === false).map((cat, idx, arr) => (
-                    <div key={cat.id} className="flex items-center gap-4 px-4 py-4" style={{ borderBottom: idx < arr.length - 1 ? `1px solid ${theme.borderLight}` : 'none' }}>
-                      <span className="text-sm flex-1" style={{ color: theme.text }}>{cat.name}</span>
+              <p className="text-xs mb-3" style={{ color: theme.textTertiary }}>Use arrows to reorder. Toggle to show/hide.</p>
+
+              {/* Combined category list with arrows + toggle */}
+              <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+                {categories.map((cat, idx) => {
+                  const isHidden = hiddenCategories.includes(cat.id);
+                  const itemCount = items.filter(i => i.category === cat.id).length;
+                  const isCustom = cat.isDefault === false;
+                  const isFirst = idx === 0;
+                  const isLast = idx === categories.length - 1;
+                  
+                  return (
+                    <div 
+                      key={cat.id} 
+                      className="flex items-center gap-2 px-3 py-3 transition-all"
+                      style={{ 
+                        borderBottom: idx < categories.length - 1 ? `1px solid ${theme.borderLight}` : 'none',
+                        opacity: isHidden ? 0.5 : 1
+                      }}
+                    >
+                      {/* Up/Down arrows */}
+                      <div className="flex flex-col gap-0.5">
+                        <button
+                          onClick={() => { if (!isFirst) moveCategory(idx, idx - 1); }}
+                          disabled={isFirst}
+                          className="w-6 h-6 rounded flex items-center justify-center transition-all active:scale-90"
+                          style={{ 
+                            color: isFirst ? theme.border : theme.textSecondary,
+                            backgroundColor: 'transparent'
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 15l-6-6-6 6"/>
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => { if (!isLast) moveCategory(idx, idx + 1); }}
+                          disabled={isLast}
+                          className="w-6 h-6 rounded flex items-center justify-center transition-all active:scale-90"
+                          style={{ 
+                            color: isLast ? theme.border : theme.textSecondary,
+                            backgroundColor: 'transparent'
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M6 9l6 6 6-6"/>
+                          </svg>
+                        </button>
+                      </div>
+                      
+                      {/* Category name and info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm truncate" style={{ color: theme.text }}>{cat.name}</span>
+                          {isCustom && (
+                            <span className="text-xs px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: '#fefce8', color: '#a16207' }}>Custom</span>
+                          )}
+                        </div>
+                        {itemCount > 0 && !isHidden && (
+                          <span className="text-xs" style={{ color: theme.textTertiary }}>{itemCount} {itemCount === 1 ? 'item' : 'items'}</span>
+                        )}
+                      </div>
+
+                      {/* Delete button for custom categories */}
+                      {isCustom && (
+                        <button
+                          onClick={() => deleteCustomCategory(cat.id)}
+                          className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
+                          style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
+                        >
+                          <span className="text-sm">×</span>
+                        </button>
+                      )}
+
+                      {/* Visibility toggle */}
                       <button
-                        onClick={() => deleteCustomCategory(cat.id)}
-                        className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
-                        style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
+                        onClick={() => toggleCategoryVisibility(cat.id)}
+                        className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
+                        style={{ backgroundColor: isHidden ? theme.border : YELLOW }}
                       >
-                        <span className="text-lg">−</span>
+                        <div
+                          className="absolute top-0.5 w-5 h-5 rounded-full transition-all shadow-sm"
+                          style={{ backgroundColor: '#fff', left: isHidden ? '2px' : 'calc(100% - 22px)' }}
+                        ></div>
                       </button>
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {categories.filter(c => c.isDefault === false).length === 0 && !showAddCategory && (
-                <div className="text-center py-8">
-                  <div className="text-3xl mb-2">📦</div>
-                  <p className="text-sm" style={{ color: theme.textTertiary }}>No custom categories yet</p>
-                </div>
-              )}
+                  );
+                })}
+              </div>
             </>
           )}
         </div>
@@ -861,10 +886,53 @@ export default function App() {
           <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary }}>
             <div className="text-4xl mb-4">🧹</div>
             <h2 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>Clear completed items?</h2>
-            <p className="text-sm mb-6" style={{ color: theme.textSecondary }}>This will remove {checkedCount} ticked {checkedCount === 1 ? 'item' : 'items'} from your list.</p>
+            <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>
+              This will remove {checkedCount} ticked {checkedCount === 1 ? 'item' : 'items'} from the list.
+            </p>
+            <p className="text-xs mb-6 px-2 py-2 rounded-lg" style={{ backgroundColor: darkMode ? '#3f3f46' : '#fef3c7', color: darkMode ? '#fcd34d' : '#92400e' }}>
+              ⚠️ This affects everyone sharing this list
+            </p>
             <div className="flex gap-3">
               <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(false); }} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>Cancel</button>
               <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ backgroundColor: YELLOW, color: '#292524' }}>Clear</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showClearAllConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary }}>
+            <div className="text-4xl mb-4">🗑️</div>
+            <h2 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>Clear all items?</h2>
+            <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>
+              This will remove all {items.length} {items.length === 1 ? 'item' : 'items'} from the list — both ticked and unticked.
+            </p>
+            <p className="text-xs mb-6 px-2 py-2 rounded-lg" style={{ backgroundColor: darkMode ? '#3f3f46' : '#fef3c7', color: darkMode ? '#fcd34d' : '#92400e' }}>
+              ⚠️ This affects everyone sharing this list
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => { triggerHaptic('light'); setShowClearAllConfirm(false); }} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>Cancel</button>
+              <button onClick={clearAllItems} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ backgroundColor: '#ef4444', color: '#fff' }}>Clear All</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary }}>
+            <div className="text-4xl mb-4">👋</div>
+            <h2 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>Leave this list?</h2>
+            <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>
+              You'll be removed from this list on your device.
+            </p>
+            <p className="text-xs mb-6 px-3 py-2 rounded-lg" style={{ backgroundColor: darkMode ? '#3f3f46' : '#f0fdf4', color: darkMode ? '#86efac' : '#166534' }}>
+              💡 You can rejoin anytime with the code: <span className="font-mono font-medium">{listId}</span>
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => { triggerHaptic('light'); setShowLeaveConfirm(false); }} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>Stay</button>
+              <button onClick={confirmLeaveList} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ backgroundColor: '#ef4444', color: '#fff' }}>Leave</button>
             </div>
           </div>
         </div>
@@ -877,33 +945,37 @@ export default function App() {
       <div className="sticky top-0 z-40" style={{ backgroundColor: theme.bg, borderBottom: `1px solid ${theme.border}` }}>
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-3">
+            {/* Left side - Logo and title */}
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: YELLOW }}></div>
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
                 <div className="w-1 h-1 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
               </div>
-              <div>
-                <h1 className="text-lg font-medium tracking-tight" style={{ color: theme.text }}>
-                  {listName || 'Breadcrumbs'}
-                </h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <span 
-                    className="text-xs font-mono px-2 py-0.5 rounded-full" 
-                    style={{ backgroundColor: theme.codePillBg, color: theme.textSecondary }}
-                  >
-                    {listId}
-                  </span>
-                  <span className={`w-1.5 h-1.5 rounded-full ${syncing ? 'sync-pulse' : ''}`} style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}></span>
-                </div>
-              </div>
+              <h1 className="text-lg font-medium tracking-tight" style={{ color: theme.text }}>
+                {listName || 'Breadcrumbs'}
+              </h1>
             </div>
-            <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ backgroundColor: theme.bgTertiary }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
+            
+            {/* Right side - Code pill and settings */}
+            <div className="flex items-center gap-2">
+              <div 
+                className="flex items-center gap-2 px-2.5 py-1 rounded-full"
+                style={{ backgroundColor: theme.codePillBg }}
+              >
+                <span className="text-xs font-mono" style={{ color: theme.textSecondary }}>{listId}</span>
+                <span 
+                  className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${syncing ? 'sync-pulse' : ''}`} 
+                  style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}
+                ></span>
+              </div>
+              <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ backgroundColor: theme.bgTertiary }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
           </div>
           {totalItems > 0 && (
             <div className="flex items-center gap-3">
