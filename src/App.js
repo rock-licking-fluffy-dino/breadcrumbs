@@ -309,6 +309,7 @@ export default function App() {
   const [deletingRecipeId, setDeletingRecipeId] = useState(null);
   const [showCodePopup, setShowCodePopup] = useState(false);
   const [savingRecipe, setSavingRecipe] = useState(false);
+  const [editingRecipeId, setEditingRecipeId] = useState(null);
   
   const inputRef = useRef(null);
   const recipeInputRef = useRef(null);
@@ -709,22 +710,35 @@ export default function App() {
     setSavingRecipe(true);
     triggerHaptic('success');
     
-    const recipe = {
-      id: generateId(),
-      name: newRecipeName.trim(),
-      ingredients: newRecipeIngredients,
-      createdAt: Date.now()
-    };
+    let newRecipes;
     
-    const newRecipes = [...recipes, recipe];
+    if (editingRecipeId) {
+      // Update existing recipe
+      newRecipes = recipes.map(r => 
+        r.id === editingRecipeId 
+          ? { ...r, name: newRecipeName.trim(), ingredients: newRecipeIngredients }
+          : r
+      );
+    } else {
+      // Create new recipe
+      const recipe = {
+        id: generateId(),
+        name: newRecipeName.trim(),
+        ingredients: newRecipeIngredients,
+        createdAt: Date.now()
+      };
+      newRecipes = [...recipes, recipe];
+    }
+    
     setRecipes(newRecipes);
     await saveList(items, categories, newRecipes);
     
     setNewRecipeName('');
     setNewRecipeIngredients([]);
     setShowCreateRecipe(false);
+    setEditingRecipeId(null);
     setSavingRecipe(false);
-    showToastMessage('Recipe saved!');
+    showToastMessage(editingRecipeId ? 'Recipe updated!' : 'Recipe saved!');
   };
 
   const cancelCreateRecipe = () => {
@@ -733,6 +747,15 @@ export default function App() {
     setNewRecipeIngredients([]);
     setRecipeAddingTo(null);
     setShowCreateRecipe(false);
+    setEditingRecipeId(null);
+  };
+
+  const startEditRecipe = (recipe) => {
+    triggerHaptic('light');
+    setEditingRecipeId(recipe.id);
+    setNewRecipeName(recipe.name);
+    setNewRecipeIngredients([...recipe.ingredients]);
+    setShowCreateRecipe(true);
   };
 
   const addRecipeToList = async (recipe) => {
@@ -842,11 +865,13 @@ export default function App() {
         
         <div className="sticky top-0 z-40" style={{ backgroundColor: theme.bg, borderBottom: `1px solid ${theme.border}` }}>
           <div className="px-5 py-4 flex items-center justify-between">
-            <button onClick={() => { setShowRecipes(false); setShowCreateRecipe(false); }} className="text-sm font-medium flex items-center gap-2" style={{ color: theme.text }}>
+            <button onClick={() => { setShowRecipes(false); setShowCreateRecipe(false); setEditingRecipeId(null); setNewRecipeName(''); setNewRecipeIngredients([]); }} className="text-sm font-medium flex items-center gap-2" style={{ color: theme.text }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
               Back
             </button>
-            <h1 className="text-base font-medium" style={{ color: theme.text }}>Recipes</h1>
+            <h1 className="text-base font-medium" style={{ color: theme.text }}>
+              {showCreateRecipe ? (editingRecipeId ? 'Edit Recipe' : 'New Recipe') : 'Recipes'}
+            </h1>
             <div className="w-16"></div>
           </div>
         </div>
@@ -972,11 +997,29 @@ export default function App() {
                       className={`rounded-2xl p-4 ${addingRecipeId === recipe.id ? 'recipe-pop' : ''}`}
                       style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium" style={{ color: theme.text }}>{recipe.name}</h3>
-                        <span className="text-xs" style={{ color: theme.textSecondary }}>{recipe.ingredients.length} items</span>
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="text-sm font-medium" style={{ color: theme.text }}>{recipe.name}</h3>
+                          <span className="text-xs" style={{ color: theme.textSecondary }}>{recipe.ingredients.length} items</span>
+                        </div>
+                        <button
+                          onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }}
+                          className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
+                          style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                          </svg>
+                        </button>
                       </div>
                       <div className="flex gap-2">
+                        <button
+                          onClick={() => startEditRecipe(recipe)}
+                          className="flex-1 py-2 text-sm font-medium rounded-full transition-all active:scale-95"
+                          style={{ border: `1.5px solid ${theme.border}`, color: theme.text }}
+                        >
+                          Edit
+                        </button>
                         <button
                           onClick={() => addRecipeToList(recipe)}
                           className="flex-1 py-2 text-sm font-medium rounded-full transition-all active:scale-95"
@@ -985,13 +1028,6 @@ export default function App() {
                           Add to List
                         </button>
                       </div>
-                      <button
-                        onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }}
-                        className="w-full mt-2 py-2 text-sm font-medium rounded-full transition-all active:scale-95"
-                        style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}
-                      >
-                        Delete Recipe
-                      </button>
                     </div>
                   ))}
                 </div>
@@ -1022,7 +1058,7 @@ export default function App() {
                   opacity: (newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe) ? 1 : 0.5
                 }}
               >
-                {savingRecipe ? 'Saving...' : `Save Recipe (${newRecipeIngredients.length} items)`}
+                {savingRecipe ? 'Saving...' : (editingRecipeId ? `Update Recipe (${newRecipeIngredients.length} items)` : `Save Recipe (${newRecipeIngredients.length} items)`)}
               </button>
             </div>
           </div>
