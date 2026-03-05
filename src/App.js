@@ -17,19 +17,24 @@ const db = getFirestore(app);
 
 const DEFAULT_CATEGORIES = [
   { id: 'fruit-veg', name: 'Fruits & Vegetables', isDefault: true },
-  { id: 'spices', name: 'Spices', isDefault: true },
-  { id: 'rice-pasta', name: 'Rice & Pasta', isDefault: true },
-  { id: 'meat', name: 'Meat', isDefault: true },
-  { id: 'dairy', name: 'Dairy', isDefault: true },
-  { id: 'snacks', name: 'Snacks', isDefault: true },
-  { id: 'canned', name: 'Canned Items', isDefault: true },
-  { id: 'household', name: 'Household', isDefault: true },
-  { id: 'healthcare', name: 'Healthcare', isDefault: true },
-  { id: 'frozen', name: 'Frozen', isDefault: true },
-  { id: 'nuts-jams', name: 'Nuts & Jams', isDefault: true },
-  { id: 'cereals', name: 'Cereals', isDefault: true },
+  { id: 'meat-poultry', name: 'Meat & Poultry', isDefault: true },
+  { id: 'seafood', name: 'Seafood', isDefault: true },
+  { id: 'dairy-eggs', name: 'Dairy & Eggs', isDefault: true },
   { id: 'bakery', name: 'Bakery', isDefault: true },
+  { id: 'deli-chilled', name: 'Deli & Chilled', isDefault: true },
+  { id: 'frozen', name: 'Frozen', isDefault: true },
+  { id: 'breakfast-cereals', name: 'Breakfast & Cereals', isDefault: true },
+  { id: 'pasta-rice-grains', name: 'Pasta, Rice & Grains', isDefault: true },
+  { id: 'canned-goods', name: 'Canned Goods', isDefault: true },
+  { id: 'sauces-condiments', name: 'Sauces & Condiments', isDefault: true },
+  { id: 'spices-seasonings', name: 'Spices & Seasonings', isDefault: true },
+  { id: 'snacks-confectionery', name: 'Snacks & Confectionery', isDefault: true },
+  { id: 'beverages', name: 'Beverages', isDefault: true },
   { id: 'alcohol', name: 'Alcohol', isDefault: true },
+  { id: 'household', name: 'Household', isDefault: true },
+  { id: 'personal-care-health', name: 'Personal Care & Health', isDefault: true },
+  { id: 'baby', name: 'Baby', isDefault: true },
+  { id: 'pet-supplies', name: 'Pet Supplies', isDefault: true },
   { id: 'other', name: 'Other', isDefault: true },
 ];
 
@@ -84,7 +89,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
       description: 'Your shopping list is organised by store section — just like a real supermarket. Shop faster and never miss an aisle.',
       visual: (
         <div className="flex flex-col gap-2 mt-4">
-          {['🥬 Fruits & Veg', '🧀 Dairy', '🧊 Frozen'].map((cat, i) => (
+          {['🥬 Fruits & Veg', '🧀 Dairy & Eggs', '🧊 Frozen'].map((cat, i) => (
             <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: theme.bgTertiary }}>
               <span className="text-sm" style={{ color: theme.text }}>{cat}</span>
             </div>
@@ -134,9 +139,26 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
       )
     },
     {
+      icon: '📖',
+      title: 'Save Your Recipes',
+      description: 'Create recipes with ingredients and add them all to your list in one tap. Perfect for weekly meal planning.',
+      visual: (
+        <div className="mt-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: theme.bgTertiary }}>
+            <span className="text-sm" style={{ color: theme.text }}>Sunday Roast</span>
+            <span className="text-xs" style={{ color: theme.textSecondary }}>8 items</span>
+          </div>
+          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: theme.bgTertiary }}>
+            <span className="text-sm" style={{ color: theme.text }}>Pasta Bolognese</span>
+            <span className="text-xs" style={{ color: theme.textSecondary }}>6 items</span>
+          </div>
+        </div>
+      )
+    },
+    {
       icon: '🎛️',
       title: 'Make It Yours',
-      description: 'Name your list, reorder categories to match your store, hide ones you don\'t need, or create custom categories.',
+      description: 'Name your list, reorder categories, hide ones you don\'t need, create custom categories, and toggle dark mode.',
       visual: (
         <div className="mt-4 flex flex-col gap-2">
           <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: '#fefce8', border: `1px solid ${YELLOW}` }}>
@@ -144,21 +166,8 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
             <span className="text-xs" style={{ color: '#78716c' }}>ABC123</span>
           </div>
           <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: theme.bgTertiary }}>
-            <span className="text-sm" style={{ color: theme.text }}>Pet Supplies</span>
-            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: '#fefce8', color: '#a16207' }}>Custom</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: theme.bgTertiary }}>
-            <div className="flex flex-col gap-0.5">
-              <div className="flex gap-0.5">
-                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: theme.textTertiary }}></div>
-                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: theme.textTertiary }}></div>
-              </div>
-              <div className="flex gap-0.5">
-                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: theme.textTertiary }}></div>
-                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: theme.textTertiary }}></div>
-              </div>
-            </div>
-            <span className="text-sm" style={{ color: theme.text }}>Dairy</span>
+            <span className="text-sm" style={{ color: theme.text }}>Dark Mode</span>
+            <div className="w-8 h-4 rounded-full" style={{ backgroundColor: YELLOW }}></div>
           </div>
         </div>
       )
@@ -166,7 +175,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
     {
       icon: '🎉',
       title: "You're All Set!",
-      description: 'Your list is ready. Tap + to add items, or head to Settings to name your list and customise categories.',
+      description: 'Your list is ready. Tap + to add items, or tap the recipe book to save your favourite meals.',
       visual: (
         <div className="mt-6 flex justify-center">
           <div className="flex items-center gap-2">
@@ -238,6 +247,18 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
   );
 };
 
+// Toast Component
+const Toast = ({ message, visible, theme }) => {
+  if (!visible) return null;
+  return (
+    <div className="fixed top-20 left-4 right-4 flex justify-center z-50 fade-in">
+      <div className="px-4 py-3 rounded-full shadow-lg text-sm font-medium" style={{ backgroundColor: theme.text, color: theme.bg }}>
+        {message}
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [listId, setListId] = useState(() => {
     const saved = localStorage.getItem('breadcrumbs-current-list');
@@ -258,7 +279,6 @@ export default function App() {
     const saved = localStorage.getItem('breadcrumbs-hidden-categories');
     return saved ? JSON.parse(saved) : [];
   });
-  const [draggedIdx, setDraggedIdx] = useState(null);
   const [createAnim, setCreateAnim] = useState(false);
   const [checkingItems, setCheckingItems] = useState(new Set());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -273,10 +293,32 @@ export default function App() {
     const saved = localStorage.getItem('breadcrumbs-dark-mode');
     return saved ? JSON.parse(saved) : false;
   });
+  const [editingQuantityId, setEditingQuantityId] = useState(null);
+  
+  // Recipe state
+  const [recipes, setRecipes] = useState([]);
+  const [showRecipes, setShowRecipes] = useState(false);
+  const [showCreateRecipe, setShowCreateRecipe] = useState(false);
+  const [newRecipeName, setNewRecipeName] = useState('');
+  const [newRecipeIngredients, setNewRecipeIngredients] = useState([]);
+  const [recipeAddingTo, setRecipeAddingTo] = useState(null);
+  const [newRecipeItemText, setNewRecipeItemText] = useState('');
+  const [toastMessage, setToastMessage] = useState('');
+  const [showToast, setShowToast] = useState(false);
+  const [addingRecipeId, setAddingRecipeId] = useState(null);
+  
   const inputRef = useRef(null);
+  const recipeInputRef = useRef(null);
   const listNameInputRef = useRef(null);
 
   const theme = darkMode ? themes.dark : themes.light;
+
+  // Show toast helper
+  const showToastMessage = (message) => {
+    setToastMessage(message);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 2500);
+  };
 
   // Save dark mode preference
   useEffect(() => {
@@ -339,6 +381,7 @@ export default function App() {
           const data = docSnap.data();
           setItems(data.items || []);
           if (data.categories) setCategories(data.categories);
+          if (data.recipes) setRecipes(data.recipes);
         }
         setSyncing(false);
       },
@@ -350,18 +393,19 @@ export default function App() {
     return () => unsubscribe();
   }, [listId]);
 
-  const saveList = useCallback(async (newItems, newCategories = categories) => {
+  const saveList = useCallback(async (newItems, newCategories = categories, newRecipes = recipes) => {
     if (!listId) return;
     try {
       await setDoc(doc(db, 'lists', listId), {
         items: newItems,
         categories: newCategories,
+        recipes: newRecipes,
         updatedAt: new Date().toISOString()
       });
     } catch (error) {
       console.error('Error saving list:', error);
     }
-  }, [listId, categories]);
+  }, [listId, categories, recipes]);
 
   const saveHiddenCategories = (hidden) => {
     localStorage.setItem('breadcrumbs-hidden-categories', JSON.stringify(hidden));
@@ -411,6 +455,10 @@ export default function App() {
     if (addingTo && inputRef.current) inputRef.current.focus();
   }, [addingTo]);
 
+  useEffect(() => {
+    if (recipeAddingTo && recipeInputRef.current) recipeInputRef.current.focus();
+  }, [recipeAddingTo]);
+
   const createNewList = async () => {
     setCreateAnim(true);
     triggerHaptic('success');
@@ -419,11 +467,13 @@ export default function App() {
       setListId(code);
       setItems([]);
       setCategories(DEFAULT_CATEGORIES);
+      setRecipes([]);
       setListName('');
       setEditingListName('');
       await setDoc(doc(db, 'lists', code), {
         items: [],
         categories: DEFAULT_CATEGORIES,
+        recipes: [],
         updatedAt: new Date().toISOString()
       });
       localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
@@ -443,6 +493,7 @@ export default function App() {
         setListId(code);
         setItems(data.items || []);
         if (data.categories) setCategories(data.categories);
+        if (data.recipes) setRecipes(data.recipes);
         setJoinCode('');
         localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
         checkOnboarding();
@@ -461,6 +512,7 @@ export default function App() {
     setListId(null);
     setItems([]);
     setCategories(DEFAULT_CATEGORIES);
+    setRecipes([]);
     setListName('');
     setEditingListName('');
     localStorage.removeItem('breadcrumbs-current-list');
@@ -482,8 +534,35 @@ export default function App() {
   const addItem = async () => {
     if (!newItemText.trim() || !addingTo) return;
     triggerHaptic('success');
-    const item = { id: generateId(), name: newItemText.trim(), category: addingTo, checked: false, addedAt: Date.now() };
-    const newItems = [...items, item];
+    
+    // Check for duplicate (same name and category)
+    const existingItem = items.find(i => 
+      i.name.toLowerCase() === newItemText.trim().toLowerCase() && 
+      i.category === addingTo &&
+      !i.checked
+    );
+    
+    let newItems;
+    if (existingItem) {
+      // Increase quantity
+      newItems = items.map(i => 
+        i.id === existingItem.id 
+          ? { ...i, quantity: (i.quantity || 1) + 1 }
+          : i
+      );
+    } else {
+      // Add new item
+      const item = { 
+        id: generateId(), 
+        name: newItemText.trim(), 
+        category: addingTo, 
+        checked: false, 
+        quantity: 1,
+        addedAt: Date.now() 
+      };
+      newItems = [...items, item];
+    }
+    
     setItems(newItems);
     setNewItemText('');
     await saveList(newItems);
@@ -517,6 +596,26 @@ export default function App() {
     await saveList(newItems);
   };
 
+  const updateQuantity = async (id, delta) => {
+    triggerHaptic('light');
+    const item = items.find(i => i.id === id);
+    const newQuantity = (item.quantity || 1) + delta;
+    
+    if (newQuantity <= 0) {
+      // Delete item if quantity reaches 0
+      const newItems = items.filter(i => i.id !== id);
+      setItems(newItems);
+      setEditingQuantityId(null);
+      await saveList(newItems);
+    } else {
+      const newItems = items.map(i => 
+        i.id === id ? { ...i, quantity: newQuantity } : i
+      );
+      setItems(newItems);
+      await saveList(newItems);
+    }
+  };
+
   const startEdit = (item) => { setEditingId(item.id); setEditText(item.name); };
 
   const saveEdit = async () => {
@@ -542,6 +641,145 @@ export default function App() {
     setDarkMode(!darkMode);
   };
 
+  // Recipe functions
+  const startRecipeAdding = (categoryId) => {
+    triggerHaptic('light');
+    setRecipeAddingTo(categoryId);
+    setNewRecipeItemText('');
+  };
+
+  const addRecipeIngredient = () => {
+    if (!newRecipeItemText.trim() || !recipeAddingTo) return;
+    triggerHaptic('success');
+    
+    // Check for duplicate in current recipe
+    const existingIdx = newRecipeIngredients.findIndex(i => 
+      i.name.toLowerCase() === newRecipeItemText.trim().toLowerCase() && 
+      i.category === recipeAddingTo
+    );
+    
+    if (existingIdx >= 0) {
+      // Increase quantity
+      const updated = [...newRecipeIngredients];
+      updated[existingIdx] = { ...updated[existingIdx], quantity: (updated[existingIdx].quantity || 1) + 1 };
+      setNewRecipeIngredients(updated);
+    } else {
+      const ingredient = {
+        id: generateId(),
+        name: newRecipeItemText.trim(),
+        category: recipeAddingTo,
+        quantity: 1
+      };
+      setNewRecipeIngredients([...newRecipeIngredients, ingredient]);
+    }
+    setNewRecipeItemText('');
+  };
+
+  const removeRecipeIngredient = (id) => {
+    triggerHaptic('light');
+    setNewRecipeIngredients(newRecipeIngredients.filter(i => i.id !== id));
+  };
+
+  const updateRecipeIngredientQuantity = (id, delta) => {
+    triggerHaptic('light');
+    const ingredient = newRecipeIngredients.find(i => i.id === id);
+    const newQuantity = (ingredient.quantity || 1) + delta;
+    
+    if (newQuantity <= 0) {
+      setNewRecipeIngredients(newRecipeIngredients.filter(i => i.id !== id));
+    } else {
+      setNewRecipeIngredients(newRecipeIngredients.map(i => 
+        i.id === id ? { ...i, quantity: newQuantity } : i
+      ));
+    }
+  };
+
+  const cancelRecipeAdding = () => {
+    triggerHaptic('light');
+    setRecipeAddingTo(null);
+    setNewRecipeItemText('');
+  };
+
+  const saveRecipe = async () => {
+    if (!newRecipeName.trim() || newRecipeIngredients.length === 0) return;
+    triggerHaptic('success');
+    
+    const recipe = {
+      id: generateId(),
+      name: newRecipeName.trim(),
+      ingredients: newRecipeIngredients,
+      createdAt: Date.now()
+    };
+    
+    const newRecipes = [...recipes, recipe];
+    setRecipes(newRecipes);
+    await saveList(items, categories, newRecipes);
+    
+    setNewRecipeName('');
+    setNewRecipeIngredients([]);
+    setShowCreateRecipe(false);
+    showToastMessage('Recipe saved!');
+  };
+
+  const cancelCreateRecipe = () => {
+    triggerHaptic('light');
+    setNewRecipeName('');
+    setNewRecipeIngredients([]);
+    setRecipeAddingTo(null);
+    setShowCreateRecipe(false);
+  };
+
+  const addRecipeToList = async (recipe) => {
+    triggerHaptic('success');
+    setAddingRecipeId(recipe.id);
+    
+    let newItems = [...items];
+    let addedCount = 0;
+    
+    for (const ingredient of recipe.ingredients) {
+      const existingItem = newItems.find(i => 
+        i.name.toLowerCase() === ingredient.name.toLowerCase() && 
+        i.category === ingredient.category &&
+        !i.checked
+      );
+      
+      if (existingItem) {
+        // Increase quantity
+        newItems = newItems.map(i => 
+          i.id === existingItem.id 
+            ? { ...i, quantity: (i.quantity || 1) + (ingredient.quantity || 1) }
+            : i
+        );
+      } else {
+        // Add new item
+        newItems.push({
+          id: generateId(),
+          name: ingredient.name,
+          category: ingredient.category,
+          checked: false,
+          quantity: ingredient.quantity || 1,
+          addedAt: Date.now()
+        });
+      }
+      addedCount += ingredient.quantity || 1;
+    }
+    
+    setItems(newItems);
+    await saveList(newItems);
+    
+    setTimeout(() => {
+      setAddingRecipeId(null);
+      showToastMessage(`Added ${recipe.ingredients.length} items to your list`);
+    }, 300);
+  };
+
+  const deleteRecipe = async (recipeId) => {
+    triggerHaptic('light');
+    const newRecipes = recipes.filter(r => r.id !== recipeId);
+    setRecipes(newRecipes);
+    await saveList(items, categories, newRecipes);
+  };
+
   const totalItems = items.length;
   const checkedCount = items.filter(i => i.checked).length;
 
@@ -554,6 +792,11 @@ export default function App() {
       50% { transform: scale(1.02); background-color: ${YELLOW}; }
       100% { transform: scale(1); background-color: ${YELLOW}; }
     }
+    @keyframes recipePop {
+      0% { transform: scale(1); }
+      50% { transform: scale(0.95); }
+      100% { transform: scale(1); }
+    }
     @keyframes checkPop { 0% { transform: scale(1); } 25% { transform: scale(1.3); } 50% { transform: scale(0.95); } 75% { transform: scale(1.1); } 100% { transform: scale(1); } }
     @keyframes fillCheck {
       0% { background-color: transparent; border-color: #d6d3d1; }
@@ -564,16 +807,196 @@ export default function App() {
     .fade-in { animation: fadeIn 0.2s ease-out; }
     .sync-pulse { animation: pulse 1.5s ease-in-out infinite; }
     .btn-pop { animation: buttonPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    .recipe-pop { animation: recipePop 0.3s ease-out; }
     .check-pop { animation: checkPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     .fill-check { animation: fillCheck 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     .draw-check { stroke-dasharray: 24; stroke-dashoffset: 24; animation: drawCheck 0.3s ease-out 0.15s forwards; }
     .item-row { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     input { font-size: 16px !important; }
-    .drag-handle { cursor: grab; }
-    .drag-handle:active { cursor: grabbing; }
-    .dragging { opacity: 0.5; }
-    .drag-over { background-color: ${darkMode ? '#3f3f46' : '#fefce8'} !important; }
   `;
+
+  // Recipes Screen
+  if (showRecipes) {
+    return (
+      <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: theme.bg }}>
+        <style>{styles}</style>
+        <Toast message={toastMessage} visible={showToast} theme={theme} />
+        
+        <div className="sticky top-0 z-40" style={{ backgroundColor: theme.bg, borderBottom: `1px solid ${theme.border}` }}>
+          <div className="px-5 py-4 flex items-center justify-between">
+            <button onClick={() => { setShowRecipes(false); setShowCreateRecipe(false); }} className="text-sm font-medium flex items-center gap-2" style={{ color: theme.text }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+              Back
+            </button>
+            <h1 className="text-base font-medium" style={{ color: theme.text }}>Recipes</h1>
+            <div className="w-16"></div>
+          </div>
+        </div>
+
+        <div className="px-5 py-6">
+          {showCreateRecipe ? (
+            // Create Recipe Form
+            <div className="fade-in">
+              <div className="rounded-2xl p-4 mb-4" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+                <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>Recipe Name</label>
+                <input
+                  type="text"
+                  value={newRecipeName}
+                  onChange={(e) => setNewRecipeName(e.target.value)}
+                  placeholder="e.g. Sunday Roast, Pasta Bolognese..."
+                  className="w-full py-2 text-sm focus:outline-none bg-transparent"
+                  style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }}
+                  autoFocus
+                />
+              </div>
+
+              <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textSecondary }}>Ingredients</h2>
+              
+              {/* Category-based ingredient adding */}
+              {visibleCategories.map(category => {
+                const categoryIngredients = newRecipeIngredients.filter(i => i.category === category.id);
+                const hasIngredients = categoryIngredients.length > 0;
+                const isAdding = recipeAddingTo === category.id;
+                
+                return (
+                  <div key={category.id} className="mb-3">
+                    <div className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all" style={{ backgroundColor: hasIngredients ? theme.bgSecondary : 'transparent', boxShadow: hasIngredients ? theme.cardShadow : 'none' }}>
+                      <span className="text-sm font-medium" style={{ color: hasIngredients ? theme.text : theme.textTertiary }}>
+                        {category.name}
+                        {hasIngredients && <span className="ml-2 font-normal" style={{ color: theme.textTertiary }}>{categoryIngredients.length}</span>}
+                      </span>
+                      <button onClick={() => isAdding ? cancelRecipeAdding() : startRecipeAdding(category.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90" style={{ backgroundColor: isAdding ? theme.text : theme.bgTertiary, color: isAdding ? theme.bg : theme.textSecondary }}>
+                        <span className="text-lg leading-none transition-transform duration-200" style={{ transform: isAdding ? 'rotate(45deg)' : 'none' }}>+</span>
+                      </button>
+                    </div>
+                    
+                    {isAdding && (
+                      <div className="mt-1 ml-4 mr-4 fade-in">
+                        <div className="flex items-center gap-3">
+                          <input 
+                            ref={recipeInputRef}
+                            type="text" 
+                            value={newRecipeItemText} 
+                            onChange={(e) => setNewRecipeItemText(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') addRecipeIngredient(); if (e.key === 'Escape') cancelRecipeAdding(); }}
+                            placeholder={`Add to ${category.name}...`}
+                            className="flex-1 py-2 text-sm focus:outline-none bg-transparent"
+                            style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }} 
+                          />
+                          <button onClick={addRecipeIngredient} disabled={!newRecipeItemText.trim()}
+                            className="px-4 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95"
+                            style={{ backgroundColor: newRecipeItemText.trim() ? YELLOW : 'transparent', color: '#292524', opacity: newRecipeItemText.trim() ? 1 : 0.3 }}>
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {hasIngredients && (
+                      <div className="mt-1 ml-4 mr-4">
+                        {categoryIngredients.map(ingredient => (
+                          <div key={ingredient.id} className="flex items-center gap-3 py-3 fade-in" style={{ borderBottom: `1px solid ${theme.borderLight}` }}>
+                            <span className="flex-1 text-sm" style={{ color: theme.text }}>
+                              {ingredient.name}
+                            </span>
+                            {(ingredient.quantity || 1) > 1 && (
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: YELLOW, color: '#292524' }}>
+                                ×{ingredient.quantity}
+                              </span>
+                            )}
+                            <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, 1)} className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: theme.bgTertiary, color: theme.text }}>
+                              <span className="text-sm">+</span>
+                            </button>
+                            <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, -1)} className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: theme.bgTertiary, color: theme.text }}>
+                              <span className="text-sm">−</span>
+                            </button>
+                            <button onClick={() => removeRecipeIngredient(ingredient.id)} className="w-7 h-7 rounded-full flex items-center justify-center" style={{ color: '#ef4444' }}>
+                              <span className="text-sm">×</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Save/Cancel buttons */}
+              <div className="flex gap-3 mt-6">
+                <button onClick={cancelCreateRecipe} className="flex-1 py-3 text-sm font-medium rounded-full" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>
+                  Cancel
+                </button>
+                <button 
+                  onClick={saveRecipe} 
+                  disabled={!newRecipeName.trim() || newRecipeIngredients.length === 0}
+                  className="flex-1 py-3 text-sm font-medium rounded-full transition-all"
+                  style={{ 
+                    backgroundColor: (newRecipeName.trim() && newRecipeIngredients.length > 0) ? YELLOW : theme.border, 
+                    color: '#292524',
+                    opacity: (newRecipeName.trim() && newRecipeIngredients.length > 0) ? 1 : 0.5
+                  }}
+                >
+                  Save Recipe
+                </button>
+              </div>
+            </div>
+          ) : (
+            // Recipe List
+            <>
+              <button
+                onClick={() => setShowCreateRecipe(true)}
+                className="w-full py-3 text-sm font-medium rounded-full mb-6 transition-all active:scale-[0.98]"
+                style={{ border: `1.5px dashed ${YELLOW}`, color: theme.text }}
+              >
+                📖 Create New Recipe
+              </button>
+
+              {recipes.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-5xl mb-4">📖</div>
+                  <h3 className="text-lg font-medium mb-2" style={{ color: theme.text }}>No recipes yet</h3>
+                  <p className="text-sm" style={{ color: theme.textSecondary }}>
+                    Save your favourite meals and add all ingredients to your list in one tap!
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recipes.map(recipe => (
+                    <div 
+                      key={recipe.id} 
+                      className={`rounded-2xl p-4 ${addingRecipeId === recipe.id ? 'recipe-pop' : ''}`}
+                      style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-medium" style={{ color: theme.text }}>{recipe.name}</h3>
+                        <span className="text-xs" style={{ color: theme.textSecondary }}>{recipe.ingredients.length} items</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => addRecipeToList(recipe)}
+                          className="flex-1 py-2 text-sm font-medium rounded-full transition-all active:scale-95"
+                          style={{ backgroundColor: YELLOW, color: '#292524' }}
+                        >
+                          Add to List
+                        </button>
+                        <button
+                          onClick={() => deleteRecipe(recipe.id)}
+                          className="px-4 py-2 text-sm font-medium rounded-full transition-all active:scale-95"
+                          style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // Settings Page
   if (showSettings) {
@@ -874,6 +1297,8 @@ export default function App() {
     <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: theme.bg }}>
       <style>{styles}</style>
       
+      <Toast message={toastMessage} visible={showToast} theme={theme} />
+      
       {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} theme={theme} />}
       
       {showClearConfirm && (
@@ -952,7 +1377,7 @@ export default function App() {
               </h1>
             </div>
             
-            {/* Right side - Code pill and settings */}
+            {/* Right side - Code pill, recipe button, and settings */}
             <div className="flex items-center gap-2">
               <div 
                 className="flex items-center gap-2 px-2.5 py-1 rounded-full"
@@ -964,6 +1389,16 @@ export default function App() {
                   style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}
                 ></span>
               </div>
+              <button 
+                onClick={() => setShowRecipes(true)} 
+                className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" 
+                style={{ backgroundColor: YELLOW }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+              </button>
               <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ backgroundColor: theme.bgTertiary }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
@@ -1020,6 +1455,9 @@ export default function App() {
                 <div className="mt-1 ml-4 mr-4">
                   {categoryItems.map(item => {
                     const isChecking = checkingItems.has(item.id);
+                    const isEditingQty = editingQuantityId === item.id;
+                    const quantity = item.quantity || 1;
+                    
                     return (
                       <div key={item.id} className="flex items-center gap-3 py-3 item-row fade-in" style={{ borderBottom: `1px solid ${theme.borderLight}`, opacity: item.checked ? 0.5 : 1, transition: 'opacity 0.3s ease' }}>
                         <button onClick={() => toggleItem(item.id)}
@@ -1042,9 +1480,51 @@ export default function App() {
                             {item.name}
                           </span>
                         )}
-                        <button onClick={() => deleteItem(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90" style={{ color: theme.textTertiary }}>
-                          <span className="text-lg">−</span>
-                        </button>
+                        
+                        {/* Quantity badge */}
+                        {quantity > 1 && !isEditingQty && (
+                          <button 
+                            onClick={() => setEditingQuantityId(item.id)}
+                            className="text-xs font-medium px-2 py-0.5 rounded-full transition-all active:scale-95"
+                            style={{ backgroundColor: YELLOW, color: '#292524' }}
+                          >
+                            ×{quantity}
+                          </button>
+                        )}
+                        
+                        {/* Quantity controls */}
+                        {isEditingQty && (
+                          <div className="flex items-center gap-1 fade-in">
+                            <button 
+                              onClick={() => updateQuantity(item.id, -1)}
+                              className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90"
+                              style={{ backgroundColor: theme.bgTertiary, color: theme.text }}
+                            >
+                              <span className="text-sm">−</span>
+                            </button>
+                            <span className="text-sm font-medium w-6 text-center" style={{ color: theme.text }}>{quantity}</span>
+                            <button 
+                              onClick={() => updateQuantity(item.id, 1)}
+                              className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90"
+                              style={{ backgroundColor: theme.bgTertiary, color: theme.text }}
+                            >
+                              <span className="text-sm">+</span>
+                            </button>
+                            <button 
+                              onClick={() => setEditingQuantityId(null)}
+                              className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90 ml-1"
+                              style={{ backgroundColor: YELLOW, color: '#292524' }}
+                            >
+                              <span className="text-xs">✓</span>
+                            </button>
+                          </div>
+                        )}
+                        
+                        {!isEditingQty && (
+                          <button onClick={() => deleteItem(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90" style={{ color: theme.textTertiary }}>
+                            <span className="text-lg">−</span>
+                          </button>
+                        )}
                       </div>
                     );
                   })}
