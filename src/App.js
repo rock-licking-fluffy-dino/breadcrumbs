@@ -307,6 +307,7 @@ export default function App() {
   const [showToast, setShowToast] = useState(false);
   const [addingRecipeId, setAddingRecipeId] = useState(null);
   const [deletingRecipeId, setDeletingRecipeId] = useState(null);
+  const [showCodePopup, setShowCodePopup] = useState(false);
   
   const inputRef = useRef(null);
   const recipeInputRef = useRef(null);
@@ -837,7 +838,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="px-5 py-6">
+        <div className="px-5 py-6 pb-28">
           {showCreateRecipe ? (
             // Create Recipe Form
             <div className="fade-in">
@@ -903,18 +904,24 @@ export default function App() {
                             <span className="flex-1 text-sm" style={{ color: theme.text }}>
                               {ingredient.name}
                             </span>
-                            {(ingredient.quantity || 1) > 1 && (
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: YELLOW, color: '#292524' }}>
-                                ×{ingredient.quantity}
-                              </span>
-                            )}
-                            <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, 1)} className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: theme.bgTertiary, color: theme.text }}>
-                              <span className="text-sm">+</span>
-                            </button>
-                            <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, -1)} className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: theme.bgTertiary, color: theme.text }}>
+                            <button 
+                              onClick={() => updateRecipeIngredientQuantity(ingredient.id, -1)}
+                              className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90"
+                              style={{ backgroundColor: theme.bgTertiary, color: theme.text }}
+                            >
                               <span className="text-sm">−</span>
                             </button>
-                            <button onClick={() => removeRecipeIngredient(ingredient.id)} className="w-7 h-7 rounded-full flex items-center justify-center" style={{ color: '#ef4444' }}>
+                            <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>
+                              ×{ingredient.quantity || 1}
+                            </span>
+                            <button 
+                              onClick={() => updateRecipeIngredientQuantity(ingredient.id, 1)}
+                              className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90"
+                              style={{ backgroundColor: theme.bgTertiary, color: theme.text }}
+                            >
+                              <span className="text-sm">+</span>
+                            </button>
+                            <button onClick={() => removeRecipeIngredient(ingredient.id)} className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90" style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}>
                               <span className="text-sm">×</span>
                             </button>
                           </div>
@@ -924,25 +931,6 @@ export default function App() {
                   </div>
                 );
               })}
-
-              {/* Save/Cancel buttons */}
-              <div className="flex gap-3 mt-6">
-                <button onClick={cancelCreateRecipe} className="flex-1 py-3 text-sm font-medium rounded-full" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>
-                  Cancel
-                </button>
-                <button 
-                  onClick={saveRecipe} 
-                  disabled={!newRecipeName.trim() || newRecipeIngredients.length === 0}
-                  className="flex-1 py-3 text-sm font-medium rounded-full transition-all"
-                  style={{ 
-                    backgroundColor: (newRecipeName.trim() && newRecipeIngredients.length > 0) ? YELLOW : theme.border, 
-                    color: '#292524',
-                    opacity: (newRecipeName.trim() && newRecipeIngredients.length > 0) ? 1 : 0.5
-                  }}
-                >
-                  Save Recipe
-                </button>
-              </div>
             </div>
           ) : (
             // Recipe List
@@ -999,6 +987,29 @@ export default function App() {
           )}
         </div>
 
+        {/* Sticky Save/Cancel footer for recipe creation */}
+        {showCreateRecipe && (
+          <div className="fixed bottom-0 left-0 right-0 p-4 border-t" style={{ backgroundColor: theme.bg, borderColor: theme.border }}>
+            <div className="flex gap-3 max-w-lg mx-auto">
+              <button onClick={cancelCreateRecipe} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>
+                Cancel
+              </button>
+              <button 
+                onClick={saveRecipe} 
+                disabled={!newRecipeName.trim() || newRecipeIngredients.length === 0}
+                className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]"
+                style={{ 
+                  backgroundColor: (newRecipeName.trim() && newRecipeIngredients.length > 0) ? YELLOW : theme.border, 
+                  color: '#292524',
+                  opacity: (newRecipeName.trim() && newRecipeIngredients.length > 0) ? 1 : 0.5
+                }}
+              >
+                Save Recipe ({newRecipeIngredients.length} items)
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Delete Recipe Confirmation Modal */}
         {deletingRecipeId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
@@ -1027,6 +1038,7 @@ export default function App() {
     return (
       <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: theme.bg }}>
         <style>{styles}</style>
+        <Toast message={toastMessage} visible={showToast} theme={theme} />
         <div className="sticky top-0 z-40" style={{ backgroundColor: theme.bg, borderBottom: `1px solid ${theme.border}` }}>
           <div className="px-5 py-4 flex items-center justify-between">
             <button onClick={() => setShowSettings(false)} className="text-sm font-medium flex items-center gap-2" style={{ color: theme.text }}>
@@ -1088,6 +1100,7 @@ export default function App() {
                     onClick={() => {
                       navigator.clipboard?.writeText(listId);
                       triggerHaptic('success');
+                      showToastMessage('Code copied!');
                     }}
                     className="px-4 py-2 text-xs font-medium rounded-full transition-all active:scale-95"
                     style={{ backgroundColor: theme.bgTertiary, color: theme.text }}
@@ -1381,6 +1394,33 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {showCodePopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setShowCodePopup(false)}>
+          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary }} onClick={(e) => e.stopPropagation()}>
+            <div className="text-4xl mb-4">🔗</div>
+            <h2 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>Your Share Code</h2>
+            <div className="px-6 py-4 rounded-2xl mb-4" style={{ backgroundColor: theme.bgTertiary }}>
+              <span className="text-3xl font-mono tracking-widest" style={{ color: theme.text }}>{listId}</span>
+            </div>
+            <p className="text-sm mb-6" style={{ color: theme.textSecondary }}>
+              Share this code with family or housemates so they can join your list and shop together in real-time!
+            </p>
+            <button 
+              onClick={() => { 
+                navigator.clipboard?.writeText(listId); 
+                triggerHaptic('success'); 
+                setShowCodePopup(false);
+                showToastMessage('Code copied!');
+              }} 
+              className="w-full py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" 
+              style={{ backgroundColor: YELLOW, color: '#292524' }}
+            >
+              Copy Code
+            </button>
+          </div>
+        </div>
+      )}
       
       {!isOnline && (
         <div className="px-4 py-2 text-center text-xs font-medium" style={{ backgroundColor: '#fef3c7', color: '#92400e' }}>You're offline. Changes will sync when you reconnect.</div>
@@ -1401,10 +1441,11 @@ export default function App() {
               </h1>
             </div>
             
-            {/* Right side - Code pill, recipe button, and settings */}
+            {/* Right side - Code pill, settings, and recipe button */}
             <div className="flex items-center gap-2">
-              <div 
-                className="flex items-center gap-2 px-2.5 py-1 rounded-full"
+              <button 
+                onClick={() => { triggerHaptic('light'); setShowCodePopup(true); }}
+                className="flex items-center gap-2 px-2.5 py-1 rounded-full transition-all active:scale-95"
                 style={{ backgroundColor: theme.codePillBg }}
               >
                 <span className="text-xs font-mono" style={{ color: theme.textSecondary }}>{listId}</span>
@@ -1412,7 +1453,13 @@ export default function App() {
                   className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${syncing ? 'sync-pulse' : ''}`} 
                   style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}
                 ></span>
-              </div>
+              </button>
+              <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ backgroundColor: theme.bgTertiary }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
               <button 
                 onClick={() => setShowRecipes(true)} 
                 className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" 
@@ -1421,12 +1468,6 @@ export default function App() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
                   <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                </svg>
-              </button>
-              <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ backgroundColor: theme.bgTertiary }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                  <circle cx="12" cy="12" r="3"/>
                 </svg>
               </button>
             </div>
@@ -1510,7 +1551,7 @@ export default function App() {
                           <button 
                             onClick={() => setEditingQuantityId(item.id)}
                             className="text-xs font-medium px-2 py-0.5 rounded-full transition-all active:scale-95"
-                            style={{ backgroundColor: YELLOW, color: '#292524' }}
+                            style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary, backgroundColor: 'transparent' }}
                           >
                             ×{quantity}
                           </button>
