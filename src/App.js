@@ -857,6 +857,15 @@ export default function App() {
 
               <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textSecondary }}>Ingredients</h2>
               
+              {/* Tap-away overlay to close recipe input */}
+              {recipeAddingTo && (
+                <div 
+                  className="fixed inset-0 z-10" 
+                  onClick={cancelRecipeAdding}
+                  style={{ backgroundColor: 'transparent' }}
+                />
+              )}
+              
               {/* Category-based ingredient adding */}
               {visibleCategories.map(category => {
                 const categoryIngredients = newRecipeIngredients.filter(i => i.category === category.id);
@@ -864,7 +873,7 @@ export default function App() {
                 const isAdding = recipeAddingTo === category.id;
                 
                 return (
-                  <div key={category.id} className="mb-3">
+                  <div key={category.id} className="mb-3 relative z-20">
                     <div className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all" style={{ backgroundColor: hasIngredients ? theme.bgSecondary : 'transparent', boxShadow: hasIngredients ? theme.cardShadow : 'none' }}>
                       <span className="text-sm font-medium" style={{ color: hasIngredients ? theme.text : theme.textTertiary }}>
                         {category.name}
@@ -876,7 +885,7 @@ export default function App() {
                     </div>
                     
                     {isAdding && (
-                      <div className="mt-1 ml-4 mr-4 fade-in">
+                      <div className="mt-1 ml-4 mr-4 fade-in relative z-30">
                         <div className="flex items-center gap-3">
                           <input 
                             ref={recipeInputRef}
@@ -1484,13 +1493,22 @@ export default function App() {
       </div>
       
       <div className="px-4 py-4 pb-20">
+        {/* Tap-away overlay to close input */}
+        {addingTo && (
+          <div 
+            className="fixed inset-0 z-10" 
+            onClick={cancelAdding}
+            style={{ backgroundColor: 'transparent' }}
+          />
+        )}
+        
         {visibleCategories.map(category => {
           const categoryItems = items.filter(item => item.category === category.id);
           const uncheckedCount = categoryItems.filter(i => !i.checked).length;
           const hasItems = categoryItems.length > 0;
           const isAdding = addingTo === category.id;
           return (
-            <div key={category.id} className="mb-3">
+            <div key={category.id} className="mb-3 relative z-20">
               <div className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all" style={{ backgroundColor: hasItems ? theme.bgSecondary : 'transparent', boxShadow: hasItems ? theme.cardShadow : 'none' }}>
                 <span className="text-sm font-medium" style={{ color: hasItems ? theme.text : theme.textTertiary }}>
                   {category.name}
@@ -1501,7 +1519,7 @@ export default function App() {
                 </button>
               </div>
               {isAdding && (
-                <div className="mt-1 ml-4 mr-4 fade-in">
+                <div className="mt-1 ml-4 mr-4 fade-in relative z-30">
                   <div className="flex items-center gap-3">
                     <input ref={inputRef} type="text" value={newItemText} onChange={(e) => setNewItemText(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') addItem(); if (e.key === 'Escape') cancelAdding(); }}
