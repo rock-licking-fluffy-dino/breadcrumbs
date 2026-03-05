@@ -306,6 +306,7 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [addingRecipeId, setAddingRecipeId] = useState(null);
+  const [deletingRecipeId, setDeletingRecipeId] = useState(null);
   
   const inputRef = useRef(null);
   const recipeInputRef = useRef(null);
@@ -773,11 +774,14 @@ export default function App() {
     }, 300);
   };
 
-  const deleteRecipe = async (recipeId) => {
-    triggerHaptic('light');
-    const newRecipes = recipes.filter(r => r.id !== recipeId);
+  const confirmDeleteRecipe = async () => {
+    if (!deletingRecipeId) return;
+    triggerHaptic('success');
+    const newRecipes = recipes.filter(r => r.id !== deletingRecipeId);
     setRecipes(newRecipes);
     await saveList(items, categories, newRecipes);
+    setDeletingRecipeId(null);
+    showToastMessage('Recipe deleted');
   };
 
   const totalItems = items.length;
@@ -979,14 +983,14 @@ export default function App() {
                         >
                           Add to List
                         </button>
-                        <button
-                          onClick={() => deleteRecipe(recipe.id)}
-                          className="px-4 py-2 text-sm font-medium rounded-full transition-all active:scale-95"
-                          style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
-                        >
-                          Delete
-                        </button>
                       </div>
+                      <button
+                        onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }}
+                        className="w-full mt-2 py-2 text-sm font-medium rounded-full transition-all active:scale-95"
+                        style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}
+                      >
+                        Delete Recipe
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -994,6 +998,26 @@ export default function App() {
             </>
           )}
         </div>
+
+        {/* Delete Recipe Confirmation Modal */}
+        {deletingRecipeId && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary }}>
+              <div className="text-4xl mb-4">🗑️</div>
+              <h2 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>Delete recipe?</h2>
+              <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>
+                This will permanently delete "{recipes.find(r => r.id === deletingRecipeId)?.name}".
+              </p>
+              <p className="text-xs mb-6 px-2 py-2 rounded-lg" style={{ backgroundColor: darkMode ? '#3f3f46' : '#fef3c7', color: darkMode ? '#fcd34d' : '#92400e' }}>
+                ⚠️ This affects everyone sharing this list
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => { triggerHaptic('light'); setDeletingRecipeId(null); }} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>Cancel</button>
+                <button onClick={confirmDeleteRecipe} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ backgroundColor: '#ef4444', color: '#fff' }}>Delete</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1481,8 +1505,8 @@ export default function App() {
                           </span>
                         )}
                         
-                        {/* Quantity badge */}
-                        {quantity > 1 && !isEditingQty && (
+                        {/* Quantity badge - always show for unchecked items */}
+                        {!item.checked && !isEditingQty && (
                           <button 
                             onClick={() => setEditingQuantityId(item.id)}
                             className="text-xs font-medium px-2 py-0.5 rounded-full transition-all active:scale-95"
@@ -1521,8 +1545,12 @@ export default function App() {
                         )}
                         
                         {!isEditingQty && (
-                          <button onClick={() => deleteItem(item.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90" style={{ color: theme.textTertiary }}>
-                            <span className="text-lg">−</span>
+                          <button 
+                            onClick={() => deleteItem(item.id)} 
+                            className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90" 
+                            style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
+                          >
+                            <span className="text-sm">×</span>
                           </button>
                         )}
                       </div>
