@@ -308,6 +308,7 @@ export default function App() {
   const [addingRecipeId, setAddingRecipeId] = useState(null);
   const [deletingRecipeId, setDeletingRecipeId] = useState(null);
   const [showCodePopup, setShowCodePopup] = useState(false);
+  const [savingRecipe, setSavingRecipe] = useState(false);
   
   const inputRef = useRef(null);
   const recipeInputRef = useRef(null);
@@ -703,7 +704,9 @@ export default function App() {
   };
 
   const saveRecipe = async () => {
-    if (!newRecipeName.trim() || newRecipeIngredients.length === 0) return;
+    if (!newRecipeName.trim() || newRecipeIngredients.length === 0 || savingRecipe) return;
+    
+    setSavingRecipe(true);
     triggerHaptic('success');
     
     const recipe = {
@@ -720,6 +723,7 @@ export default function App() {
     setNewRecipeName('');
     setNewRecipeIngredients([]);
     setShowCreateRecipe(false);
+    setSavingRecipe(false);
     showToastMessage('Recipe saved!');
   };
 
@@ -823,7 +827,16 @@ export default function App() {
   // Recipes Screen
   if (showRecipes) {
     return (
-      <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: theme.bg }}>
+      <div 
+        className="min-h-screen" 
+        style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: theme.bg }}
+        onClick={(e) => {
+          // Close recipe input if clicking outside input area
+          if (recipeAddingTo && !e.target.closest('.recipe-input-area')) {
+            cancelRecipeAdding();
+          }
+        }}
+      >
         <style>{styles}</style>
         <Toast message={toastMessage} visible={showToast} theme={theme} />
         
@@ -857,15 +870,6 @@ export default function App() {
 
               <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textSecondary }}>Ingredients</h2>
               
-              {/* Tap-away overlay to close recipe input */}
-              {recipeAddingTo && (
-                <div 
-                  className="fixed inset-0 z-10" 
-                  onClick={cancelRecipeAdding}
-                  style={{ backgroundColor: 'transparent' }}
-                />
-              )}
-              
               {/* Category-based ingredient adding */}
               {visibleCategories.map(category => {
                 const categoryIngredients = newRecipeIngredients.filter(i => i.category === category.id);
@@ -873,19 +877,19 @@ export default function App() {
                 const isAdding = recipeAddingTo === category.id;
                 
                 return (
-                  <div key={category.id} className="mb-3 relative z-20">
+                  <div key={category.id} className="mb-3">
                     <div className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all" style={{ backgroundColor: hasIngredients ? theme.bgSecondary : 'transparent', boxShadow: hasIngredients ? theme.cardShadow : 'none' }}>
                       <span className="text-sm font-medium" style={{ color: hasIngredients ? theme.text : theme.textTertiary }}>
                         {category.name}
                         {hasIngredients && <span className="ml-2 font-normal" style={{ color: theme.textTertiary }}>{categoryIngredients.length}</span>}
                       </span>
-                      <button onClick={() => isAdding ? cancelRecipeAdding() : startRecipeAdding(category.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90" style={{ backgroundColor: isAdding ? theme.text : theme.bgTertiary, color: isAdding ? theme.bg : theme.textSecondary }}>
+                      <button onClick={() => isAdding ? cancelRecipeAdding() : startRecipeAdding(category.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 recipe-input-area" style={{ backgroundColor: isAdding ? theme.text : theme.bgTertiary, color: isAdding ? theme.bg : theme.textSecondary }}>
                         <span className="text-lg leading-none transition-transform duration-200" style={{ transform: isAdding ? 'rotate(45deg)' : 'none' }}>+</span>
                       </button>
                     </div>
                     
                     {isAdding && (
-                      <div className="mt-1 ml-4 mr-4 fade-in relative z-30">
+                      <div className="mt-1 ml-4 mr-4 fade-in recipe-input-area">
                         <div className="flex items-center gap-3">
                           <input 
                             ref={recipeInputRef}
@@ -998,22 +1002,27 @@ export default function App() {
 
         {/* Sticky Save/Cancel footer for recipe creation */}
         {showCreateRecipe && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 border-t" style={{ backgroundColor: theme.bg, borderColor: theme.border }}>
+          <div className="fixed bottom-0 left-0 right-0 p-4 border-t z-40" style={{ backgroundColor: theme.bg, borderColor: theme.border }}>
             <div className="flex gap-3 max-w-lg mx-auto">
-              <button onClick={cancelCreateRecipe} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>
+              <button 
+                onClick={cancelCreateRecipe} 
+                disabled={savingRecipe}
+                className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" 
+                style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary, opacity: savingRecipe ? 0.5 : 1 }}
+              >
                 Cancel
               </button>
               <button 
                 onClick={saveRecipe} 
-                disabled={!newRecipeName.trim() || newRecipeIngredients.length === 0}
+                disabled={!newRecipeName.trim() || newRecipeIngredients.length === 0 || savingRecipe}
                 className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]"
                 style={{ 
-                  backgroundColor: (newRecipeName.trim() && newRecipeIngredients.length > 0) ? YELLOW : theme.border, 
+                  backgroundColor: (newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe) ? YELLOW : theme.border, 
                   color: '#292524',
-                  opacity: (newRecipeName.trim() && newRecipeIngredients.length > 0) ? 1 : 0.5
+                  opacity: (newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe) ? 1 : 0.5
                 }}
               >
-                Save Recipe ({newRecipeIngredients.length} items)
+                {savingRecipe ? 'Saving...' : `Save Recipe (${newRecipeIngredients.length} items)`}
               </button>
             </div>
           </div>
@@ -1340,7 +1349,20 @@ export default function App() {
 
   // Main List
   return (
-    <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: theme.bg }}>
+    <div 
+      className="min-h-screen" 
+      style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: theme.bg }}
+      onClick={(e) => {
+        // Close adding input if clicking outside input area
+        if (addingTo && !e.target.closest('.adding-input-area')) {
+          cancelAdding();
+        }
+        // Close quantity editor if clicking outside
+        if (editingQuantityId && !e.target.closest('.quantity-editor')) {
+          setEditingQuantityId(null);
+        }
+      }}
+    >
       <style>{styles}</style>
       
       <Toast message={toastMessage} visible={showToast} theme={theme} />
@@ -1493,33 +1515,24 @@ export default function App() {
       </div>
       
       <div className="px-4 py-4 pb-20">
-        {/* Tap-away overlay to close input */}
-        {addingTo && (
-          <div 
-            className="fixed inset-0 z-10" 
-            onClick={cancelAdding}
-            style={{ backgroundColor: 'transparent' }}
-          />
-        )}
-        
         {visibleCategories.map(category => {
           const categoryItems = items.filter(item => item.category === category.id);
           const uncheckedCount = categoryItems.filter(i => !i.checked).length;
           const hasItems = categoryItems.length > 0;
           const isAdding = addingTo === category.id;
           return (
-            <div key={category.id} className="mb-3 relative z-20">
+            <div key={category.id} className="mb-3">
               <div className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all" style={{ backgroundColor: hasItems ? theme.bgSecondary : 'transparent', boxShadow: hasItems ? theme.cardShadow : 'none' }}>
                 <span className="text-sm font-medium" style={{ color: hasItems ? theme.text : theme.textTertiary }}>
                   {category.name}
                   {hasItems && <span className="ml-2 font-normal" style={{ color: theme.textTertiary }}>{uncheckedCount}</span>}
                 </span>
-                <button onClick={() => isAdding ? cancelAdding() : startAdding(category.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90" style={{ backgroundColor: isAdding ? theme.text : theme.bgTertiary, color: isAdding ? theme.bg : theme.textSecondary }}>
+                <button onClick={() => isAdding ? cancelAdding() : startAdding(category.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 adding-input-area" style={{ backgroundColor: isAdding ? theme.text : theme.bgTertiary, color: isAdding ? theme.bg : theme.textSecondary }}>
                   <span className="text-lg leading-none transition-transform duration-200" style={{ transform: isAdding ? 'rotate(45deg)' : 'none' }}>+</span>
                 </button>
               </div>
               {isAdding && (
-                <div className="mt-1 ml-4 mr-4 fade-in relative z-30">
+                <div className="mt-1 ml-4 mr-4 fade-in adding-input-area">
                   <div className="flex items-center gap-3">
                     <input ref={inputRef} type="text" value={newItemText} onChange={(e) => setNewItemText(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') addItem(); if (e.key === 'Escape') cancelAdding(); }}
@@ -1577,7 +1590,7 @@ export default function App() {
                         
                         {/* Quantity controls */}
                         {isEditingQty && (
-                          <div className="flex items-center gap-1 fade-in">
+                          <div className="flex items-center gap-1 fade-in quantity-editor">
                             <button 
                               onClick={() => updateQuantity(item.id, -1)}
                               className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90"
