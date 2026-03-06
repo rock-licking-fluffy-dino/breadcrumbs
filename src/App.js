@@ -1018,18 +1018,24 @@ export default function App() {
                       className={`rounded-2xl relative overflow-hidden ${addingRecipeId === recipe.id ? 'recipe-pop' : ''}`}
                       style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}
                     >
-                      {/* Accent strip */}
+                      {/* Bookmark shape */}
                       <div 
-                        className="absolute left-0 top-0 bottom-0 w-1"
+                        className="absolute left-3 top-0"
                         style={{ 
-                          backgroundColor: RECIPE_ACCENT_COLORS[index % RECIPE_ACCENT_COLORS.length],
-                          borderRadius: '4px 0 0 4px'
+                          width: '24px',
+                          height: '36px',
                         }}
-                      />
-                      <div className="p-4 pl-5">
+                      >
+                        <svg width="24" height="36" viewBox="0 0 24 36" fill="none">
+                          <path 
+                            d="M0 0H24V32L12 26L0 32V0Z" 
+                            fill={RECIPE_ACCENT_COLORS[index % RECIPE_ACCENT_COLORS.length]}
+                          />
+                        </svg>
+                      </div>
+                      <div className="p-4 pl-12">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-3">
-                            <span className="text-2xl">🍽️</span>
                             <div className="flex items-baseline gap-2">
                               <h3 style={{ color: theme.text, fontWeight: 600, fontSize: '15px' }}>{recipe.name}</h3>
                               <span style={{ color: theme.textTertiary, fontWeight: 300, fontSize: '12px' }}>{recipe.ingredients.length} items</span>
