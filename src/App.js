@@ -40,10 +40,14 @@ const DEFAULT_CATEGORIES = [
 
 const YELLOW = '#FACC15';
 
+// Recipe accent colors palette
+const RECIPE_ACCENT_COLORS = ['#fb923c', '#86efac', '#93c5fd', '#f9a8d4', '#fdba74', '#6ee7b7', '#c4b5fd', '#fca5a5', '#67e8f9', '#d9f99d'];
+
 // Theme colors
 const themes = {
   light: {
     bg: '#fafaf9',
+    bgGradient: 'linear-gradient(160deg, #fafaf9 0%, #f5f0eb 100%)',
     bgSecondary: '#fff',
     bgTertiary: '#f5f5f4',
     text: '#292524',
@@ -52,10 +56,14 @@ const themes = {
     border: '#e7e5e4',
     borderLight: '#f5f5f4',
     codePillBg: '#f5f5f4',
-    cardShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    cardShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
+    yellowGlow: '0 4px 20px rgba(250,204,21,0.35)',
+    yellowGlowSubtle: '0 2px 12px rgba(250,204,21,0.25)',
+    yellowGlowActive: '0 2px 8px rgba(250,204,21,0.5)',
   },
   dark: {
     bg: '#1c1917',
+    bgGradient: 'linear-gradient(160deg, #1c1917 0%, #292524 100%)',
     bgSecondary: '#292524',
     bgTertiary: '#3f3f46',
     text: '#fafaf9',
@@ -64,7 +72,10 @@ const themes = {
     border: '#3f3f46',
     borderLight: '#3f3f46',
     codePillBg: '#3f3f46',
-    cardShadow: '0 1px 3px rgba(0,0,0,0.3)',
+    cardShadow: '0 2px 12px rgba(0,0,0,0.2), 0 1px 3px rgba(0,0,0,0.15)',
+    yellowGlow: '0 4px 20px rgba(250,204,21,0.25)',
+    yellowGlowSubtle: '0 2px 12px rgba(250,204,21,0.18)',
+    yellowGlowActive: '0 2px 8px rgba(250,204,21,0.4)',
   }
 };
 
@@ -213,7 +224,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="w-full max-w-sm rounded-3xl overflow-hidden" style={{ backgroundColor: theme.bgSecondary, maxHeight: '90vh' }}>
+      <div className="w-full max-w-sm rounded-3xl overflow-hidden" style={{ backgroundColor: theme.bgSecondary, maxHeight: '90vh', boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)' }}>
         <div className="flex justify-end p-4 pb-0">
           <button onClick={skip} className="text-sm" style={{ color: theme.textTertiary }}>Skip</button>
         </div>
@@ -234,7 +245,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
           {currentCard > 0 && (
             <button onClick={goBack} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>Back</button>
           )}
-          <button onClick={goNext} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ backgroundColor: YELLOW, color: '#292524' }}>
+          <button onClick={goNext} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.97]" style={{ backgroundColor: YELLOW, color: '#292524', boxShadow: '0 4px 20px rgba(250,204,21,0.35)' }}>
             {currentCard === cards.length - 1 ? 'Start Shopping' : 'Next'}
           </button>
         </div>
@@ -852,7 +863,7 @@ export default function App() {
     return (
       <div 
         className="min-h-screen" 
-        style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: theme.bg }}
+        style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}
         onClick={(e) => {
           // Close recipe input if clicking outside input area
           if (recipeAddingTo && !e.target.closest('.recipe-input-area')) {
@@ -863,9 +874,9 @@ export default function App() {
         <style>{styles}</style>
         <Toast message={toastMessage} visible={showToast} theme={theme} />
         
-        <div className="sticky top-0 z-40" style={{ backgroundColor: theme.bg, borderBottom: `1px solid ${theme.border}` }}>
+        <div className="sticky top-0 z-40" style={{ backgroundColor: darkMode ? theme.bg : 'rgba(250,249,248,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${theme.border}` }}>
           <div className="px-5 py-4 flex items-center justify-between">
-            <button onClick={() => { setShowRecipes(false); setShowCreateRecipe(false); setEditingRecipeId(null); setNewRecipeName(''); setNewRecipeIngredients([]); }} className="text-sm font-medium flex items-center gap-2" style={{ color: theme.text }}>
+            <button onClick={() => { setShowRecipes(false); setShowCreateRecipe(false); setEditingRecipeId(null); setNewRecipeName(''); setNewRecipeIngredients([]); }} className="text-sm font-medium flex items-center gap-2 transition-all" style={{ color: theme.text }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
               Back
             </button>
@@ -985,48 +996,61 @@ export default function App() {
                 <div className="text-center py-12">
                   <div className="text-5xl mb-4">📖</div>
                   <h3 className="text-lg font-medium mb-2" style={{ color: theme.text }}>No recipes yet</h3>
-                  <p className="text-sm" style={{ color: theme.textSecondary }}>
+                  <p className="text-sm" style={{ color: theme.textSecondary, fontWeight: 300 }}>
                     Save your favourite meals and add all ingredients to your list in one tap!
                   </p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recipes.map(recipe => (
+                  {recipes.map((recipe, index) => (
                     <div 
                       key={recipe.id} 
-                      className={`rounded-2xl p-4 ${addingRecipeId === recipe.id ? 'recipe-pop' : ''}`}
+                      className={`rounded-2xl relative overflow-hidden ${addingRecipeId === recipe.id ? 'recipe-pop' : ''}`}
                       style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <div>
-                          <h3 className="text-sm font-medium" style={{ color: theme.text }}>{recipe.name}</h3>
-                          <span className="text-xs" style={{ color: theme.textSecondary }}>{recipe.ingredients.length} items</span>
+                      {/* Accent strip */}
+                      <div 
+                        className="absolute left-0 top-0 bottom-0 w-1"
+                        style={{ 
+                          backgroundColor: RECIPE_ACCENT_COLORS[index % RECIPE_ACCENT_COLORS.length],
+                          borderRadius: '4px 0 0 4px'
+                        }}
+                      />
+                      <div className="p-4 pl-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">🍽️</span>
+                            <div className="flex items-baseline gap-2">
+                              <h3 style={{ color: theme.text, fontWeight: 600, fontSize: '15px' }}>{recipe.name}</h3>
+                              <span style={{ color: theme.textTertiary, fontWeight: 300, fontSize: '12px' }}>{recipe.ingredients.length} items</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }}
+                            className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
+                            style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                            </svg>
+                          </button>
                         </div>
-                        <button
-                          onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }}
-                          className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
-                          style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                          </svg>
-                        </button>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => startEditRecipe(recipe)}
-                          className="flex-1 py-2 text-sm font-medium rounded-full transition-all active:scale-95"
-                          style={{ border: `1.5px solid ${theme.border}`, color: theme.text }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => addRecipeToList(recipe)}
-                          className="flex-1 py-2 text-sm font-medium rounded-full transition-all active:scale-95"
-                          style={{ backgroundColor: YELLOW, color: '#292524' }}
-                        >
-                          Add to List
-                        </button>
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={() => startEditRecipe(recipe)}
+                            className="transition-all active:scale-95"
+                            style={{ color: theme.textTertiary, fontWeight: 400, fontSize: '13px', background: 'none', border: 'none', padding: 0 }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => addRecipeToList(recipe)}
+                            className="px-5 py-2 text-sm font-medium rounded-full transition-all active:scale-95"
+                            style={{ backgroundColor: YELLOW, color: '#292524', boxShadow: theme.yellowGlow }}
+                          >
+                            Add to List
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1051,11 +1075,12 @@ export default function App() {
               <button 
                 onClick={saveRecipe} 
                 disabled={!newRecipeName.trim() || newRecipeIngredients.length === 0 || savingRecipe}
-                className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]"
+                className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.97]"
                 style={{ 
                   backgroundColor: (newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe) ? YELLOW : theme.border, 
                   color: '#292524',
-                  opacity: (newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe) ? 1 : 0.5
+                  opacity: (newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe) ? 1 : 0.5,
+                  boxShadow: (newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe) ? theme.yellowGlow : 'none'
                 }}
               >
                 {savingRecipe ? 'Saving...' : (editingRecipeId ? `Update Recipe (${newRecipeIngredients.length} items)` : `Save Recipe (${newRecipeIngredients.length} items)`)}
@@ -1067,7 +1092,7 @@ export default function App() {
         {/* Delete Recipe Confirmation Modal */}
         {deletingRecipeId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-            <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary }}>
+            <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
               <div className="text-4xl mb-4">🗑️</div>
               <h2 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>Delete recipe?</h2>
               <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>
@@ -1090,12 +1115,12 @@ export default function App() {
   // Settings Page
   if (showSettings) {
     return (
-      <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: theme.bg }}>
+      <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}>
         <style>{styles}</style>
         <Toast message={toastMessage} visible={showToast} theme={theme} />
-        <div className="sticky top-0 z-40" style={{ backgroundColor: theme.bg, borderBottom: `1px solid ${theme.border}` }}>
+        <div className="sticky top-0 z-40" style={{ backgroundColor: darkMode ? theme.bg : 'rgba(250,249,248,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${theme.border}` }}>
           <div className="px-5 py-4 flex items-center justify-between">
-            <button onClick={() => setShowSettings(false)} className="text-sm font-medium flex items-center gap-2" style={{ color: theme.text }}>
+            <button onClick={() => setShowSettings(false)} className="text-sm font-medium flex items-center gap-2 transition-all" style={{ color: theme.text }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
               Back
             </button>
@@ -1112,10 +1137,12 @@ export default function App() {
               <button
                 key={tab.id}
                 onClick={() => { setSettingsTab(tab.id); triggerHaptic('light'); }}
-                className="flex-1 py-2.5 text-sm font-medium rounded-full transition-all"
+                className="flex-1 py-2.5 text-sm rounded-full transition-all"
                 style={{
                   backgroundColor: settingsTab === tab.id ? YELLOW : theme.bgTertiary,
-                  color: settingsTab === tab.id ? '#292524' : theme.text
+                  color: settingsTab === tab.id ? '#292524' : theme.text,
+                  fontWeight: settingsTab === tab.id ? 600 : 400,
+                  boxShadow: settingsTab === tab.id ? theme.yellowGlowSubtle : 'none'
                 }}
               >
                 {tab.label}
@@ -1128,7 +1155,7 @@ export default function App() {
           {/* General Tab */}
           {settingsTab === 'general' && (
             <>
-              {/* List Name */}
+              {/* List Name & Preferences Card */}
               <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>List Name</label>
                 <input
@@ -1142,11 +1169,29 @@ export default function App() {
                   className="w-full py-2 text-sm focus:outline-none bg-transparent"
                   style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }}
                 />
-                <p className="text-xs mt-2" style={{ color: theme.textTertiary }}>Give your list a name to easily identify it. Saved on this device only.</p>
+                <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>Give your list a name to easily identify it. Saved on this device only.</p>
+                
+                {/* Preferences section */}
+                <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${theme.borderLight}` }}>
+                  <label className="text-xs font-medium mb-3 block" style={{ color: theme.textSecondary }}>Preferences</label>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm" style={{ color: theme.text }}>Dark Mode</span>
+                    <button
+                      onClick={toggleDarkMode}
+                      className="w-12 h-7 rounded-full transition-all relative"
+                      style={{ backgroundColor: darkMode ? YELLOW : theme.border, boxShadow: darkMode ? theme.yellowGlowSubtle : 'none' }}
+                    >
+                      <div
+                        className="absolute top-1 w-5 h-5 rounded-full transition-all shadow-sm"
+                        style={{ backgroundColor: '#fff', left: darkMode ? 'calc(100% - 24px)' : '4px' }}
+                      ></div>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Share Code */}
-              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+              <div className="rounded-2xl p-4 mb-6" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>Share Code</label>
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-mono tracking-widest" style={{ color: theme.text }}>{listId}</span>
@@ -1162,47 +1207,30 @@ export default function App() {
                     Copy
                   </button>
                 </div>
-                <p className="text-xs mt-2" style={{ color: theme.textTertiary }}>Share this code so others can join your list.</p>
-              </div>
-
-              {/* Dark Mode Toggle */}
-              <div className="rounded-2xl p-4 mb-6" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-medium" style={{ color: theme.text }}>Dark Mode</span>
-                  </div>
-                  <button
-                    onClick={toggleDarkMode}
-                    className="w-12 h-7 rounded-full transition-all relative"
-                    style={{ backgroundColor: darkMode ? YELLOW : theme.border }}
-                  >
-                    <div
-                      className="absolute top-1 w-5 h-5 rounded-full transition-all shadow-sm"
-                      style={{ backgroundColor: '#fff', left: darkMode ? 'calc(100% - 24px)' : '4px' }}
-                    ></div>
-                  </button>
-                </div>
+                <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>Share this code so others can join your list.</p>
               </div>
 
               {/* Danger Zone */}
               <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textTertiary }}>⚠️ Danger Zone</h2>
               
-              <button 
-                onClick={() => { triggerHaptic('light'); setShowSettings(false); setTimeout(() => setShowClearAllConfirm(true), 100); }}
-                disabled={items.length === 0}
-                className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-transform mb-3" 
-                style={{ 
-                  border: '1.5px solid #ef4444', 
-                  color: items.length === 0 ? theme.textTertiary : '#ef4444',
-                  opacity: items.length === 0 ? 0.5 : 1
-                }}
-              >
-                Clear all items {items.length > 0 && `(${items.length})`}
-              </button>
+              <div className="rounded-2xl p-4" style={{ backgroundColor: 'rgba(239,68,68,0.03)' }}>
+                <button 
+                  onClick={() => { triggerHaptic('light'); setShowSettings(false); setTimeout(() => setShowClearAllConfirm(true), 100); }}
+                  disabled={items.length === 0}
+                  className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-all mb-3" 
+                  style={{ 
+                    border: '1.5px solid #ef4444', 
+                    color: items.length === 0 ? theme.textTertiary : '#ef4444',
+                    opacity: items.length === 0 ? 0.5 : 1
+                  }}
+                >
+                  Clear all items {items.length > 0 && `(${items.length})`}
+                </button>
 
-              <button onClick={() => { triggerHaptic('light'); setShowSettings(false); setTimeout(() => setShowLeaveConfirm(true), 100); }} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-transform" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
-                Leave this list
-              </button>
+                <button onClick={() => { triggerHaptic('light'); setShowSettings(false); setTimeout(() => setShowLeaveConfirm(true), 100); }} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-all" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
+                  Leave this list
+                </button>
+              </div>
             </>
           )}
 
@@ -1250,7 +1278,7 @@ export default function App() {
                 </button>
               )}
 
-              <p className="text-xs mb-3" style={{ color: theme.textTertiary }}>Use arrows to reorder. Toggle to show/hide.</p>
+              <p className="text-xs mb-3" style={{ color: theme.textTertiary, fontWeight: 300 }}>Use arrows to reorder. Toggle to show/hide.</p>
 
               {/* Combined category list with arrows on opposite sides + toggle */}
               <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
@@ -1313,7 +1341,7 @@ export default function App() {
                       <button
                         onClick={() => toggleCategoryVisibility(cat.id)}
                         className="w-11 h-6 rounded-full transition-all relative flex-shrink-0"
-                        style={{ backgroundColor: isHidden ? theme.border : YELLOW }}
+                        style={{ backgroundColor: isHidden ? theme.border : YELLOW, boxShadow: isHidden ? 'none' : theme.yellowGlowSubtle }}
                       >
                         <div
                           className="absolute top-0.5 w-5 h-5 rounded-full transition-all shadow-sm"
@@ -1349,9 +1377,22 @@ export default function App() {
   // Welcome Screen
   if (!listId) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: theme.bg }}>
+      <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden" style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}>
         <style>{styles}</style>
-        <div className="w-full max-w-sm">
+        {/* Decorative blob */}
+        <div 
+          className="absolute pointer-events-none" 
+          style={{ 
+            width: '500px', 
+            height: '400px', 
+            top: '10%', 
+            left: '50%', 
+            transform: 'translateX(-50%)',
+            background: 'radial-gradient(ellipse, rgba(250,204,21,0.12) 0%, transparent 70%)',
+            zIndex: 0
+          }}
+        />
+        <div className="w-full max-w-sm relative" style={{ zIndex: 1 }}>
           <div className="text-center mb-12">
             <div className="mb-6 flex justify-center items-center gap-2">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: YELLOW }}></div>
@@ -1362,20 +1403,23 @@ export default function App() {
             <p className="text-sm font-light leading-relaxed" style={{ color: theme.textSecondary }}>Never get lost in the aisles again.</p>
             <p className="text-sm font-light" style={{ color: theme.textTertiary }}>The smartest path to a stocked home.</p>
           </div>
-          <button onClick={createNewList} className={`w-full py-4 text-sm tracking-wide font-medium rounded-full transition-all ${createAnim ? 'btn-pop' : ''}`} style={{ backgroundColor: createAnim ? YELLOW : (darkMode ? '#fafaf9' : '#292524'), color: createAnim ? '#292524' : (darkMode ? '#292524' : '#fff') }}>
+          <button onClick={createNewList} className={`w-full py-4 text-sm tracking-wide font-medium rounded-full transition-all ${createAnim ? 'btn-pop' : ''}`} style={{ backgroundColor: createAnim ? YELLOW : (darkMode ? '#fafaf9' : '#292524'), color: createAnim ? '#292524' : (darkMode ? '#292524' : '#fff'), boxShadow: createAnim ? theme.yellowGlow : 'none' }}>
             Create new list
           </button>
           <div className="relative my-10">
             <div className="absolute inset-0 flex items-center"><div className="w-full" style={{ borderTop: `1px solid ${theme.border}` }}></div></div>
-            <div className="relative flex justify-center"><span className="px-4 text-xs tracking-widest uppercase" style={{ backgroundColor: theme.bg, color: theme.textTertiary }}>or join</span></div>
+            <div className="relative flex justify-center"><span className="px-4 text-xs tracking-widest uppercase" style={{ backgroundColor: 'transparent', color: theme.textTertiary }}><span style={{ backgroundColor: darkMode ? theme.bg : '#f8f6f3', padding: '0 8px' }}>or join</span></span></div>
           </div>
-          <div className="flex gap-3">
-            <input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="Code" maxLength={6}
-              className="flex-1 px-5 py-4 text-center text-sm tracking-widest uppercase font-mono focus:outline-none transition-all rounded-full"
-              style={{ border: `1.5px solid ${theme.border}`, backgroundColor: 'transparent', color: theme.text }}
-              onFocus={(e) => e.target.style.borderColor = theme.text}
-              onBlur={(e) => e.target.style.borderColor = theme.border} />
-            <button onClick={joinList} className="px-8 py-4 text-sm tracking-wide font-medium active:scale-[0.98] rounded-full transition-transform" style={{ border: `1.5px solid ${theme.text}`, color: theme.text }}>Join</button>
+          {/* Join section card */}
+          <div className="p-4 rounded-2xl" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+            <div className="flex gap-3">
+              <input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="Code" maxLength={6}
+                className="flex-1 px-5 py-4 text-center text-sm tracking-widest uppercase font-mono focus:outline-none transition-all rounded-full"
+                style={{ border: `1.5px solid ${theme.border}`, backgroundColor: 'transparent', color: theme.text }}
+                onFocus={(e) => e.target.style.borderColor = theme.text}
+                onBlur={(e) => e.target.style.borderColor = theme.border} />
+              <button onClick={joinList} className="px-8 py-4 text-sm tracking-wide font-medium active:scale-[0.98] rounded-full transition-all" style={{ border: `1.5px solid ${theme.text}`, color: theme.text }}>Join</button>
+            </div>
           </div>
           <p className="text-center mt-10 text-xs" style={{ color: theme.textTertiary }}>Share your code to shop together</p>
         </div>
@@ -1387,7 +1431,7 @@ export default function App() {
   return (
     <div 
       className="min-h-screen" 
-      style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: theme.bg }}
+      style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}
       onClick={(e) => {
         // Close adding input if clicking outside input area
         if (addingTo && !e.target.closest('.adding-input-area')) {
@@ -1407,7 +1451,7 @@ export default function App() {
       
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary }}>
+          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
             <div className="text-4xl mb-4">🧹</div>
             <h2 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>Clear completed items?</h2>
             <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>
@@ -1418,7 +1462,7 @@ export default function App() {
             </p>
             <div className="flex gap-3">
               <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(false); }} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>Cancel</button>
-              <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ backgroundColor: YELLOW, color: '#292524' }}>Clear</button>
+              <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.97]" style={{ backgroundColor: YELLOW, color: '#292524', boxShadow: theme.yellowGlow }}>Clear</button>
             </div>
           </div>
         </div>
@@ -1426,7 +1470,7 @@ export default function App() {
 
       {showClearAllConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary }}>
+          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
             <div className="text-4xl mb-4">🗑️</div>
             <h2 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>Clear all items?</h2>
             <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>
@@ -1445,7 +1489,7 @@ export default function App() {
 
       {showLeaveConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary }}>
+          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
             <div className="text-4xl mb-4">👋</div>
             <h2 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>Leave this list?</h2>
             <p className="text-sm mb-2" style={{ color: theme.textSecondary }}>
@@ -1464,13 +1508,13 @@ export default function App() {
 
       {showCodePopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setShowCodePopup(false)}>
-          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary }} onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }} onClick={(e) => e.stopPropagation()}>
             <div className="text-4xl mb-4">🔗</div>
             <h2 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>Your Share Code</h2>
             <div className="px-6 py-4 rounded-2xl mb-4" style={{ backgroundColor: theme.bgTertiary }}>
               <span className="text-3xl font-mono tracking-widest" style={{ color: theme.text }}>{listId}</span>
             </div>
-            <p className="text-sm mb-6" style={{ color: theme.textSecondary }}>
+            <p className="text-sm mb-6" style={{ color: theme.textSecondary, fontWeight: 300 }}>
               Share this code with family or housemates so they can join your list and shop together in real-time!
             </p>
             <button 
@@ -1480,8 +1524,8 @@ export default function App() {
                 setShowCodePopup(false);
                 showToastMessage('Code copied!');
               }} 
-              className="w-full py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" 
-              style={{ backgroundColor: YELLOW, color: '#292524' }}
+              className="w-full py-3 text-sm font-medium rounded-full transition-all active:scale-[0.97]" 
+              style={{ backgroundColor: YELLOW, color: '#292524', boxShadow: theme.yellowGlow }}
             >
               Copy Code
             </button>
@@ -1493,7 +1537,7 @@ export default function App() {
         <div className="px-4 py-2 text-center text-xs font-medium" style={{ backgroundColor: '#fef3c7', color: '#92400e' }}>You're offline. Changes will sync when you reconnect.</div>
       )}
       
-      <div className="sticky top-0 z-40" style={{ backgroundColor: theme.bg, borderBottom: `1px solid ${theme.border}` }}>
+      <div className="sticky top-0 z-40" style={{ backgroundColor: darkMode ? theme.bg : 'rgba(250,249,248,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${theme.border}` }}>
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-3">
             {/* Left side - Logo and title */}
@@ -1559,9 +1603,9 @@ export default function App() {
           return (
             <div key={category.id} className="mb-3">
               <div className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all" style={{ backgroundColor: hasItems ? theme.bgSecondary : 'transparent', boxShadow: hasItems ? theme.cardShadow : 'none' }}>
-                <span className="text-sm font-medium" style={{ color: hasItems ? theme.text : theme.textTertiary }}>
+                <span className="text-sm" style={{ color: hasItems ? theme.text : theme.textTertiary, fontWeight: 600 }}>
                   {category.name}
-                  {hasItems && <span className="ml-2 font-normal" style={{ color: theme.textTertiary }}>{uncheckedCount}</span>}
+                  {hasItems && <span className="ml-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>{uncheckedCount}</span>}
                 </span>
                 <button onClick={() => isAdding ? cancelAdding() : startAdding(category.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 adding-input-area" style={{ backgroundColor: isAdding ? theme.text : theme.bgTertiary, color: isAdding ? theme.bg : theme.textSecondary }}>
                   <span className="text-lg leading-none transition-transform duration-200" style={{ transform: isAdding ? 'rotate(45deg)' : 'none' }}>+</span>
@@ -1674,8 +1718,8 @@ export default function App() {
       {checkedCount > 0 && (
         <div className="fixed bottom-6 left-4 right-4 flex justify-center fade-in">
           <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(true); }}
-            className="px-6 py-3 text-sm font-medium rounded-full shadow-lg transition-all active:scale-95"
-            style={{ backgroundColor: YELLOW, color: '#292524' }}>
+            className="px-6 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.97]"
+            style={{ backgroundColor: YELLOW, color: '#292524', boxShadow: theme.yellowGlow }}>
             Clear {checkedCount} completed
           </button>
         </div>
