@@ -321,6 +321,7 @@ export default function App() {
   const [showCodePopup, setShowCodePopup] = useState(false);
   const [savingRecipe, setSavingRecipe] = useState(false);
   const [editingRecipeId, setEditingRecipeId] = useState(null);
+  const [hideShareCode, setHideShareCode] = useState(false);
   
   const inputRef = useRef(null);
   const recipeInputRef = useRef(null);
@@ -397,6 +398,7 @@ export default function App() {
           setItems(data.items || []);
           if (data.categories) setCategories(data.categories);
           if (data.recipes) setRecipes(data.recipes);
+          if (data.hideShareCode !== undefined) setHideShareCode(data.hideShareCode);
         }
         setSyncing(false);
       },
@@ -408,19 +410,20 @@ export default function App() {
     return () => unsubscribe();
   }, [listId]);
 
-  const saveList = useCallback(async (newItems, newCategories = categories, newRecipes = recipes) => {
+  const saveList = useCallback(async (newItems, newCategories = categories, newRecipes = recipes, newHideShareCode = hideShareCode) => {
     if (!listId) return;
     try {
       await setDoc(doc(db, 'lists', listId), {
         items: newItems,
         categories: newCategories,
         recipes: newRecipes,
+        hideShareCode: newHideShareCode,
         updatedAt: new Date().toISOString()
       });
     } catch (error) {
       console.error('Error saving list:', error);
     }
-  }, [listId, categories, recipes]);
+  }, [listId, categories, recipes, hideShareCode]);
 
   const saveHiddenCategories = (hidden) => {
     localStorage.setItem('breadcrumbs-hidden-categories', JSON.stringify(hidden));
@@ -654,6 +657,13 @@ export default function App() {
   const toggleDarkMode = () => {
     triggerHaptic('light');
     setDarkMode(!darkMode);
+  };
+
+  const toggleHideShareCode = async () => {
+    triggerHaptic('light');
+    const newValue = !hideShareCode;
+    setHideShareCode(newValue);
+    await saveList(items, categories, recipes, newValue);
   };
 
   // Recipe functions
@@ -1187,6 +1197,24 @@ export default function App() {
                       ></div>
                     </button>
                   </div>
+                  
+                  {/* Hide Share Code toggle */}
+                  <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: `1px solid ${theme.borderLight}` }}>
+                    <div>
+                      <span className="text-sm" style={{ color: theme.text }}>Hide Share Code</span>
+                      <p className="text-xs mt-0.5" style={{ color: theme.textTertiary, fontWeight: 300 }}>Hides the 6-digit code on the main screen for everyone</p>
+                    </div>
+                    <button
+                      onClick={toggleHideShareCode}
+                      className="w-12 h-7 rounded-full transition-all relative flex-shrink-0 ml-3"
+                      style={{ backgroundColor: hideShareCode ? YELLOW : theme.border, boxShadow: hideShareCode ? theme.yellowGlowSubtle : 'none' }}
+                    >
+                      <div
+                        className="absolute top-1 w-5 h-5 rounded-full transition-all shadow-sm"
+                        style={{ backgroundColor: '#fff', left: hideShareCode ? 'calc(100% - 24px)' : '4px' }}
+                      ></div>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -1377,7 +1405,7 @@ export default function App() {
   // Welcome Screen
   if (!listId) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 relative overflow-hidden" style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}>
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden" style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}>
         <style>{styles}</style>
         {/* Decorative blob */}
         <div 
@@ -1392,36 +1420,71 @@ export default function App() {
             zIndex: 0
           }}
         />
+        
         <div className="w-full max-w-sm relative" style={{ zIndex: 1 }}>
-          <div className="text-center mb-12">
+          {/* Hero section */}
+          <div className="text-center mb-10">
             <div className="mb-6 flex justify-center items-center gap-2">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: YELLOW }}></div>
               <div className="w-2 h-2 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
               <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
             </div>
-            <h1 className="text-3xl font-light tracking-tight mb-4" style={{ color: theme.text }}>Breadcrumbs</h1>
-            <p className="text-sm font-light leading-relaxed" style={{ color: theme.textSecondary }}>Never get lost in the aisles again.</p>
-            <p className="text-sm font-light" style={{ color: theme.textTertiary }}>The smartest path to a stocked home.</p>
+            <h1 className="text-3xl font-light tracking-tight mb-3" style={{ color: theme.text }}>Breadcrumbs</h1>
+            <p className="text-sm leading-relaxed" style={{ color: theme.textSecondary, fontWeight: 300 }}>Never get lost in the aisles again.</p>
+            <p className="text-sm" style={{ color: theme.textTertiary, fontWeight: 300 }}>The smartest path to a stocked home.</p>
           </div>
-          <button onClick={createNewList} className={`w-full py-4 text-sm tracking-wide font-medium rounded-full transition-all ${createAnim ? 'btn-pop' : ''}`} style={{ backgroundColor: createAnim ? YELLOW : (darkMode ? '#fafaf9' : '#292524'), color: createAnim ? '#292524' : (darkMode ? '#292524' : '#fff'), boxShadow: createAnim ? theme.yellowGlow : 'none' }}>
-            Create new list
-          </button>
-          <div className="relative my-10">
-            <div className="absolute inset-0 flex items-center"><div className="w-full" style={{ borderTop: `1px solid ${theme.border}` }}></div></div>
-            <div className="relative flex justify-center"><span className="px-4 text-xs tracking-widest uppercase" style={{ backgroundColor: 'transparent', color: theme.textTertiary }}><span style={{ backgroundColor: darkMode ? theme.bg : '#f8f6f3', padding: '0 8px' }}>or join</span></span></div>
-          </div>
-          {/* Join section card */}
-          <div className="p-4 rounded-2xl" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
-            <div className="flex gap-3">
-              <input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="Code" maxLength={6}
-                className="flex-1 px-5 py-4 text-center text-sm tracking-widest uppercase font-mono focus:outline-none transition-all rounded-full"
-                style={{ border: `1.5px solid ${theme.border}`, backgroundColor: 'transparent', color: theme.text }}
-                onFocus={(e) => e.target.style.borderColor = theme.text}
-                onBlur={(e) => e.target.style.borderColor = theme.border} />
-              <button onClick={joinList} className="px-8 py-4 text-sm tracking-wide font-medium active:scale-[0.98] rounded-full transition-all" style={{ border: `1.5px solid ${theme.text}`, color: theme.text }}>Join</button>
+          
+          {/* Action card */}
+          <div className="rounded-3xl p-6" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+            {/* Create new list */}
+            <button 
+              onClick={createNewList} 
+              className={`w-full py-4 text-sm tracking-wide font-medium rounded-full transition-all mb-6 ${createAnim ? 'btn-pop' : ''}`} 
+              style={{ 
+                backgroundColor: createAnim ? YELLOW : (darkMode ? '#fafaf9' : '#292524'), 
+                color: createAnim ? '#292524' : (darkMode ? '#292524' : '#fff'), 
+                boxShadow: createAnim ? theme.yellowGlow : 'none' 
+              }}
+            >
+              Create new list
+            </button>
+            
+            {/* Divider */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex-1 h-px" style={{ backgroundColor: theme.border }}></div>
+              <span className="text-xs tracking-widest uppercase" style={{ color: theme.textTertiary }}>or join</span>
+              <div className="flex-1 h-px" style={{ backgroundColor: theme.border }}></div>
+            </div>
+            
+            {/* Join existing list */}
+            <div className="space-y-3">
+              <input 
+                type="text" 
+                value={joinCode} 
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())} 
+                placeholder="Enter 6-digit code" 
+                maxLength={6}
+                className="w-full px-5 py-4 text-center text-sm tracking-widest uppercase font-mono focus:outline-none transition-all rounded-xl"
+                style={{ border: `1.5px solid ${theme.border}`, backgroundColor: theme.bgTertiary, color: theme.text }}
+                onFocus={(e) => e.target.style.borderColor = YELLOW}
+                onBlur={(e) => e.target.style.borderColor = theme.border} 
+              />
+              <button 
+                onClick={joinList} 
+                disabled={joinCode.length !== 6}
+                className="w-full py-4 text-sm tracking-wide font-medium rounded-full transition-all active:scale-[0.98]" 
+                style={{ 
+                  border: `1.5px solid ${joinCode.length === 6 ? theme.text : theme.border}`, 
+                  color: joinCode.length === 6 ? theme.text : theme.textTertiary,
+                  opacity: joinCode.length === 6 ? 1 : 0.7
+                }}
+              >
+                Join list
+              </button>
             </div>
           </div>
-          <p className="text-center mt-10 text-xs" style={{ color: theme.textTertiary }}>Share your code to shop together</p>
+          
+          <p className="text-center mt-8 text-xs" style={{ color: theme.textTertiary, fontWeight: 300 }}>Share your code to shop together</p>
         </div>
       </div>
     );
@@ -1552,19 +1615,34 @@ export default function App() {
               </h1>
             </div>
             
-            {/* Right side - Code pill, settings, and recipe button */}
+            {/* Right side - Code pill (or just status dot), settings, and recipe button */}
             <div className="flex items-center gap-2">
-              <button 
-                onClick={() => { triggerHaptic('light'); setShowCodePopup(true); }}
-                className="flex items-center gap-2 px-2.5 py-1 rounded-full transition-all active:scale-95"
-                style={{ backgroundColor: theme.codePillBg }}
-              >
-                <span className="text-xs font-mono" style={{ color: theme.textSecondary }}>{listId}</span>
-                <span 
-                  className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${syncing ? 'sync-pulse' : ''}`} 
-                  style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}
-                ></span>
-              </button>
+              {hideShareCode ? (
+                /* Just show status dot when code is hidden */
+                <button 
+                  onClick={() => { triggerHaptic('light'); setShowCodePopup(true); }}
+                  className="flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95"
+                  style={{ backgroundColor: theme.codePillBg }}
+                >
+                  <span 
+                    className={`w-2 h-2 rounded-full ${syncing ? 'sync-pulse' : ''}`} 
+                    style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}
+                  ></span>
+                </button>
+              ) : (
+                /* Show full code pill */
+                <button 
+                  onClick={() => { triggerHaptic('light'); setShowCodePopup(true); }}
+                  className="flex items-center gap-2 px-2.5 py-1 rounded-full transition-all active:scale-95"
+                  style={{ backgroundColor: theme.codePillBg }}
+                >
+                  <span className="text-xs font-mono" style={{ color: theme.textSecondary }}>{listId}</span>
+                  <span 
+                    className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${syncing ? 'sync-pulse' : ''}`} 
+                    style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}
+                  ></span>
+                </button>
+              )}
               <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ backgroundColor: theme.bgTertiary }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
