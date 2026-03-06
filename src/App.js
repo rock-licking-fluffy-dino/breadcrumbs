@@ -1023,12 +1023,12 @@ export default function App() {
                         className="absolute left-3 top-0"
                         style={{ 
                           width: '24px',
-                          height: '36px',
+                          height: '44px',
                         }}
                       >
-                        <svg width="24" height="36" viewBox="0 0 24 36" fill="none">
+                        <svg width="24" height="44" viewBox="0 0 24 44" fill="none">
                           <path 
-                            d="M0 0H24V32L12 26L0 32V0Z" 
+                            d="M0 0H24V40L12 34L0 40V0Z" 
                             fill={RECIPE_ACCENT_COLORS[index % RECIPE_ACCENT_COLORS.length]}
                           />
                         </svg>
