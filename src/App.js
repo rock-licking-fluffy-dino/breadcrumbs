@@ -317,7 +317,11 @@ export default function App() {
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('breadcrumbs-dark-mode');
-    return saved ? JSON.parse(saved) : false;
+    if (saved !== null) {
+      return JSON.parse(saved);
+    }
+    // Default to device preference
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
   const [editingQuantityId, setEditingQuantityId] = useState(null);
   
@@ -402,6 +406,19 @@ export default function App() {
     };
   }, []);
 
+  // Listen for device theme changes (only if user hasn't manually set a preference)
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e) => {
+      const saved = localStorage.getItem('breadcrumbs-dark-mode');
+      if (saved === null) {
+        setDarkMode(e.matches);
+      }
+    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
   useEffect(() => {
     if (!listId) return;
     setSyncing(true);
@@ -411,26 +428,25 @@ export default function App() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           
-          // Check for 60-day inactivity - clear items and recipes if stale
+          // Check for 60-day inactivity - fully reset list if stale
           if (data.updatedAt) {
             const lastUpdate = new Date(data.updatedAt);
             const daysSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
             
-            if (daysSinceUpdate > 60 && (data.items?.length > 0 || data.recipes?.length > 0)) {
-              // List is stale - clear it
-              console.log(`List ${listId} inactive for ${Math.floor(daysSinceUpdate)} days, clearing...`);
+            if (daysSinceUpdate > 60) {
+              // List is stale - reset to fresh state
+              console.log(`List ${listId} inactive for ${Math.floor(daysSinceUpdate)} days, resetting...`);
               await setDoc(doc(db, 'lists', listId), {
                 items: [],
-                categories: data.categories || DEFAULT_CATEGORIES,
+                categories: DEFAULT_CATEGORIES,
                 recipes: [],
-                hideShareCode: data.hideShareCode || false,
-                updatedAt: new Date().toISOString(),
-                clearedDueToInactivity: true
+                hideShareCode: false,
+                updatedAt: new Date().toISOString()
               });
               setItems([]);
               setRecipes([]);
-              if (data.categories) setCategories(data.categories);
-              if (data.hideShareCode !== undefined) setHideShareCode(data.hideShareCode);
+              setCategories(DEFAULT_CATEGORIES);
+              setHideShareCode(false);
               setSyncing(false);
               return;
             }
@@ -697,7 +713,9 @@ export default function App() {
 
   const toggleDarkMode = () => {
     triggerHaptic('light');
-    setDarkMode(!darkMode);
+    const newValue = !darkMode;
+    setDarkMode(newValue);
+    localStorage.setItem('breadcrumbs-dark-mode', JSON.stringify(newValue));
   };
 
   const toggleHideShareCode = async () => {
@@ -1283,6 +1301,15 @@ export default function App() {
                   </button>
                 </div>
                 <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>Share this code so others can join your list.</p>
+              </div>
+
+              {/* Inactivity Notice */}
+              <div className="rounded-2xl p-4 mb-6 flex items-start gap-3" style={{ backgroundColor: darkMode ? '#3f3f46' : '#fefce8' }}>
+                <span className="text-lg">💤</span>
+                <div>
+                  <p className="text-sm font-medium mb-1" style={{ color: theme.text }}>Inactivity Policy</p>
+                  <p className="text-xs" style={{ color: theme.textSecondary, fontWeight: 300 }}>Lists that are inactive for 60 days will be automatically reset. Items, recipes, and settings will be cleared.</p>
+                </div>
               </div>
 
               {/* Danger Zone */}
