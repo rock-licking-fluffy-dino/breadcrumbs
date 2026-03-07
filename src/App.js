@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -14,6 +15,20 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+// Initialize App Check (only in production)
+// TODO: Replace YOUR_RECAPTCHA_SITE_KEY with your actual reCAPTCHA v3 site key
+// Get your key from: https://www.google.com/recaptcha/admin
+if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider('YOUR_RECAPTCHA_SITE_KEY'),
+      isTokenAutoRefreshEnabled: true
+    });
+  } catch (error) {
+    console.error('App Check initialization failed:', error);
+  }
+}
 
 const DEFAULT_CATEGORIES = [
   { id: 'fruit-veg', name: 'Fruits & Vegetables', isDefault: true },
@@ -392,9 +407,35 @@ export default function App() {
     setSyncing(true);
     const unsubscribe = onSnapshot(
       doc(db, 'lists', listId),
-      (docSnap) => {
+      async (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
+          
+          // Check for 60-day inactivity - clear items and recipes if stale
+          if (data.updatedAt) {
+            const lastUpdate = new Date(data.updatedAt);
+            const daysSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
+            
+            if (daysSinceUpdate > 60 && (data.items?.length > 0 || data.recipes?.length > 0)) {
+              // List is stale - clear it
+              console.log(`List ${listId} inactive for ${Math.floor(daysSinceUpdate)} days, clearing...`);
+              await setDoc(doc(db, 'lists', listId), {
+                items: [],
+                categories: data.categories || DEFAULT_CATEGORIES,
+                recipes: [],
+                hideShareCode: data.hideShareCode || false,
+                updatedAt: new Date().toISOString(),
+                clearedDueToInactivity: true
+              });
+              setItems([]);
+              setRecipes([]);
+              if (data.categories) setCategories(data.categories);
+              if (data.hideShareCode !== undefined) setHideShareCode(data.hideShareCode);
+              setSyncing(false);
+              return;
+            }
+          }
+          
           setItems(data.items || []);
           if (data.categories) setCategories(data.categories);
           if (data.recipes) setRecipes(data.recipes);
