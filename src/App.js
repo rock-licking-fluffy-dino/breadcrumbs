@@ -315,12 +315,11 @@ export default function App() {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showAddCategory, setShowAddCategory] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('breadcrumbs-dark-mode');
-    if (saved !== null) {
-      return JSON.parse(saved);
-    }
-    // Default to device preference
+  const [appearanceMode, setAppearanceMode] = useState(() => {
+    const saved = localStorage.getItem('breadcrumbs-appearance-mode');
+    return saved || 'system'; // 'light', 'system', or 'dark'
+  });
+  const [systemDarkMode, setSystemDarkMode] = useState(() => {
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
   const [editingQuantityId, setEditingQuantityId] = useState(null);
@@ -346,6 +345,8 @@ export default function App() {
   const recipeInputRef = useRef(null);
   const listNameInputRef = useRef(null);
 
+  // Derive actual dark mode from appearance setting
+  const darkMode = appearanceMode === 'dark' || (appearanceMode === 'system' && systemDarkMode);
   const theme = darkMode ? themes.dark : themes.light;
 
   // Show toast helper
@@ -355,10 +356,10 @@ export default function App() {
     setTimeout(() => setShowToast(false), 2500);
   };
 
-  // Save dark mode preference
+  // Save appearance mode preference
   useEffect(() => {
-    localStorage.setItem('breadcrumbs-dark-mode', JSON.stringify(darkMode));
-  }, [darkMode]);
+    localStorage.setItem('breadcrumbs-appearance-mode', appearanceMode);
+  }, [appearanceMode]);
 
   // Load list name from localStorage when listId changes
   useEffect(() => {
@@ -406,14 +407,11 @@ export default function App() {
     };
   }, []);
 
-  // Listen for device theme changes (only if user hasn't manually set a preference)
+  // Listen for device theme changes
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e) => {
-      const saved = localStorage.getItem('breadcrumbs-dark-mode');
-      if (saved === null) {
-        setDarkMode(e.matches);
-      }
+      setSystemDarkMode(e.matches);
     };
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
@@ -711,11 +709,9 @@ export default function App() {
     await saveList(items, newCats);
   };
 
-  const toggleDarkMode = () => {
+  const setAppearanceModeTo = (mode) => {
     triggerHaptic('light');
-    const newValue = !darkMode;
-    setDarkMode(newValue);
-    localStorage.setItem('breadcrumbs-dark-mode', JSON.stringify(newValue));
+    setAppearanceMode(mode);
   };
 
   const toggleHideShareCode = async () => {
@@ -1249,18 +1245,31 @@ export default function App() {
                 {/* Preferences section */}
                 <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${theme.borderLight}` }}>
                   <label className="text-xs font-medium mb-3 block" style={{ color: theme.textSecondary }}>Preferences</label>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm" style={{ color: theme.text }}>Dark Mode</span>
-                    <button
-                      onClick={toggleDarkMode}
-                      className="w-12 h-7 rounded-full transition-all relative"
-                      style={{ backgroundColor: darkMode ? YELLOW : theme.border, boxShadow: darkMode ? theme.yellowGlowSubtle : 'none' }}
-                    >
-                      <div
-                        className="absolute top-1 w-5 h-5 rounded-full transition-all shadow-sm"
-                        style={{ backgroundColor: '#fff', left: darkMode ? 'calc(100% - 24px)' : '4px' }}
-                      ></div>
-                    </button>
+                  <div>
+                    <span className="text-sm" style={{ color: theme.text }}>Appearance</span>
+                    <div className="flex gap-1 mt-2 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
+                      {[
+                        { id: 'light', label: 'Light', icon: '☀️' },
+                        { id: 'system', label: 'System', icon: '⚙️' },
+                        { id: 'dark', label: 'Dark', icon: '🌙' }
+                      ].map(option => (
+                        <button
+                          key={option.id}
+                          onClick={() => setAppearanceModeTo(option.id)}
+                          className="flex-1 py-2 text-xs font-medium rounded-full transition-all"
+                          style={{
+                            backgroundColor: appearanceMode === option.id ? YELLOW : 'transparent',
+                            color: appearanceMode === option.id ? '#292524' : theme.textSecondary,
+                            boxShadow: appearanceMode === option.id ? theme.yellowGlowSubtle : 'none'
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>
+                      {appearanceMode === 'system' ? 'Follows your device theme' : appearanceMode === 'dark' ? 'Always use dark theme' : 'Always use light theme'}
+                    </p>
                   </div>
                   
                   {/* Hide Share Code toggle */}
