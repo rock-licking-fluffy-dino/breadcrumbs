@@ -22,7 +22,7 @@ const db = getFirestore(app);
 if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
   try {
     initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider('YOUR_RECAPTCHA_SITE_KEY'),
+      provider: new ReCaptchaV3Provider('6LcUPoMsAAAAAKXBQxRYUt5UmVa135MT7V2pkHR4'),
       isTokenAutoRefreshEnabled: true
     });
   } catch (error) {
