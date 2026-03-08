@@ -303,7 +303,11 @@ export default function App() {
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [hiddenCategories, setHiddenCategories] = useState(() => {
     const saved = localStorage.getItem('breadcrumbs-hidden-categories');
-    return saved ? JSON.parse(saved) : [];
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    // Default: hide Baby and Alcohol for new users
+    return ['baby', 'alcohol'];
   });
   const [createAnim, setCreateAnim] = useState(false);
   const [checkingItems, setCheckingItems] = useState(new Set());
@@ -431,7 +435,7 @@ export default function App() {
             const lastUpdate = new Date(data.updatedAt);
             const daysSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
             
-            if (daysSinceUpdate > 60) {
+            if (daysSinceUpdate > 90) {
               // List is stale - reset to fresh state
               console.log(`List ${listId} inactive for ${Math.floor(daysSinceUpdate)} days, resetting...`);
               await setDoc(doc(db, 'lists', listId), {
@@ -895,6 +899,15 @@ export default function App() {
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+    @keyframes breathe {
+      0%   { transform: translateY(0px) scale(1); }
+      40%  { transform: translateY(-10px) scale(1.08); }
+      100% { transform: translateY(0px) scale(1); }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
     @keyframes buttonPop {
       0% { transform: scale(1); background-color: #292524; }
       50% { transform: scale(1.02); background-color: ${YELLOW}; }
@@ -913,6 +926,10 @@ export default function App() {
     }
     @keyframes drawCheck { 0% { stroke-dashoffset: 24; } 100% { stroke-dashoffset: 0; } }
     .fade-in { animation: fadeIn 0.2s ease-out; }
+    .fade-up-1 { animation: fadeUp 0.6s ease-out 0.1s both; }
+    .fade-up-2 { animation: fadeUp 0.6s ease-out 0.25s both; }
+    .fade-up-3 { animation: fadeUp 0.6s ease-out 0.4s both; }
+    .fade-up-4 { animation: fadeUp 0.6s ease-out 0.55s both; }
     .sync-pulse { animation: pulse 1.5s ease-in-out infinite; }
     .btn-pop { animation: buttonPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     .recipe-pop { animation: recipePop 0.3s ease-out; }
@@ -920,7 +937,11 @@ export default function App() {
     .fill-check { animation: fillCheck 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     .draw-check { stroke-dasharray: 24; stroke-dashoffset: 24; animation: drawCheck 0.3s ease-out 0.15s forwards; }
     .item-row { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .breathe-1 { animation: breathe 2.8s ease-in-out infinite; }
+    .breathe-2 { animation: breathe 3.2s ease-in-out infinite; animation-delay: 0.35s; }
+    .breathe-3 { animation: breathe 3.6s ease-in-out infinite; animation-delay: 0.7s; }
     input { font-size: 16px !important; }
+    .code-input::placeholder { color: #d6d3d1; letter-spacing: 0.15em; }
   `;
 
   // Recipes Screen
@@ -1317,7 +1338,7 @@ export default function App() {
                 <span className="text-lg">💤</span>
                 <div>
                   <p className="text-sm font-medium mb-1" style={{ color: theme.text }}>Inactivity Policy</p>
-                  <p className="text-xs" style={{ color: theme.textSecondary, fontWeight: 300 }}>Lists that are inactive for 60 days will be automatically reset. Items, recipes, and settings will be cleared.</p>
+                  <p className="text-xs" style={{ color: theme.textSecondary, fontWeight: 300 }}>Lists inactive for 90 days are automatically reset. Items, recipes, custom categories, and settings will be cleared.</p>
                 </div>
               </div>
 
@@ -1488,86 +1509,143 @@ export default function App() {
   // Welcome Screen
   if (!listId) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden" style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}>
+      <div 
+        className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden" 
+        style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}
+      >
         <style>{styles}</style>
-        {/* Decorative blob */}
-        <div 
-          className="absolute pointer-events-none" 
-          style={{ 
-            width: '500px', 
-            height: '400px', 
-            top: '10%', 
-            left: '50%', 
-            transform: 'translateX(-50%)',
-            background: 'radial-gradient(ellipse, rgba(250,204,21,0.12) 0%, transparent 70%)',
-            zIndex: 0
-          }}
-        />
         
         <div className="w-full max-w-sm relative" style={{ zIndex: 1 }}>
-          {/* Hero section */}
-          <div className="text-center mb-10">
-            <div className="mb-6 flex justify-center items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: YELLOW }}></div>
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
-              <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
+          {/* Hero section with breathing dots */}
+          <div className="flex flex-col items-center mb-12 fade-up-1">
+            {/* Big breathing dots */}
+            <div className="flex items-center gap-6 mb-9">
+              <div 
+                className="breathe-1 rounded-full"
+                style={{ 
+                  width: 72, 
+                  height: 72, 
+                  backgroundColor: YELLOW,
+                }}
+              />
+              <div 
+                className="breathe-2 rounded-full"
+                style={{ 
+                  width: 52, 
+                  height: 52, 
+                  backgroundColor: YELLOW,
+                  opacity: 0.6,
+                }}
+              />
+              <div 
+                className="breathe-3 rounded-full"
+                style={{ 
+                  width: 36, 
+                  height: 36, 
+                  backgroundColor: YELLOW,
+                  opacity: 0.3,
+                }}
+              />
             </div>
-            <h1 className="text-3xl font-light tracking-tight mb-3" style={{ color: theme.text }}>Breadcrumbs</h1>
-            <p className="text-sm leading-relaxed" style={{ color: theme.textSecondary, fontWeight: 300 }}>Never get lost in the aisles again.</p>
-            <p className="text-sm" style={{ color: theme.textTertiary, fontWeight: 300 }}>The smartest path to a stocked home.</p>
+
+            {/* Wordmark */}
+            <h1 
+              style={{ 
+                fontSize: 40, 
+                fontWeight: 800, 
+                letterSpacing: '-0.01em', 
+                color: theme.text,
+                margin: 0,
+                lineHeight: 1,
+              }}
+            >
+              Breadcrumbs
+            </h1>
+
+            {/* Taglines */}
+            <p className="fade-up-2 mt-3 text-sm" style={{ color: theme.textSecondary, fontWeight: 400 }}>
+              Never get lost in the aisles again.
+            </p>
+            <p style={{ color: theme.textTertiary, fontSize: 14, fontWeight: 300, marginTop: 2 }}>
+              The smartest path to a stocked home.
+            </p>
           </div>
-          
-          {/* Action card */}
-          <div className="rounded-3xl p-6" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
-            {/* Create new list */}
+
+          {/* CTA card */}
+          <div 
+            className="fade-up-3 rounded-3xl p-6"
+            style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}
+          >
+            {/* Create button */}
             <button 
               onClick={createNewList} 
-              className={`w-full py-4 text-sm tracking-wide font-medium rounded-full transition-all mb-6 ${createAnim ? 'btn-pop' : ''}`} 
+              className={`w-full py-4 text-sm font-medium rounded-full transition-all mb-5 ${createAnim ? 'btn-pop' : ''}`}
               style={{ 
-                backgroundColor: createAnim ? YELLOW : (darkMode ? '#fafaf9' : '#292524'), 
-                color: createAnim ? '#292524' : (darkMode ? '#292524' : '#fff'), 
-                boxShadow: createAnim ? theme.yellowGlow : 'none' 
+                backgroundColor: createAnim ? YELLOW : (darkMode ? '#fafaf9' : '#1c1917'), 
+                color: createAnim ? '#292524' : (darkMode ? '#1c1917' : '#fff'),
+                boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
               }}
             >
               Create new list
             </button>
-            
+
             {/* Divider */}
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1 h-px" style={{ backgroundColor: theme.border }}></div>
-              <span className="text-xs tracking-widest uppercase" style={{ color: theme.textTertiary }}>or join</span>
-              <div className="flex-1 h-px" style={{ backgroundColor: theme.border }}></div>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="flex-1 h-px" style={{ backgroundColor: darkMode ? theme.border : '#f0eeec' }}></div>
+              <span 
+                style={{ 
+                  fontSize: 11, 
+                  fontWeight: 500, 
+                  letterSpacing: '0.12em', 
+                  color: darkMode ? theme.textTertiary : '#c4bfbb',
+                  textTransform: 'uppercase',
+                }}
+              >
+                or join
+              </span>
+              <div className="flex-1 h-px" style={{ backgroundColor: darkMode ? theme.border : '#f0eeec' }}></div>
             </div>
-            
-            {/* Join existing list */}
-            <div className="space-y-3">
+
+            {/* Code input + join row */}
+            <div className="flex gap-2.5">
               <input 
                 type="text" 
                 value={joinCode} 
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())} 
-                placeholder="Enter 6-digit code" 
+                placeholder="ABC123" 
                 maxLength={6}
-                className="w-full px-5 py-4 text-center text-sm tracking-widest uppercase font-mono focus:outline-none transition-all rounded-xl"
-                style={{ border: `1.5px solid ${theme.border}`, backgroundColor: theme.bgTertiary, color: theme.text }}
-                onFocus={(e) => e.target.style.borderColor = YELLOW}
-                onBlur={(e) => e.target.style.borderColor = theme.border} 
+                className="code-input flex-1 px-4 py-3.5 text-center text-sm tracking-widest uppercase font-medium focus:outline-none transition-all rounded-full"
+                style={{ 
+                  border: `1.5px solid ${darkMode ? theme.border : '#f0eeec'}`, 
+                  backgroundColor: theme.bgTertiary, 
+                  color: theme.text,
+                  letterSpacing: '0.15em',
+                }}
+                onFocus={(e) => e.target.style.borderColor = darkMode ? theme.textTertiary : '#d6d3d1'}
+                onBlur={(e) => e.target.style.borderColor = darkMode ? theme.border : '#f0eeec'} 
               />
               <button 
                 onClick={joinList} 
-                disabled={joinCode.length !== 6}
-                className="w-full py-4 text-sm tracking-wide font-medium rounded-full transition-all active:scale-[0.98]" 
+                className="px-5 py-3.5 text-sm font-medium rounded-full transition-all active:scale-[0.97]"
                 style={{ 
-                  border: `1.5px solid ${joinCode.length === 6 ? theme.text : theme.border}`, 
-                  color: joinCode.length === 6 ? theme.text : theme.textTertiary,
-                  opacity: joinCode.length === 6 ? 1 : 0.7
+                  border: `1.5px solid ${theme.border}`, 
+                  backgroundColor: 'transparent',
+                  color: theme.text,
+                  whiteSpace: 'nowrap',
                 }}
               >
-                Join list
+                Join
               </button>
             </div>
           </div>
-          
-          <p className="text-center mt-8 text-xs" style={{ color: theme.textTertiary, fontWeight: 300 }}>Share your code to shop together</p>
+
+          {/* Footer hint */}
+          <p 
+            className="fade-up-4 text-center mt-4"
+            style={{ fontSize: 12, color: darkMode ? theme.textTertiary : '#d6d3d1', fontWeight: 300 }}
+          >
+            Share your code to shop together
+          </p>
         </div>
       </div>
     );
