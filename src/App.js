@@ -1573,8 +1573,8 @@ export default function App() {
 
           {/* CTA card */}
           <div 
-            className="fade-up-3 rounded-3xl p-6"
-            style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}
+            className="fade-up-3 rounded-3xl p-5"
+            style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow, overflow: 'hidden' }}
           >
             {/* Create button */}
             <button 
@@ -1607,15 +1607,17 @@ export default function App() {
             </div>
 
             {/* Code input + join row */}
-            <div className="flex gap-2.5">
+            <div className="flex gap-2" style={{ minWidth: 0 }}>
               <input 
                 type="text" 
                 value={joinCode} 
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())} 
                 placeholder="ABC123" 
                 maxLength={6}
-                className="code-input flex-1 px-4 py-3.5 text-center text-sm tracking-widest uppercase font-medium focus:outline-none transition-all rounded-full"
+                className="code-input py-3.5 text-center text-sm tracking-widest uppercase font-medium focus:outline-none transition-all rounded-full"
                 style={{ 
+                  flex: '1 1 auto',
+                  minWidth: 0,
                   border: `1.5px solid ${darkMode ? theme.border : '#f0eeec'}`, 
                   backgroundColor: theme.bgTertiary, 
                   color: theme.text,
@@ -1626,12 +1628,11 @@ export default function App() {
               />
               <button 
                 onClick={joinList} 
-                className="px-5 py-3.5 text-sm font-medium rounded-full transition-all active:scale-[0.97]"
+                className="px-5 py-3.5 text-sm font-medium rounded-full transition-all active:scale-[0.97] flex-shrink-0"
                 style={{ 
                   border: `1.5px solid ${theme.border}`, 
                   backgroundColor: 'transparent',
                   color: theme.text,
-                  whiteSpace: 'nowrap',
                 }}
               >
                 Join
