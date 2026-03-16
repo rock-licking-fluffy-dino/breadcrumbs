@@ -1843,15 +1843,13 @@ export default function App() {
           const uncheckedCount = categoryItems.filter(i => !i.checked).length;
           const hasItems = categoryItems.length > 0;
           const isAdding = addingTo === category.id;
-          const isLastCategory = categoryIndex === visibleCategories.length - 1;
           return (
             <div key={category.id} className="mb-1">
               <div 
                 className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all" 
                 style={{ 
-                  backgroundColor: hasItems ? theme.bgSecondary : 'transparent', 
-                  boxShadow: hasItems ? theme.cardShadow : 'none',
-                  borderBottom: !hasItems && !isLastCategory ? `1px solid ${theme.borderLight}` : 'none'
+                  backgroundColor: hasItems ? theme.bgSecondary : (darkMode ? 'rgba(63,63,70,0.3)' : 'rgba(245,245,244,0.5)'), 
+                  boxShadow: hasItems ? theme.cardShadow : 'none'
                 }}
               >
                 <span className="text-sm" style={{ color: hasItems ? theme.text : theme.textTertiary, fontWeight: hasItems ? 600 : 500 }}>
