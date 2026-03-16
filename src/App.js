@@ -22,7 +22,7 @@ const db = getFirestore(app);
 if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
   try {
     initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider('6LcUPoMsAAAAAKXBQxRYUt5UmVa135MT7V2pkHR4'),
+      provider: new ReCaptchaV3Provider('YOUR_RECAPTCHA_SITE_KEY'),
       isTokenAutoRefreshEnabled: true
     });
   } catch (error) {
@@ -1805,22 +1805,25 @@ export default function App() {
                   ></span>
                 </button>
               )}
-              <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ backgroundColor: theme.bgTertiary }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              </button>
-              <button 
-                onClick={() => setShowRecipes(true)} 
-                className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" 
-                style={{ backgroundColor: YELLOW }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                </svg>
-              </button>
+              {/* Settings and Recipes grouped together */}
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ border: `1.5px solid ${theme.border}`, backgroundColor: 'transparent' }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+                <button 
+                  onClick={() => setShowRecipes(true)} 
+                  className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" 
+                  style={{ backgroundColor: YELLOW }}
+                >
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
           {totalItems > 0 && (
@@ -1834,21 +1837,37 @@ export default function App() {
         </div>
       </div>
       
-      <div className="px-4 py-4 pb-20">
-        {visibleCategories.map(category => {
+      <div className="px-4 py-3 pb-20">
+        {visibleCategories.map((category, categoryIndex) => {
           const categoryItems = items.filter(item => item.category === category.id);
           const uncheckedCount = categoryItems.filter(i => !i.checked).length;
           const hasItems = categoryItems.length > 0;
           const isAdding = addingTo === category.id;
+          const isLastCategory = categoryIndex === visibleCategories.length - 1;
           return (
-            <div key={category.id} className="mb-3">
-              <div className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all" style={{ backgroundColor: hasItems ? theme.bgSecondary : 'transparent', boxShadow: hasItems ? theme.cardShadow : 'none' }}>
-                <span className="text-sm" style={{ color: hasItems ? theme.text : theme.textTertiary, fontWeight: 600 }}>
+            <div key={category.id} className="mb-1">
+              <div 
+                className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all" 
+                style={{ 
+                  backgroundColor: hasItems ? theme.bgSecondary : 'transparent', 
+                  boxShadow: hasItems ? theme.cardShadow : 'none',
+                  borderBottom: !hasItems && !isLastCategory ? `1px solid ${theme.borderLight}` : 'none'
+                }}
+              >
+                <span className="text-sm" style={{ color: hasItems ? theme.text : theme.textTertiary, fontWeight: hasItems ? 600 : 500 }}>
                   {category.name}
                   {hasItems && <span className="ml-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>{uncheckedCount}</span>}
                 </span>
-                <button onClick={() => isAdding ? cancelAdding() : startAdding(category.id)} className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 adding-input-area" style={{ backgroundColor: isAdding ? theme.text : theme.bgTertiary, color: isAdding ? theme.bg : theme.textSecondary }}>
-                  <span className="text-lg leading-none transition-transform duration-200" style={{ transform: isAdding ? 'rotate(45deg)' : 'none' }}>+</span>
+                <button 
+                  onClick={() => isAdding ? cancelAdding() : startAdding(category.id)} 
+                  className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 adding-input-area" 
+                  style={{ 
+                    backgroundColor: isAdding ? theme.text : 'transparent', 
+                    border: isAdding ? 'none' : `1.5px solid ${darkMode ? '#57534e' : '#d6d3d1'}`,
+                    color: isAdding ? theme.bg : theme.textTertiary 
+                  }}
+                >
+                  <span className="text-base leading-none transition-transform duration-200" style={{ transform: isAdding ? 'rotate(45deg)' : 'none', fontWeight: 300 }}>+</span>
                 </button>
               </div>
               {isAdding && (
