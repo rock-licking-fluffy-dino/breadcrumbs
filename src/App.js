@@ -58,6 +58,52 @@ const YELLOW = '#FACC15';
 // Recipe accent colors palette
 const RECIPE_ACCENT_COLORS = ['#fb923c', '#86efac', '#93c5fd', '#f9a8d4', '#fdba74', '#6ee7b7', '#c4b5fd', '#fca5a5', '#67e8f9', '#d9f99d'];
 
+// Default store layouts with typical UK supermarket category orders
+const DEFAULT_STORE_LAYOUTS = [
+  {
+    id: 'default',
+    name: 'Default',
+    isDefault: true,
+    categoryOrder: ['fruit-veg', 'meat-poultry', 'seafood', 'dairy-eggs', 'bakery', 'deli-chilled', 'frozen', 'breakfast-cereals', 'pasta-rice-grains', 'canned-goods', 'sauces-condiments', 'spices-seasonings', 'snacks-confectionery', 'beverages', 'alcohol', 'household', 'personal-care-health', 'baby', 'pet-supplies', 'other']
+  },
+  {
+    id: 'tesco',
+    name: 'Tesco',
+    isDefault: true,
+    categoryOrder: ['fruit-veg', 'bakery', 'deli-chilled', 'dairy-eggs', 'meat-poultry', 'seafood', 'frozen', 'breakfast-cereals', 'pasta-rice-grains', 'canned-goods', 'sauces-condiments', 'spices-seasonings', 'snacks-confectionery', 'beverages', 'alcohol', 'baby', 'personal-care-health', 'household', 'pet-supplies', 'other']
+  },
+  {
+    id: 'sainsburys',
+    name: "Sainsbury's",
+    isDefault: true,
+    categoryOrder: ['fruit-veg', 'bakery', 'meat-poultry', 'seafood', 'deli-chilled', 'dairy-eggs', 'frozen', 'breakfast-cereals', 'pasta-rice-grains', 'canned-goods', 'sauces-condiments', 'spices-seasonings', 'beverages', 'snacks-confectionery', 'alcohol', 'household', 'personal-care-health', 'baby', 'pet-supplies', 'other']
+  },
+  {
+    id: 'aldi',
+    name: 'Aldi',
+    isDefault: true,
+    categoryOrder: ['bakery', 'fruit-veg', 'dairy-eggs', 'deli-chilled', 'meat-poultry', 'seafood', 'frozen', 'breakfast-cereals', 'pasta-rice-grains', 'canned-goods', 'sauces-condiments', 'spices-seasonings', 'snacks-confectionery', 'beverages', 'alcohol', 'household', 'personal-care-health', 'baby', 'pet-supplies', 'other']
+  },
+  {
+    id: 'lidl',
+    name: 'Lidl',
+    isDefault: true,
+    categoryOrder: ['bakery', 'fruit-veg', 'dairy-eggs', 'deli-chilled', 'meat-poultry', 'seafood', 'frozen', 'breakfast-cereals', 'pasta-rice-grains', 'canned-goods', 'sauces-condiments', 'spices-seasonings', 'snacks-confectionery', 'beverages', 'alcohol', 'household', 'personal-care-health', 'baby', 'pet-supplies', 'other']
+  },
+  {
+    id: 'waitrose',
+    name: 'Waitrose',
+    isDefault: true,
+    categoryOrder: ['fruit-veg', 'bakery', 'deli-chilled', 'dairy-eggs', 'meat-poultry', 'seafood', 'pasta-rice-grains', 'canned-goods', 'sauces-condiments', 'spices-seasonings', 'breakfast-cereals', 'snacks-confectionery', 'beverages', 'alcohol', 'frozen', 'household', 'personal-care-health', 'baby', 'pet-supplies', 'other']
+  },
+  {
+    id: 'mands',
+    name: 'M&S Food',
+    isDefault: true,
+    categoryOrder: ['fruit-veg', 'bakery', 'deli-chilled', 'dairy-eggs', 'meat-poultry', 'seafood', 'frozen', 'pasta-rice-grains', 'canned-goods', 'sauces-condiments', 'spices-seasonings', 'breakfast-cereals', 'snacks-confectionery', 'beverages', 'alcohol', 'household', 'personal-care-health', 'baby', 'pet-supplies', 'other']
+  }
+];
+
 // Theme colors
 const themes = {
   light: {
@@ -345,6 +391,12 @@ export default function App() {
   const [editingRecipeId, setEditingRecipeId] = useState(null);
   const [hideShareCode, setHideShareCode] = useState(false);
   
+  // Store layout state
+  const [storeLayouts, setStoreLayouts] = useState(DEFAULT_STORE_LAYOUTS);
+  const [activeStoreLayoutId, setActiveStoreLayoutId] = useState('default');
+  const [showStorePicker, setShowStorePicker] = useState(false);
+  const [editingStoreLayout, setEditingStoreLayout] = useState(null);
+  
   const inputRef = useRef(null);
   const recipeInputRef = useRef(null);
   const listNameInputRef = useRef(null);
@@ -386,7 +438,23 @@ export default function App() {
     triggerHaptic('success');
   };
 
-  const visibleCategories = categories.filter(cat => !hiddenCategories.includes(cat.id));
+  // Get active store layout
+  const activeStoreLayout = storeLayouts.find(s => s.id === activeStoreLayoutId) || storeLayouts[0];
+  
+  // Sort categories based on active store layout, then filter hidden ones
+  const visibleCategories = (() => {
+    const categoryOrder = activeStoreLayout?.categoryOrder || [];
+    const sortedCategories = [...categories].sort((a, b) => {
+      const aIndex = categoryOrder.indexOf(a.id);
+      const bIndex = categoryOrder.indexOf(b.id);
+      // If not in layout, put at end
+      if (aIndex === -1 && bIndex === -1) return 0;
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
+    return sortedCategories.filter(cat => !hiddenCategories.includes(cat.id));
+  })();
 
   const checkOnboarding = useCallback(() => {
     const hasSeenOnboarding = localStorage.getItem('breadcrumbs-has-seen-onboarding');
@@ -458,6 +526,8 @@ export default function App() {
           if (data.categories) setCategories(data.categories);
           if (data.recipes) setRecipes(data.recipes);
           if (data.hideShareCode !== undefined) setHideShareCode(data.hideShareCode);
+          if (data.storeLayouts) setStoreLayouts(data.storeLayouts);
+          if (data.activeStoreLayoutId) setActiveStoreLayoutId(data.activeStoreLayoutId);
         }
         setSyncing(false);
       },
@@ -469,7 +539,7 @@ export default function App() {
     return () => unsubscribe();
   }, [listId]);
 
-  const saveList = useCallback(async (newItems, newCategories = categories, newRecipes = recipes, newHideShareCode = hideShareCode) => {
+  const saveList = useCallback(async (newItems, newCategories = categories, newRecipes = recipes, newHideShareCode = hideShareCode, newStoreLayouts = storeLayouts, newActiveStoreLayoutId = activeStoreLayoutId) => {
     if (!listId) return;
     try {
       await setDoc(doc(db, 'lists', listId), {
@@ -477,12 +547,14 @@ export default function App() {
         categories: newCategories,
         recipes: newRecipes,
         hideShareCode: newHideShareCode,
+        storeLayouts: newStoreLayouts,
+        activeStoreLayoutId: newActiveStoreLayoutId,
         updatedAt: new Date().toISOString()
       });
     } catch (error) {
       console.error('Error saving list:', error);
     }
-  }, [listId, categories, recipes, hideShareCode]);
+  }, [listId, categories, recipes, hideShareCode, storeLayouts, activeStoreLayoutId]);
 
   const saveHiddenCategories = (hidden) => {
     localStorage.setItem('breadcrumbs-hidden-categories', JSON.stringify(hidden));
@@ -528,6 +600,63 @@ export default function App() {
     await saveList(newItems, newCategories);
   };
 
+  // Store layout functions
+  const switchStoreLayout = async (layoutId) => {
+    triggerHaptic('success');
+    setActiveStoreLayoutId(layoutId);
+    setShowStorePicker(false);
+    await saveList(items, categories, recipes, hideShareCode, storeLayouts, layoutId);
+    const layout = storeLayouts.find(s => s.id === layoutId);
+    showToastMessage(`Switched to ${layout?.name || 'layout'}`);
+  };
+
+  const updateStoreLayoutOrder = async (layoutId, newCategoryOrder) => {
+    const newLayouts = storeLayouts.map(layout => 
+      layout.id === layoutId 
+        ? { ...layout, categoryOrder: newCategoryOrder }
+        : layout
+    );
+    setStoreLayouts(newLayouts);
+    await saveList(items, categories, recipes, hideShareCode, newLayouts, activeStoreLayoutId);
+  };
+
+  const createCustomStoreLayout = async (name) => {
+    triggerHaptic('success');
+    const newLayout = {
+      id: `custom-${generateId()}`,
+      name: name.trim(),
+      isDefault: false,
+      categoryOrder: activeStoreLayout?.categoryOrder || DEFAULT_STORE_LAYOUTS[0].categoryOrder
+    };
+    const newLayouts = [...storeLayouts, newLayout];
+    setStoreLayouts(newLayouts);
+    await saveList(items, categories, recipes, hideShareCode, newLayouts, activeStoreLayoutId);
+    return newLayout;
+  };
+
+  const deleteStoreLayout = async (layoutId) => {
+    triggerHaptic('light');
+    const newLayouts = storeLayouts.filter(s => s.id !== layoutId);
+    const newActiveId = activeStoreLayoutId === layoutId ? 'default' : activeStoreLayoutId;
+    setStoreLayouts(newLayouts);
+    setActiveStoreLayoutId(newActiveId);
+    await saveList(items, categories, recipes, hideShareCode, newLayouts, newActiveId);
+  };
+
+  const resetStoreLayoutToDefault = async (layoutId) => {
+    const defaultLayout = DEFAULT_STORE_LAYOUTS.find(s => s.id === layoutId);
+    if (defaultLayout) {
+      const newLayouts = storeLayouts.map(layout => 
+        layout.id === layoutId 
+          ? { ...layout, categoryOrder: defaultLayout.categoryOrder }
+          : layout
+      );
+      setStoreLayouts(newLayouts);
+      await saveList(items, categories, recipes, hideShareCode, newLayouts, activeStoreLayoutId);
+      showToastMessage('Layout reset to default');
+    }
+  };
+
   useEffect(() => {
     if (addingTo && inputRef.current) inputRef.current.focus();
   }, [addingTo]);
@@ -545,12 +674,16 @@ export default function App() {
       setItems([]);
       setCategories(DEFAULT_CATEGORIES);
       setRecipes([]);
+      setStoreLayouts(DEFAULT_STORE_LAYOUTS);
+      setActiveStoreLayoutId('default');
       setListName('');
       setEditingListName('');
       await setDoc(doc(db, 'lists', code), {
         items: [],
         categories: DEFAULT_CATEGORIES,
         recipes: [],
+        storeLayouts: DEFAULT_STORE_LAYOUTS,
+        activeStoreLayoutId: 'default',
         updatedAt: new Date().toISOString()
       });
       localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
@@ -1220,10 +1353,11 @@ export default function App() {
             <div className="w-16"></div>
           </div>
           
-          {/* Tabs - Consolidated to 2 */}
+          {/* Tabs */}
           <div className="flex px-5 gap-2 pb-3">
             {[
               { id: 'general', label: 'General' },
+              { id: 'stores', label: 'Stores' },
               { id: 'categories', label: 'Categories' }
             ].map(tab => (
               <button
@@ -1364,6 +1498,225 @@ export default function App() {
                 </button>
               </div>
             </>
+          )}
+
+          {/* Stores Tab */}
+          {settingsTab === 'stores' && (
+            <>
+              <p className="text-sm mb-4" style={{ color: theme.textSecondary }}>
+                Choose a store layout to reorder categories based on how that store is organised. Your items stay the same — only the order changes.
+              </p>
+
+              {/* Current store indicator */}
+              <div className="rounded-2xl p-4 mb-4" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium mb-1" style={{ color: theme.textSecondary }}>Current Layout</p>
+                    <p className="text-lg font-semibold" style={{ color: theme.text }}>{activeStoreLayout?.name || 'Default'}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: YELLOW }}>
+                    <span className="text-lg">🏪</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Store layouts list */}
+              <h3 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textTertiary }}>Available Layouts</h3>
+              <div className="rounded-2xl overflow-hidden mb-4" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+                {storeLayouts.map((layout, idx) => {
+                  const isActive = layout.id === activeStoreLayoutId;
+                  return (
+                    <div 
+                      key={layout.id}
+                      className="flex items-center gap-3 px-4 py-3"
+                      style={{ borderBottom: idx < storeLayouts.length - 1 ? `1px solid ${theme.borderLight}` : 'none' }}
+                    >
+                      <button
+                        onClick={() => switchStoreLayout(layout.id)}
+                        className="flex-1 flex items-center gap-3 text-left"
+                      >
+                        <div 
+                          className="w-5 h-5 rounded-full flex items-center justify-center transition-all"
+                          style={{ 
+                            border: `2px solid ${isActive ? YELLOW : theme.border}`,
+                            backgroundColor: isActive ? YELLOW : 'transparent'
+                          }}
+                        >
+                          {isActive && (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M4 12l6 6L20 6"/>
+                            </svg>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-sm font-medium" style={{ color: theme.text }}>{layout.name}</span>
+                          {!layout.isDefault && (
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: darkMode ? '#3f3f46' : '#fefce8', color: darkMode ? '#fcd34d' : '#a16207' }}>Custom</span>
+                          )}
+                        </div>
+                      </button>
+                      
+                      <div className="flex items-center gap-1">
+                        {/* Edit button */}
+                        <button
+                          onClick={() => setEditingStoreLayout(layout.id)}
+                          className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
+                          style={{ backgroundColor: theme.bgTertiary }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                        
+                        {/* Delete button - only for custom layouts */}
+                        {!layout.isDefault && (
+                          <button
+                            onClick={() => deleteStoreLayout(layout.id)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
+                            style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Create custom layout */}
+              <button
+                onClick={async () => {
+                  const name = prompt('Enter a name for your custom layout:');
+                  if (name && name.trim()) {
+                    const newLayout = await createCustomStoreLayout(name);
+                    setEditingStoreLayout(newLayout.id);
+                  }
+                }}
+                className="w-full py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]"
+                style={{ border: `1.5px dashed ${YELLOW}`, color: theme.text }}
+              >
+                + Create Custom Layout
+              </button>
+            </>
+          )}
+
+          {/* Edit Store Layout Modal */}
+          {editingStoreLayout && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+              <div 
+                className="w-full max-h-[85vh] rounded-t-3xl overflow-hidden flex flex-col"
+                style={{ backgroundColor: theme.bg }}
+              >
+                {/* Header */}
+                <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: theme.border }}>
+                  <button 
+                    onClick={() => setEditingStoreLayout(null)} 
+                    className="text-sm font-medium"
+                    style={{ color: theme.textSecondary }}
+                  >
+                    Done
+                  </button>
+                  <h2 className="text-base font-semibold" style={{ color: theme.text }}>
+                    Edit {storeLayouts.find(s => s.id === editingStoreLayout)?.name}
+                  </h2>
+                  <button
+                    onClick={() => {
+                      resetStoreLayoutToDefault(editingStoreLayout);
+                    }}
+                    className="text-sm font-medium"
+                    style={{ color: storeLayouts.find(s => s.id === editingStoreLayout)?.isDefault ? YELLOW : theme.textTertiary }}
+                    disabled={!storeLayouts.find(s => s.id === editingStoreLayout)?.isDefault}
+                  >
+                    Reset
+                  </button>
+                </div>
+                
+                <p className="px-5 py-3 text-sm" style={{ color: theme.textSecondary }}>
+                  Drag categories to match your store's layout.
+                </p>
+
+                {/* Category reorder list */}
+                <div className="flex-1 overflow-y-auto px-5 pb-8">
+                  <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+                    {(() => {
+                      const layout = storeLayouts.find(s => s.id === editingStoreLayout);
+                      const orderedCategories = layout?.categoryOrder
+                        .map(id => categories.find(c => c.id === id))
+                        .filter(Boolean) || [];
+                      
+                      return orderedCategories.map((cat, idx) => {
+                        const isHidden = hiddenCategories.includes(cat.id);
+                        const isFirst = idx === 0;
+                        const isLast = idx === orderedCategories.length - 1;
+                        
+                        return (
+                          <div 
+                            key={cat.id}
+                            className="flex items-center gap-3 px-4 py-3"
+                            style={{ 
+                              borderBottom: idx < orderedCategories.length - 1 ? `1px solid ${theme.borderLight}` : 'none',
+                              opacity: isHidden ? 0.4 : 1
+                            }}
+                          >
+                            {/* UP arrow */}
+                            <button
+                              onClick={() => {
+                                if (!isFirst) {
+                                  triggerHaptic('light');
+                                  const newOrder = [...layout.categoryOrder];
+                                  const catIdx = newOrder.indexOf(cat.id);
+                                  [newOrder[catIdx - 1], newOrder[catIdx]] = [newOrder[catIdx], newOrder[catIdx - 1]];
+                                  updateStoreLayoutOrder(editingStoreLayout, newOrder);
+                                }
+                              }}
+                              disabled={isFirst}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
+                              style={{ 
+                                color: isFirst ? theme.border : theme.text,
+                                backgroundColor: isFirst ? 'transparent' : theme.bgTertiary
+                              }}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 15l-6-6-6 6"/>
+                              </svg>
+                            </button>
+
+                            <span className="flex-1 text-sm" style={{ color: theme.text }}>{cat.name}</span>
+
+                            {/* DOWN arrow */}
+                            <button
+                              onClick={() => {
+                                if (!isLast) {
+                                  triggerHaptic('light');
+                                  const newOrder = [...layout.categoryOrder];
+                                  const catIdx = newOrder.indexOf(cat.id);
+                                  [newOrder[catIdx], newOrder[catIdx + 1]] = [newOrder[catIdx + 1], newOrder[catIdx]];
+                                  updateStoreLayoutOrder(editingStoreLayout, newOrder);
+                                }
+                              }}
+                              disabled={isLast}
+                              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all active:scale-90"
+                              style={{ 
+                                color: isLast ? theme.border : theme.text,
+                                backgroundColor: isLast ? 'transparent' : theme.bgTertiary
+                              }}
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M6 9l6 6 6-6"/>
+                              </svg>
+                            </button>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Categories Tab - Combined reorder, visibility, and custom */}
@@ -1757,6 +2110,62 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Store Picker Modal */}
+      {showStorePicker && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setShowStorePicker(false)}>
+          <div 
+            className="w-full max-h-[60vh] rounded-t-3xl overflow-hidden"
+            style={{ backgroundColor: theme.bg }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: theme.border }}>
+              <h2 className="text-base font-semibold" style={{ color: theme.text }}>Switch Store</h2>
+              <button 
+                onClick={() => setShowStorePicker(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: theme.bgTertiary }}
+              >
+                <span style={{ color: theme.textSecondary }}>✕</span>
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4" style={{ maxHeight: 'calc(60vh - 60px)' }}>
+              {storeLayouts.map((layout) => {
+                const isActive = layout.id === activeStoreLayoutId;
+                return (
+                  <button
+                    key={layout.id}
+                    onClick={() => switchStoreLayout(layout.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-2 transition-all active:scale-[0.98]"
+                    style={{ 
+                      backgroundColor: isActive ? (darkMode ? '#3f3f46' : '#fefce8') : theme.bgSecondary,
+                      border: isActive ? `1.5px solid ${YELLOW}` : `1.5px solid transparent`
+                    }}
+                  >
+                    <div 
+                      className="w-10 h-10 rounded-full flex items-center justify-center"
+                      style={{ backgroundColor: isActive ? YELLOW : theme.bgTertiary }}
+                    >
+                      <span className="text-lg">🏪</span>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <span className="text-sm font-medium" style={{ color: theme.text }}>{layout.name}</span>
+                      {!layout.isDefault && (
+                        <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: darkMode ? '#3f3f46' : '#f5f5f4', color: theme.textSecondary }}>Custom</span>
+                      )}
+                    </div>
+                    {isActive && (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={YELLOW} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 12l6 6L20 6"/>
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
       
       {!isOnline && (
         <div className="px-4 py-2 text-center text-xs font-medium" style={{ backgroundColor: '#fef3c7', color: '#92400e' }}>You're offline. Changes will sync when you reconnect.</div>
@@ -1765,20 +2174,32 @@ export default function App() {
       <div className="sticky top-0 z-40" style={{ backgroundColor: darkMode ? theme.bg : 'rgba(250,249,248,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${theme.border}` }}>
         <div className="px-5 py-4">
           <div className="flex items-center justify-between mb-3">
-            {/* Left side - Logo and title */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
+            {/* Left side - Logo, title, and store name */}
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="flex items-center gap-1 flex-shrink-0">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: YELLOW }}></div>
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
                 <div className="w-1 h-1 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
               </div>
-              <h1 className="text-lg font-medium tracking-tight" style={{ color: theme.text }}>
-                {listName || 'Breadcrumbs'}
-              </h1>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg font-medium tracking-tight truncate" style={{ color: theme.text }}>
+                  {listName || 'Breadcrumbs'}
+                </h1>
+                {/* Store name - tappable to switch */}
+                <button
+                  onClick={() => { triggerHaptic('light'); setShowStorePicker(true); }}
+                  className="flex items-center gap-1 transition-all active:opacity-70"
+                >
+                  <span className="text-xs" style={{ color: theme.textTertiary }}>{activeStoreLayout?.name}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+              </div>
             </div>
             
             {/* Right side - Code pill (or just status dot), settings, and recipe button */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {hideShareCode ? (
                 /* Just show status dot when code is hidden */
                 <button 
