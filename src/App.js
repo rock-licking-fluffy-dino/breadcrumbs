@@ -776,6 +776,8 @@ export default function App() {
         setItems(data.items || []);
         if (data.categories) setCategories(data.categories);
         if (data.recipes) setRecipes(data.recipes);
+        if (data.storeLayouts) setStoreLayouts(data.storeLayouts);
+        if (data.activeStoreLayoutId) setActiveStoreLayoutId(data.activeStoreLayoutId);
         setJoinCode('');
         localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
         checkOnboarding();
