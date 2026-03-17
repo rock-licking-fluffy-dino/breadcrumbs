@@ -485,6 +485,7 @@ export default function App() {
   const inputRef = useRef(null);
   const recipeInputRef = useRef(null);
   const listNameInputRef = useRef(null);
+  const isSavingRef = useRef(false); // Track when we're saving to prevent snapshot overwrite
 
   // Derive actual dark mode from appearance setting
   const darkMode = appearanceMode === 'dark' || (appearanceMode === 'system' && systemDarkMode);
@@ -585,6 +586,13 @@ export default function App() {
     const unsubscribe = onSnapshot(
       doc(db, 'lists', listId),
       async (docSnap) => {
+        // Skip incoming updates while we're in the middle of saving
+        // This prevents the "bounce back" effect where local changes get overwritten
+        if (isSavingRef.current) {
+          setSyncing(false);
+          return;
+        }
+        
         if (docSnap.exists()) {
           const data = docSnap.data();
           
@@ -677,6 +685,10 @@ export default function App() {
 
   const saveList = useCallback(async (newItems, newCategories = categories, newRecipes = recipes, newStoreLayouts = storeLayouts, newActiveStoreLayoutId = activeStoreLayoutId) => {
     if (!listId) return;
+    
+    // Set flag to prevent onSnapshot from overwriting our local changes
+    isSavingRef.current = true;
+    
     try {
       await setDoc(doc(db, 'lists', listId), {
         items: newItems,
@@ -692,6 +704,11 @@ export default function App() {
       setToastMessage('Failed to save changes');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2500);
+    } finally {
+      // Clear the flag after a short delay to allow Firebase to sync
+      setTimeout(() => {
+        isSavingRef.current = false;
+      }, 500);
     }
   }, [listId, categories, recipes, storeLayouts, activeStoreLayoutId]);
 
