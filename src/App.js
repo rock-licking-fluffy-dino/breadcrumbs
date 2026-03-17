@@ -588,7 +588,7 @@ export default function App() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           
-          // Check for 60-day inactivity - fully reset list if stale
+          // Check for 90-day inactivity - fully reset list if stale
           if (data.updatedAt) {
             const lastUpdate = new Date(data.updatedAt);
             const daysSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
@@ -617,7 +617,52 @@ export default function App() {
           setItems(data.items || []);
           if (data.categories) setCategories(data.categories);
           if (data.recipes) setRecipes(data.recipes);
-          if (data.storeLayouts) setStoreLayouts(data.storeLayouts);
+          
+          // Migrate store layouts: merge stored layouts with new defaults
+          if (data.storeLayouts) {
+            const storedLayouts = data.storeLayouts;
+            
+            // Get IDs of all default layouts (built-in ones)
+            const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
+            
+            // Keep only custom layouts (user-created ones that aren't in defaults)
+            const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
+            
+            // Merge: all new defaults + any custom layouts the user created
+            const mergedLayouts = [...DEFAULT_STORE_LAYOUTS, ...customLayouts];
+            
+            // Check if migration is needed (layouts differ from what's stored)
+            const needsMigration = mergedLayouts.length !== storedLayouts.length ||
+              DEFAULT_STORE_LAYOUTS.some(defaultLayout => {
+                const stored = storedLayouts.find(s => s.id === defaultLayout.id);
+                return !stored || JSON.stringify(stored.categoryOrder) !== JSON.stringify(defaultLayout.categoryOrder);
+              });
+            
+            if (needsMigration) {
+              console.log('Migrating store layouts to new version...');
+              // Save the migrated layouts back to Firebase
+              setStoreLayouts(mergedLayouts);
+              // We'll save this in a moment after setting state
+              setTimeout(async () => {
+                try {
+                  await setDoc(doc(db, 'lists', listId), {
+                    ...data,
+                    storeLayouts: mergedLayouts,
+                    updatedAt: new Date().toISOString()
+                  });
+                  console.log('Store layouts migrated successfully');
+                } catch (error) {
+                  console.error('Error migrating store layouts:', error);
+                }
+              }, 100);
+            } else {
+              setStoreLayouts(mergedLayouts);
+            }
+          } else {
+            // No store layouts stored - use defaults
+            setStoreLayouts(DEFAULT_STORE_LAYOUTS);
+          }
+          
           if (data.activeStoreLayoutId) setActiveStoreLayoutId(data.activeStoreLayoutId);
         }
         setSyncing(false);
@@ -794,7 +839,18 @@ export default function App() {
         setItems(data.items || []);
         if (data.categories) setCategories(data.categories);
         if (data.recipes) setRecipes(data.recipes);
-        if (data.storeLayouts) setStoreLayouts(data.storeLayouts);
+        
+        // Handle store layouts with migration
+        if (data.storeLayouts) {
+          const storedLayouts = data.storeLayouts;
+          const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
+          const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
+          const mergedLayouts = [...DEFAULT_STORE_LAYOUTS, ...customLayouts];
+          setStoreLayouts(mergedLayouts);
+        } else {
+          setStoreLayouts(DEFAULT_STORE_LAYOUTS);
+        }
+        
         if (data.activeStoreLayoutId) setActiveStoreLayoutId(data.activeStoreLayoutId);
         setJoinCode('');
         localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
