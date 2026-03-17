@@ -689,7 +689,9 @@ export default function App() {
     } catch (error) {
       console.error('Error saving list:', error);
       // Show user-facing error for save failures
-      showToastMessage('Failed to save changes');
+      setToastMessage('Failed to save changes');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2500);
     }
   }, [listId, categories, recipes, storeLayouts, activeStoreLayoutId]);
 
@@ -1837,8 +1839,11 @@ export default function App() {
                   <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                     {(() => {
                       const layout = storeLayouts.find(s => s.id === editingStoreLayout);
+                      // Use DEFAULT_CATEGORIES as primary source for category names
+                      // This ensures all 20 categories appear even if user's categories differ
+                      const allCategories = [...DEFAULT_CATEGORIES, ...categories.filter(c => !DEFAULT_CATEGORIES.find(d => d.id === c.id))];
                       const orderedCategories = layout?.categoryOrder
-                        .map(id => categories.find(c => c.id === id))
+                        .map(id => allCategories.find(c => c.id === id))
                         .filter(Boolean) || [];
                       
                       return orderedCategories.map((cat, idx) => {
