@@ -1323,7 +1323,13 @@ export default function App() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {recipes.map((recipe, index) => (
+                  {recipes.map((recipe, index) => {
+                    // Generate ingredient preview
+                    const ingredientNames = recipe.ingredients.map(i => i.name.toLowerCase());
+                    const previewIngredients = ingredientNames.slice(0, 3);
+                    const ingredientPreview = previewIngredients.join(', ') + (ingredientNames.length > 3 ? '...' : '');
+                    
+                    return (
                     <div 
                       key={recipe.id} 
                       className={`rounded-2xl relative overflow-hidden ${addingRecipeId === recipe.id ? 'recipe-pop' : ''}`}
@@ -1345,26 +1351,32 @@ export default function App() {
                         </svg>
                       </div>
                       <div className="p-4 pl-12">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-baseline gap-2">
-                              <h3 style={{ color: theme.text, fontWeight: 600, fontSize: '15px' }}>{recipe.name}</h3>
-                              <span style={{ color: theme.textTertiary, fontWeight: 300, fontSize: '12px' }}>{recipe.ingredients.length} items</span>
-                            </div>
+                        {/* Top row: title (left) + delete button and item count (right) */}
+                        <div className="flex items-start justify-between mb-1">
+                          <h3 style={{ color: theme.text, fontWeight: 600, fontSize: '15px' }}>{recipe.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <span style={{ color: theme.textTertiary, fontWeight: 300, fontSize: '12px' }}>{recipe.ingredients.length} items</span>
+                            <button
+                              onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }}
+                              className="w-6 h-6 flex items-center justify-center transition-all active:scale-90"
+                              style={{ color: '#a8a29e' }}
+                            >
+                              <span className="text-base font-light">×</span>
+                            </button>
                           </div>
-                          <button
-                            onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }}
-                            className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
-                            style={{ color: '#a8a29e' }}
-                          >
-                            <span className="text-lg font-light">×</span>
-                          </button>
                         </div>
+                        
+                        {/* Ingredient preview */}
+                        {ingredientPreview && (
+                          <p className="text-xs mb-3" style={{ color: '#a8a29e' }}>{ingredientPreview}</p>
+                        )}
+                        
+                        {/* Bottom row: Edit (left) + Add to List (right) */}
                         <div className="flex items-center justify-between">
                           <button
                             onClick={() => startEditRecipe(recipe)}
                             className="transition-all active:scale-95"
-                            style={{ color: theme.textTertiary, fontWeight: 400, fontSize: '13px', background: 'none', border: 'none', padding: 0 }}
+                            style={{ color: '#78716c', fontWeight: 400, fontSize: '14px', background: 'none', border: 'none', padding: 0 }}
                           >
                             Edit
                           </button>
@@ -1378,7 +1390,7 @@ export default function App() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               )}
             </>
@@ -1479,87 +1491,9 @@ export default function App() {
           {/* General Tab */}
           {settingsTab === 'general' && (
             <>
-              {/* List Name & Preferences Card */}
+              {/* Card 1 — Share Code (most prominent) */}
               <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
-                <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>List Name</label>
-                <input
-                  ref={listNameInputRef}
-                  type="text"
-                  value={editingListName}
-                  onChange={(e) => setEditingListName(e.target.value)}
-                  onBlur={() => saveListName(editingListName)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') { saveListName(editingListName); e.target.blur(); } }}
-                  placeholder="e.g. Weekly Shop, Party Supplies..."
-                  className="w-full py-2 text-sm focus:outline-none bg-transparent"
-                  style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }}
-                />
-                <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>Give your list a name to easily identify it. Saved on this device only.</p>
-                
-                {/* Preferences section */}
-                <div className="mt-5 pt-4" style={{ borderTop: `1px solid ${theme.borderLight}` }}>
-                  <label className="text-xs font-medium mb-3 block" style={{ color: theme.textSecondary }}>Preferences</label>
-                  <div>
-                    <span className="text-sm" style={{ color: theme.text }}>Appearance</span>
-                    <div className="flex gap-1 mt-2 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
-                      {[
-                        { id: 'light', label: 'Light', icon: '☀️' },
-                        { id: 'system', label: 'System', icon: '⚙️' },
-                        { id: 'dark', label: 'Dark', icon: '🌙' }
-                      ].map(option => (
-                        <button
-                          key={option.id}
-                          onClick={() => setAppearanceModeTo(option.id)}
-                          className="flex-1 py-2 text-xs font-medium rounded-full transition-all"
-                          style={{
-                            backgroundColor: appearanceMode === option.id ? YELLOW : 'transparent',
-                            color: appearanceMode === option.id ? '#292524' : theme.textSecondary,
-                            boxShadow: appearanceMode === option.id ? theme.yellowGlowSubtle : 'none'
-                          }}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>
-                      {appearanceMode === 'system' ? 'Follows your device theme' : appearanceMode === 'dark' ? 'Always use dark theme' : 'Always use light theme'}
-                    </p>
-                  </div>
-                  
-                  {/* When items are completed setting */}
-                  <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${theme.borderLight}` }}>
-                    <span className="text-sm" style={{ color: theme.text }}>When items are completed</span>
-                    <div className="flex gap-1 mt-2 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
-                      {[
-                        { id: 'nothing', label: 'Nothing' },
-                        { id: 'auto-hide', label: 'Auto-hide' },
-                        { id: 'auto-remove', label: 'Auto-remove' }
-                      ].map(option => (
-                        <button
-                          key={option.id}
-                          onClick={() => { setCompletedBehavior(option.id); triggerHaptic('light'); }}
-                          className="flex-1 py-2 text-xs font-medium rounded-full transition-all"
-                          style={{
-                            backgroundColor: completedBehavior === option.id ? YELLOW : 'transparent',
-                            color: completedBehavior === option.id ? '#292524' : theme.textSecondary,
-                            boxShadow: completedBehavior === option.id ? theme.yellowGlowSubtle : 'none'
-                          }}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>
-                      {completedBehavior === 'nothing' ? 'Completed items stay visible' : 
-                       completedBehavior === 'auto-hide' ? 'Hides completed items automatically' : 
-                       'Removes items after a short delay (with undo)'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Share Code */}
-              <div className="rounded-2xl p-4 mb-6" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
-                <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>Share Code</label>
+                <label className="text-xs font-medium mb-3 block" style={{ color: theme.textSecondary }}>Share Code</label>
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-mono tracking-widest" style={{ color: theme.text }}>{listId}</span>
                   <button
@@ -1574,10 +1508,82 @@ export default function App() {
                     Copy
                   </button>
                 </div>
-                <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>Share this code so others can join your list.</p>
+                <p className="text-xs mt-3" style={{ color: theme.textTertiary, fontWeight: 300 }}>Share this code so others can join your list</p>
               </div>
 
-              {/* Inactivity Notice */}
+              {/* Card 2 — List Details */}
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+                <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>List Name</label>
+                <input
+                  ref={listNameInputRef}
+                  type="text"
+                  value={editingListName}
+                  onChange={(e) => setEditingListName(e.target.value)}
+                  onBlur={() => saveListName(editingListName)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { saveListName(editingListName); e.target.blur(); } }}
+                  placeholder="e.g. Weekly Shop, Party Supplies..."
+                  className="w-full py-2 text-sm focus:outline-none bg-transparent"
+                  style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }}
+                />
+                <p className="text-xs mt-2 mb-5" style={{ color: theme.textTertiary, fontWeight: 300 }}>Give your list a name to easily identify it. Saved on this device only.</p>
+                
+                <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>Appearance</label>
+                <div className="flex gap-1 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
+                  {[
+                    { id: 'light', label: 'Light' },
+                    { id: 'system', label: 'System' },
+                    { id: 'dark', label: 'Dark' }
+                  ].map(option => (
+                    <button
+                      key={option.id}
+                      onClick={() => setAppearanceModeTo(option.id)}
+                      className="flex-1 py-2 text-xs font-medium rounded-full transition-all"
+                      style={{
+                        backgroundColor: appearanceMode === option.id ? YELLOW : 'transparent',
+                        color: appearanceMode === option.id ? '#292524' : theme.textSecondary,
+                        boxShadow: appearanceMode === option.id ? theme.yellowGlowSubtle : 'none'
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>
+                  {appearanceMode === 'system' ? 'Follows your device theme' : appearanceMode === 'dark' ? 'Always use dark theme' : 'Always use light theme'}
+                </p>
+              </div>
+
+              {/* Card 3 — When items are completed */}
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+                <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>When items are completed</label>
+                <div className="flex gap-1 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
+                  {[
+                    { id: 'nothing', label: 'Nothing' },
+                    { id: 'auto-hide', label: 'Auto-hide' },
+                    { id: 'auto-remove', label: 'Auto-remove' }
+                  ].map(option => (
+                    <button
+                      key={option.id}
+                      onClick={() => { setCompletedBehavior(option.id); triggerHaptic('light'); }}
+                      className="flex-1 py-2 text-xs font-medium rounded-full transition-all"
+                      style={{
+                        backgroundColor: completedBehavior === option.id ? YELLOW : 'transparent',
+                        color: completedBehavior === option.id ? '#292524' : theme.textSecondary,
+                        boxShadow: completedBehavior === option.id ? theme.yellowGlowSubtle : 'none'
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>
+                  {completedBehavior === 'nothing' ? 'Completed items stay visible in your list' : 
+                   completedBehavior === 'auto-hide' ? 'Completed items are hidden automatically' : 
+                   'Completed items are removed after a short delay (with undo)'}
+                </p>
+              </div>
+
+              {/* Card 4 — Inactivity Policy */}
               <div className="rounded-2xl p-4 mb-6 flex items-start gap-3" style={{ backgroundColor: darkMode ? '#3f3f46' : '#fefce8' }}>
                 <span className="text-lg">💤</span>
                 <div>
@@ -2253,12 +2259,20 @@ export default function App() {
               </div>
             </div>
             
-            {/* Right side - Just sync indicator */}
+            {/* Right side - Sync status pill */}
             <div className="flex items-center flex-shrink-0">
-              <span 
-                className={`w-2 h-2 rounded-full ${syncing ? 'sync-pulse' : ''}`} 
-                style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}
-              ></span>
+              <div 
+                className="flex items-center gap-1.5 px-2 py-1 rounded-full"
+                style={{ border: '1.5px solid #e7e5e4', backgroundColor: 'transparent' }}
+              >
+                <span 
+                  className={`w-1.5 h-1.5 rounded-full ${syncing ? 'sync-pulse' : ''}`} 
+                  style={{ backgroundColor: isOnline && !syncing ? '#22c55e' : '#f59e0b' }}
+                ></span>
+                <span className="text-xs" style={{ color: '#78716c' }}>
+                  {syncing ? 'Syncing' : isOnline ? 'Live' : 'Offline'}
+                </span>
+              </div>
             </div>
           </div>
           
