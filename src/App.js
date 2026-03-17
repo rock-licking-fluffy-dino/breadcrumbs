@@ -331,6 +331,68 @@ const Toast = ({ message, visible, theme }) => {
   );
 };
 
+// Bottom Navigation Component
+const BottomNav = ({ activeTab, onTabChange, theme }) => {
+  const tabs = [
+    { 
+      id: 'list', 
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 01-8 0"/>
+        </svg>
+      )
+    },
+    { 
+      id: 'recipes', 
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6z"/>
+          <line x1="6" y1="17" x2="18" y2="17"/>
+        </svg>
+      )
+    },
+    { 
+      id: 'settings', 
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+      )
+    }
+  ];
+
+  return (
+    <div 
+      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-6 py-3"
+      style={{ 
+        backgroundColor: theme.bg,
+        borderTop: `1px solid ${theme.border}`,
+      }}
+    >
+      {tabs.map(tab => (
+        <button
+          key={tab.id}
+          onClick={() => { triggerHaptic('light'); onTabChange(tab.id); }}
+          className="flex flex-col items-center gap-1.5 py-1 px-4 transition-all active:scale-95"
+        >
+          <div style={{ color: '#78716c' }}>
+            {tab.icon}
+          </div>
+          {activeTab === tab.id && (
+            <div 
+              className="w-1 h-1 rounded-full"
+              style={{ backgroundColor: YELLOW }}
+            />
+          )}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 export default function App() {
   const [listId, setListId] = useState(() => {
     const saved = localStorage.getItem('breadcrumbs-current-list');
@@ -344,7 +406,6 @@ export default function App() {
   const [newItemText, setNewItemText] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState('general');
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [hiddenCategories, setHiddenCategories] = useState(() => {
@@ -376,7 +437,6 @@ export default function App() {
   
   // Recipe state
   const [recipes, setRecipes] = useState([]);
-  const [showRecipes, setShowRecipes] = useState(false);
   const [showCreateRecipe, setShowCreateRecipe] = useState(false);
   const [newRecipeName, setNewRecipeName] = useState('');
   const [newRecipeIngredients, setNewRecipeIngredients] = useState([]);
@@ -397,6 +457,15 @@ export default function App() {
   const [showStorePicker, setShowStorePicker] = useState(false);
   const [editingStoreLayout, setEditingStoreLayout] = useState(null);
   
+  // Navigation and UI state
+  const [activeTab, setActiveTab] = useState('list'); // 'list', 'recipes', 'settings'
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const [completedBehavior, setCompletedBehavior] = useState(() => {
+    const saved = localStorage.getItem('breadcrumbs-completed-behavior');
+    return saved || 'nothing'; // 'nothing', 'auto-hide', 'auto-remove'
+  });
+  const [pendingDeletes, setPendingDeletes] = useState([]); // [{id, name, timeoutId}]
+  
   const inputRef = useRef(null);
   const recipeInputRef = useRef(null);
   const listNameInputRef = useRef(null);
@@ -416,6 +485,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('breadcrumbs-appearance-mode', appearanceMode);
   }, [appearanceMode]);
+
+  // Save completed behavior preference
+  useEffect(() => {
+    localStorage.setItem('breadcrumbs-completed-behavior', completedBehavior);
+  }, [completedBehavior]);
 
   // Load list name from localStorage when listId changes
   useEffect(() => {
@@ -788,15 +862,51 @@ export default function App() {
     const item = items.find(i => i.id === id);
     const willCheck = !item.checked;
     triggerHaptic(willCheck ? 'success' : 'light');
+    
     if (willCheck) {
       setCheckingItems(prev => new Set([...prev, id]));
       setTimeout(() => {
         setCheckingItems(prev => { const next = new Set(prev); next.delete(id); return next; });
       }, 500);
+      
+      // Handle auto-hide behavior
+      if (completedBehavior === 'auto-hide') {
+        // Item stays in list but hideCompleted will filter it out
+        setHideCompleted(true);
+      }
+      
+      // Handle auto-remove behavior
+      if (completedBehavior === 'auto-remove') {
+        const timeoutId = setTimeout(async () => {
+          // Remove from pending deletes
+          setPendingDeletes(prev => prev.filter(p => p.id !== id));
+          // Delete the item
+          const updatedItems = items.filter(i => i.id !== id);
+          setItems(updatedItems);
+          await saveList(updatedItems);
+        }, 1500);
+        
+        // Add to pending deletes for undo capability
+        setPendingDeletes(prev => [...prev, { id, name: item.name, timeoutId }]);
+      }
     }
+    
     const newItems = items.map(i => i.id === id ? { ...i, checked: !i.checked } : i);
     setItems(newItems);
     await saveList(newItems);
+  };
+
+  const undoPendingDelete = (id) => {
+    triggerHaptic('light');
+    const pending = pendingDeletes.find(p => p.id === id);
+    if (pending) {
+      clearTimeout(pending.timeoutId);
+      setPendingDeletes(prev => prev.filter(p => p.id !== id));
+      // Uncheck the item
+      const newItems = items.map(i => i.id === id ? { ...i, checked: false } : i);
+      setItems(newItems);
+      saveList(newItems);
+    }
   };
 
   const deleteItem = async (id) => {
@@ -1069,10 +1179,10 @@ export default function App() {
   `;
 
   // Recipes Screen
-  if (showRecipes) {
+  if (activeTab === 'recipes' && listId) {
     return (
       <div 
-        className="min-h-screen" 
+        className="min-h-screen pb-20" 
         style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}
         onClick={(e) => {
           // Close recipe input if clicking outside input area
@@ -1086,14 +1196,22 @@ export default function App() {
         
         <div className="sticky top-0 z-40" style={{ backgroundColor: darkMode ? theme.bg : 'rgba(250,249,248,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${theme.border}` }}>
           <div className="px-5 py-4 flex items-center justify-between">
-            <button onClick={() => { setShowRecipes(false); setShowCreateRecipe(false); setEditingRecipeId(null); setNewRecipeName(''); setNewRecipeIngredients([]); }} className="text-sm font-medium flex items-center gap-2 transition-all" style={{ color: theme.text }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
-              Back
-            </button>
-            <h1 className="text-base font-medium" style={{ color: theme.text }}>
+            {showCreateRecipe ? (
+              <button 
+                onClick={() => { setShowCreateRecipe(false); setEditingRecipeId(null); setNewRecipeName(''); setNewRecipeIngredients([]); }} 
+                className="text-sm font-medium flex items-center gap-2 transition-all" 
+                style={{ color: theme.text }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+                Back
+              </button>
+            ) : (
+              <div className="w-14"></div>
+            )}
+            <h1 className="text-base font-semibold" style={{ color: theme.text }}>
               {showCreateRecipe ? (editingRecipeId ? 'Edit Recipe' : 'New Recipe') : 'Recipes'}
             </h1>
-            <div className="w-16"></div>
+            <div className="w-14"></div>
           </div>
         </div>
 
@@ -1180,8 +1298,8 @@ export default function App() {
                             >
                               <span className="text-sm">+</span>
                             </button>
-                            <button onClick={() => removeRecipeIngredient(ingredient.id)} className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90" style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}>
-                              <span className="text-sm">×</span>
+                            <button onClick={() => removeRecipeIngredient(ingredient.id)} className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90" style={{ color: '#a8a29e' }}>
+                              <span className="text-base font-light">×</span>
                             </button>
                           </div>
                         ))}
@@ -1244,11 +1362,9 @@ export default function App() {
                           <button
                             onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }}
                             className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
-                            style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
+                            style={{ color: '#a8a29e' }}
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                            </svg>
+                            <span className="text-lg font-light">×</span>
                           </button>
                         </div>
                         <div className="flex items-center justify-between">
@@ -1324,24 +1440,22 @@ export default function App() {
             </div>
           </div>
         )}
+        
+        {/* Bottom Navigation */}
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />
       </div>
     );
   }
 
   // Settings Page
-  if (showSettings) {
+  if (activeTab === 'settings' && listId) {
     return (
-      <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}>
+      <div className="min-h-screen pb-20" style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}>
         <style>{styles}</style>
         <Toast message={toastMessage} visible={showToast} theme={theme} />
         <div className="sticky top-0 z-40" style={{ backgroundColor: darkMode ? theme.bg : 'rgba(250,249,248,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${theme.border}` }}>
-          <div className="px-5 py-4 flex items-center justify-between">
-            <button onClick={() => setShowSettings(false)} className="text-sm font-medium flex items-center gap-2 transition-all" style={{ color: theme.text }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
-              Back
-            </button>
-            <h1 className="text-base font-medium" style={{ color: theme.text }}>Settings</h1>
-            <div className="w-16"></div>
+          <div className="px-5 py-4 flex items-center justify-center">
+            <h1 className="text-base font-semibold" style={{ color: theme.text }}>Settings</h1>
           </div>
           
           {/* Tabs */}
@@ -1368,7 +1482,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="px-5 py-6">
+        <div className="px-5 py-6 pb-24">
           {/* General Tab */}
           {settingsTab === 'general' && (
             <>
@@ -1435,6 +1549,36 @@ export default function App() {
                       ></div>
                     </button>
                   </div>
+                  
+                  {/* When items are completed setting */}
+                  <div className="mt-4 pt-4" style={{ borderTop: `1px solid ${theme.borderLight}` }}>
+                    <span className="text-sm" style={{ color: theme.text }}>When items are completed</span>
+                    <div className="flex gap-1 mt-2 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
+                      {[
+                        { id: 'nothing', label: 'Nothing' },
+                        { id: 'auto-hide', label: 'Auto-hide' },
+                        { id: 'auto-remove', label: 'Auto-remove' }
+                      ].map(option => (
+                        <button
+                          key={option.id}
+                          onClick={() => { setCompletedBehavior(option.id); triggerHaptic('light'); }}
+                          className="flex-1 py-2 text-xs font-medium rounded-full transition-all"
+                          style={{
+                            backgroundColor: completedBehavior === option.id ? YELLOW : 'transparent',
+                            color: completedBehavior === option.id ? '#292524' : theme.textSecondary,
+                            boxShadow: completedBehavior === option.id ? theme.yellowGlowSubtle : 'none'
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>
+                      {completedBehavior === 'nothing' ? 'Completed items stay visible' : 
+                       completedBehavior === 'auto-hide' ? 'Hides completed items automatically' : 
+                       'Removes items after a short delay (with undo)'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -1472,7 +1616,7 @@ export default function App() {
               
               <div className="rounded-2xl p-4" style={{ backgroundColor: 'rgba(239,68,68,0.03)' }}>
                 <button 
-                  onClick={() => { triggerHaptic('light'); setShowSettings(false); setTimeout(() => setShowClearAllConfirm(true), 100); }}
+                  onClick={() => { triggerHaptic('light'); setActiveTab('list'); setTimeout(() => setShowClearAllConfirm(true), 100); }}
                   disabled={items.length === 0}
                   className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-all mb-3" 
                   style={{ 
@@ -1484,7 +1628,7 @@ export default function App() {
                   Clear all items {items.length > 0 && `(${items.length})`}
                 </button>
 
-                <button onClick={() => { triggerHaptic('light'); setShowSettings(false); setTimeout(() => setShowLeaveConfirm(true), 100); }} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-all" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
+                <button onClick={() => { triggerHaptic('light'); setActiveTab('list'); setTimeout(() => setShowLeaveConfirm(true), 100); }} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-all" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
                   Leave this list
                 </button>
               </div>
@@ -1565,11 +1709,9 @@ export default function App() {
                           <button
                             onClick={() => deleteStoreLayout(layout.id)}
                             className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
-                            style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
+                            style={{ color: '#a8a29e' }}
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                            </svg>
+                            <span className="text-lg font-light">×</span>
                           </button>
                         )}
                       </div>
@@ -1792,11 +1934,9 @@ export default function App() {
                         <button
                           onClick={() => deleteCustomCategory(cat.id)}
                           className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 flex-shrink-0"
-                          style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
+                          style={{ color: '#a8a29e' }}
                         >
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                          </svg>
+                          <span className="text-lg font-light">×</span>
                         </button>
                       )}
 
@@ -1818,6 +1958,9 @@ export default function App() {
             </>
           )}
         </div>
+        
+        {/* Bottom Navigation */}
+        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />
       </div>
     );
   }
@@ -2136,92 +2279,73 @@ export default function App() {
       
       <div className="sticky top-0 z-40" style={{ backgroundColor: darkMode ? theme.bg : 'rgba(250,249,248,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${theme.border}` }}>
         <div className="px-5 py-4">
-          <div className="flex items-center justify-between mb-3">
-            {/* Left side - Logo, title, and store name */}
+          <div className="flex items-center justify-between">
+            {/* Left side - Logo, title, and store pill */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className="flex items-center gap-1 flex-shrink-0">
                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: YELLOW }}></div>
                 <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
                 <div className="w-1 h-1 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
               </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-lg font-medium tracking-tight truncate" style={{ color: theme.text }}>
+              <div className="flex items-center gap-2 min-w-0">
+                <h1 className="text-lg font-semibold tracking-tight" style={{ color: theme.text }}>
                   {listName || 'Breadcrumbs'}
                 </h1>
-                {/* Store name - tappable to switch */}
+                {/* Store pill - inline next to title */}
                 <button
                   onClick={() => { triggerHaptic('light'); setShowStorePicker(true); }}
-                  className="flex items-center gap-1 transition-all active:opacity-70"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-full transition-all active:scale-95"
+                  style={{ border: `1.5px solid ${theme.border}`, backgroundColor: 'transparent' }}
                 >
-                  <span className="text-xs" style={{ color: theme.textTertiary }}>{activeStoreLayout?.name}</span>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <span className="text-xs" style={{ color: theme.textSecondary }}>{activeStoreLayout?.name}</span>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M6 9l6 6 6-6"/>
                   </svg>
                 </button>
               </div>
             </div>
             
-            {/* Right side - Code pill (or just status dot), settings, and recipe button */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {hideShareCode ? (
-                /* Just show status dot when code is hidden */
-                <button 
-                  onClick={() => { triggerHaptic('light'); setShowCodePopup(true); }}
-                  className="flex items-center justify-center w-8 h-8 rounded-full transition-all active:scale-95"
-                  style={{ backgroundColor: theme.codePillBg }}
-                >
-                  <span 
-                    className={`w-2 h-2 rounded-full ${syncing ? 'sync-pulse' : ''}`} 
-                    style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}
-                  ></span>
-                </button>
-              ) : (
-                /* Show full code pill */
-                <button 
-                  onClick={() => { triggerHaptic('light'); setShowCodePopup(true); }}
-                  className="flex items-center gap-2 px-2.5 py-1 rounded-full transition-all active:scale-95"
-                  style={{ backgroundColor: theme.codePillBg }}
-                >
-                  <span className="text-xs font-mono" style={{ color: theme.textSecondary }}>{listId}</span>
-                  <span 
-                    className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${syncing ? 'sync-pulse' : ''}`} 
-                    style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}
-                  ></span>
-                </button>
-              )}
-              {/* Settings and Recipes grouped together */}
-              <div className="flex items-center gap-1.5">
-                <button onClick={() => setShowSettings(true)} className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" style={{ border: `1.5px solid ${theme.border}`, backgroundColor: 'transparent' }}>
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                  </svg>
-                </button>
-                <button 
-                  onClick={() => setShowRecipes(true)} 
-                  className="w-9 h-9 rounded-full flex items-center justify-center active:scale-95 transition-transform" 
-                  style={{ backgroundColor: YELLOW }}
-                >
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                  </svg>
-                </button>
-              </div>
+            {/* Right side - Just sync indicator */}
+            <div className="flex items-center flex-shrink-0">
+              <span 
+                className={`w-2 h-2 rounded-full ${syncing ? 'sync-pulse' : ''}`} 
+                style={{ backgroundColor: isOnline ? '#22c55e' : '#f59e0b' }}
+              ></span>
             </div>
           </div>
+          
+          {/* Progress bar with hide/clear controls */}
           {totalItems > 0 && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 mt-3">
               <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: theme.border }}>
                 <div className="h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${(checkedCount / totalItems) * 100}%`, backgroundColor: YELLOW }} />
               </div>
               <span className="text-xs font-medium tabular-nums" style={{ color: theme.textSecondary }}>{checkedCount}/{totalItems}</span>
+              {checkedCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => { triggerHaptic('light'); setHideCompleted(!hideCompleted); }}
+                    className="text-xs transition-all"
+                    style={{ color: theme.textTertiary }}
+                  >
+                    {hideCompleted ? `Show ${checkedCount}` : `Hide ${checkedCount}`}
+                  </button>
+                  <span style={{ color: theme.border }}>·</span>
+                  <button 
+                    onClick={() => { triggerHaptic('light'); setShowClearConfirm(true); }}
+                    className="text-xs transition-all"
+                    style={{ color: theme.textTertiary }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
       
-      <div className="px-4 py-3 pb-20">
+      <div className="px-4 py-3 pb-24">
         {visibleCategories.map((category, categoryIndex) => {
           const categoryItems = items.filter(item => item.category === category.id);
           const uncheckedCount = categoryItems.filter(i => !i.checked).length;
@@ -2270,10 +2394,16 @@ export default function App() {
               )}
               {hasItems && (
                 <div className="mt-1 ml-4 mr-4">
-                  {categoryItems.map(item => {
+                  {categoryItems
+                    .filter(item => !hideCompleted || !item.checked)
+                    .map(item => {
                     const isChecking = checkingItems.has(item.id);
                     const isEditingQty = editingQuantityId === item.id;
                     const quantity = item.quantity || 1;
+                    const isPendingDelete = pendingDeletes.some(p => p.id === item.id);
+                    
+                    // Don't render items that are pending deletion
+                    if (isPendingDelete) return null;
                     
                     return (
                       <div key={item.id} className="flex items-center gap-3 py-3 item-row fade-in" style={{ borderBottom: `1px solid ${theme.borderLight}`, opacity: item.checked ? 0.5 : 1, transition: 'opacity 0.3s ease' }}>
@@ -2340,10 +2470,10 @@ export default function App() {
                         {!isEditingQty && (
                           <button 
                             onClick={() => deleteItem(item.id)} 
-                            className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90" 
-                            style={{ backgroundColor: '#fef2f2', color: '#ef4444' }}
+                            className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90" 
+                            style={{ color: '#a8a29e' }}
                           >
-                            <span className="text-sm">×</span>
+                            <span className="text-lg font-light">×</span>
                           </button>
                         )}
                       </div>
@@ -2356,15 +2486,31 @@ export default function App() {
         })}
       </div>
 
-      {checkedCount > 0 && (
-        <div className="fixed bottom-6 left-4 right-4 flex justify-center fade-in">
-          <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(true); }}
-            className="px-6 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.97]"
-            style={{ backgroundColor: YELLOW, color: '#292524', boxShadow: theme.yellowGlow }}>
-            Clear {checkedCount} completed
-          </button>
+      {/* Pending delete undo toasts */}
+      {pendingDeletes.map((pending, index) => (
+        <div 
+          key={pending.id}
+          className="fixed left-4 right-4 flex justify-center fade-in z-40"
+          style={{ bottom: `${80 + index * 50}px` }}
+        >
+          <div 
+            className="flex items-center gap-3 px-4 py-2 rounded-full shadow-lg"
+            style={{ backgroundColor: theme.text, color: theme.bg }}
+          >
+            <span className="text-sm">Removing "{pending.name}"</span>
+            <button 
+              onClick={() => undoPendingDelete(pending.id)}
+              className="text-sm font-medium px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: YELLOW, color: '#292524' }}
+            >
+              Undo
+            </button>
+          </div>
         </div>
-      )}
+      ))}
+
+      {/* Bottom Navigation */}
+      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />
     </div>
   );
 }
