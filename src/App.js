@@ -688,6 +688,8 @@ export default function App() {
       });
     } catch (error) {
       console.error('Error saving list:', error);
+      // Show user-facing error for save failures
+      showToastMessage('Failed to save changes');
     }
   }, [listId, categories, recipes, storeLayouts, activeStoreLayoutId]);
 
@@ -837,21 +839,24 @@ export default function App() {
         const data = docSnap.data();
         setListId(code);
         setItems(data.items || []);
-        if (data.categories) setCategories(data.categories);
-        if (data.recipes) setRecipes(data.recipes);
+        setCategories(data.categories || DEFAULT_CATEGORIES);
+        setRecipes(data.recipes || []);
         
-        // Handle store layouts with migration
-        if (data.storeLayouts) {
-          const storedLayouts = data.storeLayouts;
-          const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
-          const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
-          const mergedLayouts = [...DEFAULT_STORE_LAYOUTS, ...customLayouts];
-          setStoreLayouts(mergedLayouts);
+        // Handle store layouts with migration - always use new defaults for built-in stores
+        const storedLayouts = data.storeLayouts || [];
+        const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
+        const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
+        const mergedLayouts = [...DEFAULT_STORE_LAYOUTS, ...customLayouts];
+        setStoreLayouts(mergedLayouts);
+        
+        // Use stored active layout ID if it exists in our merged layouts, otherwise default
+        const activeId = data.activeStoreLayoutId;
+        if (activeId && mergedLayouts.some(l => l.id === activeId)) {
+          setActiveStoreLayoutId(activeId);
         } else {
-          setStoreLayouts(DEFAULT_STORE_LAYOUTS);
+          setActiveStoreLayoutId('default');
         }
         
-        if (data.activeStoreLayoutId) setActiveStoreLayoutId(data.activeStoreLayoutId);
         setJoinCode('');
         localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
         checkOnboarding();
