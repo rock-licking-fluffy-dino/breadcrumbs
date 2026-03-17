@@ -688,7 +688,8 @@ export default function App() {
     }
   }, [listId, recipes]);
 
-  const saveCategories = useCallback(async (newCategories = categories, newStoreLayouts = storeLayouts, newActiveStoreLayoutId = activeStoreLayoutId) => {
+  // Save categories and store layouts to a separate document so they never conflict with item syncing
+  const saveCategories = async (newCategories, newStoreLayouts, newActiveStoreLayoutId) => {
     if (!listId) return;
     try {
       await setDoc(doc(db, 'lists', listId, 'meta', 'categories'), {
@@ -703,7 +704,7 @@ export default function App() {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2500);
     }
-  }, [listId, categories, storeLayouts, activeStoreLayoutId]);
+  };
 
   const saveHiddenCategories = (hidden) => {
     localStorage.setItem('breadcrumbs-hidden-categories', JSON.stringify(hidden));
@@ -735,7 +736,7 @@ export default function App() {
     };
     const newCategories = [...categories, newCategory];
     setCategories(newCategories);
-    await saveCategories(newCategories);
+    await saveCategories(newCategories, storeLayouts, activeStoreLayoutId);
     setNewCategoryName('');
     setShowAddCategory(false);
   };
@@ -746,7 +747,7 @@ export default function App() {
     const newItems = items.filter(item => item.category !== categoryId);
     setCategories(newCategories);
     setItems(newItems);
-    await saveCategories(newCategories);
+    await saveCategories(newCategories, storeLayouts, activeStoreLayoutId);
     await saveList(newItems);
   };
 
