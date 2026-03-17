@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, onSnapshot, getDoc, collection } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 // Firebase configuration
@@ -22,7 +22,7 @@ const db = getFirestore(app);
 if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
   try {
     initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider('6LcUPoMsAAAAAKXBQxRYUt5UmVa135MT7V2pkHR4'),
+      provider: new ReCaptchaV3Provider('YOUR_RECAPTCHA_SITE_KEY'),
       isTokenAutoRefreshEnabled: true
     });
   } catch (error) {
@@ -485,7 +485,8 @@ export default function App() {
   const inputRef = useRef(null);
   const recipeInputRef = useRef(null);
   const listNameInputRef = useRef(null);
-  const isSavingRef = useRef(false); // Track when we're saving to prevent snapshot overwrite
+  const isSavingRef = useRef(false); // Track when we're saving items to prevent snapshot overwrite
+  const isSavingCategoriesRef = useRef(false); // Track when we're saving categories to prevent snapshot overwrite
 
   // Derive actual dark mode from appearance setting
   const darkMode = appearanceMode === 'dark' || (appearanceMode === 'system' && systemDarkMode);
@@ -587,7 +588,6 @@ export default function App() {
       doc(db, 'lists', listId),
       async (docSnap) => {
         // Skip incoming updates while we're in the middle of saving
-        // This prevents the "bounce back" effect where local changes get overwritten
         if (isSavingRef.current) {
           setSyncing(false);
           return;
@@ -602,12 +602,15 @@ export default function App() {
             const daysSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24);
             
             if (daysSinceUpdate > 90) {
-              // List is stale - reset to fresh state
               console.log(`List ${listId} inactive for ${Math.floor(daysSinceUpdate)} days, resetting...`);
               await setDoc(doc(db, 'lists', listId), {
                 items: [],
-                categories: DEFAULT_CATEGORIES,
                 recipes: [],
+                updatedAt: new Date().toISOString()
+              });
+              // Also reset categories doc
+              await setDoc(doc(db, 'lists', listId, 'meta', 'categories'), {
+                categories: DEFAULT_CATEGORIES,
                 storeLayouts: DEFAULT_STORE_LAYOUTS,
                 activeStoreLayoutId: 'default',
                 updatedAt: new Date().toISOString()
@@ -622,56 +625,9 @@ export default function App() {
             }
           }
           
+          // Only update items and recipes from the main document
           setItems(data.items || []);
-          if (data.categories) setCategories(data.categories);
           if (data.recipes) setRecipes(data.recipes);
-          
-          // Migrate store layouts: merge stored layouts with new defaults
-          if (data.storeLayouts) {
-            const storedLayouts = data.storeLayouts;
-            
-            // Get IDs of all default layouts (built-in ones)
-            const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
-            
-            // Keep only custom layouts (user-created ones that aren't in defaults)
-            const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
-            
-            // Merge: all new defaults + any custom layouts the user created
-            const mergedLayouts = [...DEFAULT_STORE_LAYOUTS, ...customLayouts];
-            
-            // Check if migration is needed (layouts differ from what's stored)
-            const needsMigration = mergedLayouts.length !== storedLayouts.length ||
-              DEFAULT_STORE_LAYOUTS.some(defaultLayout => {
-                const stored = storedLayouts.find(s => s.id === defaultLayout.id);
-                return !stored || JSON.stringify(stored.categoryOrder) !== JSON.stringify(defaultLayout.categoryOrder);
-              });
-            
-            if (needsMigration) {
-              console.log('Migrating store layouts to new version...');
-              // Save the migrated layouts back to Firebase
-              setStoreLayouts(mergedLayouts);
-              // We'll save this in a moment after setting state
-              setTimeout(async () => {
-                try {
-                  await setDoc(doc(db, 'lists', listId), {
-                    ...data,
-                    storeLayouts: mergedLayouts,
-                    updatedAt: new Date().toISOString()
-                  });
-                  console.log('Store layouts migrated successfully');
-                } catch (error) {
-                  console.error('Error migrating store layouts:', error);
-                }
-              }, 100);
-            } else {
-              setStoreLayouts(mergedLayouts);
-            }
-          } else {
-            // No store layouts stored - use defaults
-            setStoreLayouts(DEFAULT_STORE_LAYOUTS);
-          }
-          
-          if (data.activeStoreLayoutId) setActiveStoreLayoutId(data.activeStoreLayoutId);
         }
         setSyncing(false);
       },
@@ -683,34 +639,76 @@ export default function App() {
     return () => unsubscribe();
   }, [listId]);
 
-  const saveList = useCallback(async (newItems, newCategories = categories, newRecipes = recipes, newStoreLayouts = storeLayouts, newActiveStoreLayoutId = activeStoreLayoutId) => {
+  // Separate listener for categories/store layouts (lives at lists/{listId}/meta/categories)
+  useEffect(() => {
     if (!listId) return;
-    
-    // Set flag to prevent onSnapshot from overwriting our local changes
+    const unsubscribe = onSnapshot(
+      doc(db, 'lists', listId, 'meta', 'categories'),
+      (docSnap) => {
+        // Skip if we just saved categories ourselves
+        if (isSavingCategoriesRef.current) return;
+        
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          if (data.categories) setCategories(data.categories);
+          if (data.storeLayouts) {
+            // Merge: keep all new defaults + any custom layouts from Firebase
+            const storedLayouts = data.storeLayouts;
+            const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
+            const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
+            setStoreLayouts([...DEFAULT_STORE_LAYOUTS, ...customLayouts]);
+          }
+          if (data.activeStoreLayoutId) setActiveStoreLayoutId(data.activeStoreLayoutId);
+        }
+        // If doc doesn't exist yet (new list), defaults are already in state
+      },
+      (error) => {
+        console.error('Error listening to categories:', error);
+      }
+    );
+    return () => unsubscribe();
+  }, [listId]);
+
+  // Save items and recipes to the main list document
+  const saveList = useCallback(async (newItems, newRecipes = recipes) => {
+    if (!listId) return;
     isSavingRef.current = true;
-    
     try {
       await setDoc(doc(db, 'lists', listId), {
         items: newItems,
-        categories: newCategories,
         recipes: newRecipes,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error saving list:', error);
+      setToastMessage('Failed to save changes');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2500);
+    } finally {
+      setTimeout(() => { isSavingRef.current = false; }, 500);
+    }
+  }, [listId, recipes]);
+
+  // Save categories and store layouts to a separate document so they never conflict with item syncing
+  const saveCategories = useCallback(async (newCategories = categories, newStoreLayouts = storeLayouts, newActiveStoreLayoutId = activeStoreLayoutId) => {
+    if (!listId) return;
+    isSavingCategoriesRef.current = true;
+    try {
+      await setDoc(doc(db, 'lists', listId, 'meta', 'categories'), {
+        categories: newCategories,
         storeLayouts: newStoreLayouts,
         activeStoreLayoutId: newActiveStoreLayoutId,
         updatedAt: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error saving list:', error);
-      // Show user-facing error for save failures
-      setToastMessage('Failed to save changes');
+      console.error('Error saving categories:', error);
+      setToastMessage('Failed to save category changes');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2500);
     } finally {
-      // Clear the flag after a short delay to allow Firebase to sync
-      setTimeout(() => {
-        isSavingRef.current = false;
-      }, 500);
+      setTimeout(() => { isSavingCategoriesRef.current = false; }, 500);
     }
-  }, [listId, categories, recipes, storeLayouts, activeStoreLayoutId]);
+  }, [listId, categories, storeLayouts, activeStoreLayoutId]);
 
   const saveHiddenCategories = (hidden) => {
     localStorage.setItem('breadcrumbs-hidden-categories', JSON.stringify(hidden));
@@ -742,7 +740,7 @@ export default function App() {
     };
     const newCategories = [...categories, newCategory];
     setCategories(newCategories);
-    await saveList(items, newCategories);
+    await saveCategories(newCategories);
     setNewCategoryName('');
     setShowAddCategory(false);
   };
@@ -753,7 +751,8 @@ export default function App() {
     const newItems = items.filter(item => item.category !== categoryId);
     setCategories(newCategories);
     setItems(newItems);
-    await saveList(newItems, newCategories);
+    await saveCategories(newCategories);
+    await saveList(newItems);
   };
 
   // Store layout functions
@@ -761,7 +760,7 @@ export default function App() {
     triggerHaptic('success');
     setActiveStoreLayoutId(layoutId);
     setShowStorePicker(false);
-    await saveList(items, categories, recipes, storeLayouts, layoutId);
+    await saveCategories(categories, storeLayouts, layoutId);
     const layout = storeLayouts.find(s => s.id === layoutId);
     showToastMessage(`Switched to ${layout?.name || 'layout'}`);
   };
@@ -773,7 +772,7 @@ export default function App() {
         : layout
     );
     setStoreLayouts(newLayouts);
-    await saveList(items, categories, recipes, newLayouts, activeStoreLayoutId);
+    await saveCategories(categories, newLayouts, activeStoreLayoutId);
   };
 
   const createCustomStoreLayout = async (name) => {
@@ -786,7 +785,7 @@ export default function App() {
     };
     const newLayouts = [...storeLayouts, newLayout];
     setStoreLayouts(newLayouts);
-    await saveList(items, categories, recipes, newLayouts, activeStoreLayoutId);
+    await saveCategories(categories, newLayouts, activeStoreLayoutId);
     return newLayout;
   };
 
@@ -796,7 +795,7 @@ export default function App() {
     const newActiveId = activeStoreLayoutId === layoutId ? 'default' : activeStoreLayoutId;
     setStoreLayouts(newLayouts);
     setActiveStoreLayoutId(newActiveId);
-    await saveList(items, categories, recipes, newLayouts, newActiveId);
+    await saveCategories(categories, newLayouts, newActiveId);
   };
 
   const resetStoreLayoutToDefault = async (layoutId) => {
@@ -808,7 +807,7 @@ export default function App() {
           : layout
       );
       setStoreLayouts(newLayouts);
-      await saveList(items, categories, recipes, newLayouts, activeStoreLayoutId);
+      await saveCategories(categories, newLayouts, activeStoreLayoutId);
       showToastMessage('Layout reset to default');
     }
   };
@@ -834,10 +833,15 @@ export default function App() {
       setActiveStoreLayoutId('default');
       setListName('');
       setEditingListName('');
+      // Main document: items and recipes only
       await setDoc(doc(db, 'lists', code), {
         items: [],
-        categories: DEFAULT_CATEGORIES,
         recipes: [],
+        updatedAt: new Date().toISOString()
+      });
+      // Categories subcollection document
+      await setDoc(doc(db, 'lists', code, 'meta', 'categories'), {
+        categories: DEFAULT_CATEGORIES,
         storeLayouts: DEFAULT_STORE_LAYOUTS,
         activeStoreLayoutId: 'default',
         updatedAt: new Date().toISOString()
@@ -858,24 +862,34 @@ export default function App() {
         const data = docSnap.data();
         setListId(code);
         setItems(data.items || []);
-        setCategories(data.categories || DEFAULT_CATEGORIES);
         setRecipes(data.recipes || []);
-        
-        // Handle store layouts with migration - always use new defaults for built-in stores
-        const storedLayouts = data.storeLayouts || [];
-        const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
-        const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
-        const mergedLayouts = [...DEFAULT_STORE_LAYOUTS, ...customLayouts];
-        setStoreLayouts(mergedLayouts);
-        
-        // Use stored active layout ID if it exists in our merged layouts, otherwise default
-        const activeId = data.activeStoreLayoutId;
-        if (activeId && mergedLayouts.some(l => l.id === activeId)) {
-          setActiveStoreLayoutId(activeId);
+
+        // Load categories from the subcollection
+        const catSnap = await getDoc(doc(db, 'lists', code, 'meta', 'categories'));
+        if (catSnap.exists()) {
+          const catData = catSnap.data();
+          if (catData.categories) setCategories(catData.categories);
+          if (catData.storeLayouts) {
+            const storedLayouts = catData.storeLayouts;
+            const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
+            const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
+            setStoreLayouts([...DEFAULT_STORE_LAYOUTS, ...customLayouts]);
+          }
+          const activeId = catData.activeStoreLayoutId;
+          if (activeId) setActiveStoreLayoutId(activeId);
         } else {
+          // No categories doc yet (old list) — use defaults and write them now
+          setCategories(DEFAULT_CATEGORIES);
+          setStoreLayouts(DEFAULT_STORE_LAYOUTS);
           setActiveStoreLayoutId('default');
+          await setDoc(doc(db, 'lists', code, 'meta', 'categories'), {
+            categories: DEFAULT_CATEGORIES,
+            storeLayouts: DEFAULT_STORE_LAYOUTS,
+            activeStoreLayoutId: 'default',
+            updatedAt: new Date().toISOString()
+          });
         }
-        
+
         setJoinCode('');
         localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
         checkOnboarding();
@@ -1136,7 +1150,7 @@ export default function App() {
     }
     
     setRecipes(newRecipes);
-    await saveList(items, categories, newRecipes);
+    await saveList(items, newRecipes);
     
     setNewRecipeName('');
     setNewRecipeIngredients([]);
@@ -1212,7 +1226,7 @@ export default function App() {
     triggerHaptic('success');
     const newRecipes = recipes.filter(r => r.id !== deletingRecipeId);
     setRecipes(newRecipes);
-    await saveList(items, categories, newRecipes);
+    await saveList(items, newRecipes);
     setDeletingRecipeId(null);
     showToastMessage('Recipe deleted');
   };
