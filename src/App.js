@@ -446,10 +446,8 @@ export default function App() {
   const [showToast, setShowToast] = useState(false);
   const [addingRecipeId, setAddingRecipeId] = useState(null);
   const [deletingRecipeId, setDeletingRecipeId] = useState(null);
-  const [showCodePopup, setShowCodePopup] = useState(false);
   const [savingRecipe, setSavingRecipe] = useState(false);
   const [editingRecipeId, setEditingRecipeId] = useState(null);
-  const [hideShareCode, setHideShareCode] = useState(false);
   
   // Store layout state
   const [storeLayouts, setStoreLayouts] = useState(DEFAULT_STORE_LAYOUTS);
@@ -584,13 +582,15 @@ export default function App() {
                 items: [],
                 categories: DEFAULT_CATEGORIES,
                 recipes: [],
-                hideShareCode: false,
+                storeLayouts: DEFAULT_STORE_LAYOUTS,
+                activeStoreLayoutId: 'default',
                 updatedAt: new Date().toISOString()
               });
               setItems([]);
               setRecipes([]);
               setCategories(DEFAULT_CATEGORIES);
-              setHideShareCode(false);
+              setStoreLayouts(DEFAULT_STORE_LAYOUTS);
+              setActiveStoreLayoutId('default');
               setSyncing(false);
               return;
             }
@@ -599,7 +599,6 @@ export default function App() {
           setItems(data.items || []);
           if (data.categories) setCategories(data.categories);
           if (data.recipes) setRecipes(data.recipes);
-          if (data.hideShareCode !== undefined) setHideShareCode(data.hideShareCode);
           if (data.storeLayouts) setStoreLayouts(data.storeLayouts);
           if (data.activeStoreLayoutId) setActiveStoreLayoutId(data.activeStoreLayoutId);
         }
@@ -613,14 +612,13 @@ export default function App() {
     return () => unsubscribe();
   }, [listId]);
 
-  const saveList = useCallback(async (newItems, newCategories = categories, newRecipes = recipes, newHideShareCode = hideShareCode, newStoreLayouts = storeLayouts, newActiveStoreLayoutId = activeStoreLayoutId) => {
+  const saveList = useCallback(async (newItems, newCategories = categories, newRecipes = recipes, newStoreLayouts = storeLayouts, newActiveStoreLayoutId = activeStoreLayoutId) => {
     if (!listId) return;
     try {
       await setDoc(doc(db, 'lists', listId), {
         items: newItems,
         categories: newCategories,
         recipes: newRecipes,
-        hideShareCode: newHideShareCode,
         storeLayouts: newStoreLayouts,
         activeStoreLayoutId: newActiveStoreLayoutId,
         updatedAt: new Date().toISOString()
@@ -628,7 +626,7 @@ export default function App() {
     } catch (error) {
       console.error('Error saving list:', error);
     }
-  }, [listId, categories, recipes, hideShareCode, storeLayouts, activeStoreLayoutId]);
+  }, [listId, categories, recipes, storeLayouts, activeStoreLayoutId]);
 
   const saveHiddenCategories = (hidden) => {
     localStorage.setItem('breadcrumbs-hidden-categories', JSON.stringify(hidden));
@@ -679,7 +677,7 @@ export default function App() {
     triggerHaptic('success');
     setActiveStoreLayoutId(layoutId);
     setShowStorePicker(false);
-    await saveList(items, categories, recipes, hideShareCode, storeLayouts, layoutId);
+    await saveList(items, categories, recipes, storeLayouts, layoutId);
     const layout = storeLayouts.find(s => s.id === layoutId);
     showToastMessage(`Switched to ${layout?.name || 'layout'}`);
   };
@@ -691,7 +689,7 @@ export default function App() {
         : layout
     );
     setStoreLayouts(newLayouts);
-    await saveList(items, categories, recipes, hideShareCode, newLayouts, activeStoreLayoutId);
+    await saveList(items, categories, recipes, newLayouts, activeStoreLayoutId);
   };
 
   const createCustomStoreLayout = async (name) => {
@@ -704,7 +702,7 @@ export default function App() {
     };
     const newLayouts = [...storeLayouts, newLayout];
     setStoreLayouts(newLayouts);
-    await saveList(items, categories, recipes, hideShareCode, newLayouts, activeStoreLayoutId);
+    await saveList(items, categories, recipes, newLayouts, activeStoreLayoutId);
     return newLayout;
   };
 
@@ -714,7 +712,7 @@ export default function App() {
     const newActiveId = activeStoreLayoutId === layoutId ? 'default' : activeStoreLayoutId;
     setStoreLayouts(newLayouts);
     setActiveStoreLayoutId(newActiveId);
-    await saveList(items, categories, recipes, hideShareCode, newLayouts, newActiveId);
+    await saveList(items, categories, recipes, newLayouts, newActiveId);
   };
 
   const resetStoreLayoutToDefault = async (layoutId) => {
@@ -726,7 +724,7 @@ export default function App() {
           : layout
       );
       setStoreLayouts(newLayouts);
-      await saveList(items, categories, recipes, hideShareCode, newLayouts, activeStoreLayoutId);
+      await saveList(items, categories, recipes, newLayouts, activeStoreLayoutId);
       showToastMessage('Layout reset to default');
     }
   };
@@ -950,13 +948,6 @@ export default function App() {
   const setAppearanceModeTo = (mode) => {
     triggerHaptic('light');
     setAppearanceMode(mode);
-  };
-
-  const toggleHideShareCode = async () => {
-    triggerHaptic('light');
-    const newValue = !hideShareCode;
-    setHideShareCode(newValue);
-    await saveList(items, categories, recipes, newValue);
   };
 
   // Recipe functions
@@ -1530,24 +1521,6 @@ export default function App() {
                     <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>
                       {appearanceMode === 'system' ? 'Follows your device theme' : appearanceMode === 'dark' ? 'Always use dark theme' : 'Always use light theme'}
                     </p>
-                  </div>
-                  
-                  {/* Hide Share Code toggle */}
-                  <div className="flex items-center justify-between mt-4 pt-4" style={{ borderTop: `1px solid ${theme.borderLight}` }}>
-                    <div>
-                      <span className="text-sm" style={{ color: theme.text }}>Hide Share Code</span>
-                      <p className="text-xs mt-0.5" style={{ color: theme.textTertiary, fontWeight: 300 }}>Hides the 6-digit code on the main screen for everyone</p>
-                    </div>
-                    <button
-                      onClick={toggleHideShareCode}
-                      className="w-12 h-7 rounded-full transition-all relative flex-shrink-0 ml-3"
-                      style={{ backgroundColor: hideShareCode ? YELLOW : theme.border, boxShadow: hideShareCode ? theme.yellowGlowSubtle : 'none' }}
-                    >
-                      <div
-                        className="absolute top-1 w-5 h-5 rounded-full transition-all shadow-sm"
-                        style={{ backgroundColor: '#fff', left: hideShareCode ? 'calc(100% - 24px)' : '4px' }}
-                      ></div>
-                    </button>
                   </div>
                   
                   {/* When items are completed setting */}
@@ -2186,33 +2159,6 @@ export default function App() {
               <button onClick={() => { triggerHaptic('light'); setShowLeaveConfirm(false); }} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>Stay</button>
               <button onClick={confirmLeaveList} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ backgroundColor: '#ef4444', color: '#fff' }}>Leave</button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {showCodePopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setShowCodePopup(false)}>
-          <div className="w-full max-w-xs rounded-2xl p-6 text-center" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }} onClick={(e) => e.stopPropagation()}>
-            <div className="text-4xl mb-4">🔗</div>
-            <h2 className="text-lg font-semibold mb-2" style={{ color: theme.text }}>Your Share Code</h2>
-            <div className="px-6 py-4 rounded-2xl mb-4" style={{ backgroundColor: theme.bgTertiary }}>
-              <span className="text-3xl font-mono tracking-widest" style={{ color: theme.text }}>{listId}</span>
-            </div>
-            <p className="text-sm mb-6" style={{ color: theme.textSecondary, fontWeight: 300 }}>
-              Share this code with family or housemates so they can join your list and shop together in real-time!
-            </p>
-            <button 
-              onClick={() => { 
-                navigator.clipboard?.writeText(listId); 
-                triggerHaptic('success'); 
-                setShowCodePopup(false);
-                showToastMessage('Code copied!');
-              }} 
-              className="w-full py-3 text-sm font-medium rounded-full transition-all active:scale-[0.97]" 
-              style={{ backgroundColor: YELLOW, color: '#292524', boxShadow: theme.yellowGlow }}
-            >
-              Copy Code
-            </button>
           </div>
         </div>
       )}
