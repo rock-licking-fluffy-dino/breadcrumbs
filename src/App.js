@@ -22,7 +22,7 @@ const db = getFirestore(app);
 if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
   try {
     initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider('6LcUPoMsAAAAAKXBQxRYUt5UmVa135MT7V2pkHR4'),
+      provider: new ReCaptchaV3Provider('YOUR_RECAPTCHA_SITE_KEY'),
       isTokenAutoRefreshEnabled: true
     });
   } catch (error) {
@@ -486,7 +486,6 @@ export default function App() {
   const recipeInputRef = useRef(null);
   const listNameInputRef = useRef(null);
   const isSavingRef = useRef(false); // Track when we're saving items to prevent snapshot overwrite
-  const isSavingCategoriesRef = useRef(false); // Track when we're saving categories to prevent snapshot overwrite
 
   // Derive actual dark mode from appearance setting
   const darkMode = appearanceMode === 'dark' || (appearanceMode === 'system' && systemDarkMode);
@@ -644,15 +643,16 @@ export default function App() {
     if (!listId) return;
     const unsubscribe = onSnapshot(
       doc(db, 'lists', listId, 'meta', 'categories'),
+      { includeMetadataChanges: true },
       (docSnap) => {
-        // Skip if we just saved categories ourselves
-        if (isSavingCategoriesRef.current) return;
+        // Skip updates that originated from this device's own write (local cache echo)
+        // hasPendingWrites = true means this is our own write echoing back, not another device
+        if (docSnap.metadata.hasPendingWrites) return;
         
         if (docSnap.exists()) {
           const data = docSnap.data();
           if (data.categories) setCategories(data.categories);
           if (data.storeLayouts) {
-            // Merge: keep all new defaults + any custom layouts from Firebase
             const storedLayouts = data.storeLayouts;
             const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
             const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
@@ -660,7 +660,6 @@ export default function App() {
           }
           if (data.activeStoreLayoutId) setActiveStoreLayoutId(data.activeStoreLayoutId);
         }
-        // If doc doesn't exist yet (new list), defaults are already in state
       },
       (error) => {
         console.error('Error listening to categories:', error);
@@ -689,10 +688,8 @@ export default function App() {
     }
   }, [listId, recipes]);
 
-  // Save categories and store layouts to a separate document so they never conflict with item syncing
   const saveCategories = useCallback(async (newCategories = categories, newStoreLayouts = storeLayouts, newActiveStoreLayoutId = activeStoreLayoutId) => {
     if (!listId) return;
-    isSavingCategoriesRef.current = true;
     try {
       await setDoc(doc(db, 'lists', listId, 'meta', 'categories'), {
         categories: newCategories,
@@ -705,8 +702,6 @@ export default function App() {
       setToastMessage('Failed to save category changes');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2500);
-    } finally {
-      setTimeout(() => { isSavingCategoriesRef.current = false; }, 500);
     }
   }, [listId, categories, storeLayouts, activeStoreLayoutId]);
 
