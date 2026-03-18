@@ -1832,7 +1832,7 @@ export default function App() {
 
           {/* Edit Store Layout Modal */}
           {editingStoreLayout && (
-            <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
               <div 
                 className="w-full max-h-[85vh] rounded-t-3xl overflow-hidden flex flex-col"
                 style={{ backgroundColor: theme.bg }}
@@ -2298,7 +2298,7 @@ export default function App() {
 
       {/* Store Picker Modal */}
       {showStorePicker && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setShowStorePicker(false)}>
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setShowStorePicker(false)}>
           <div
             className="w-full max-h-[75vh] rounded-t-3xl overflow-hidden flex flex-col"
             style={{ backgroundColor: theme.bg }}
