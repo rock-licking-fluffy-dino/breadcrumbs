@@ -16,13 +16,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Initialize App Check (only in production)
-// TODO: Replace YOUR_RECAPTCHA_SITE_KEY with your actual reCAPTCHA v3 site key
-// Get your key from: https://www.google.com/recaptcha/admin
 if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
   try {
     initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider('YOUR_RECAPTCHA_SITE_KEY'),
+      provider: new ReCaptchaV3Provider('6LcUPoMsAAAAAKXBQxRYUt5UmVa135MT7V2pkHR4'),
       isTokenAutoRefreshEnabled: true
     });
   } catch (error) {
