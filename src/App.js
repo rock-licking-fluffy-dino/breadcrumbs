@@ -236,6 +236,10 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
     if (touchStartX.current === null) return;
     const diff = touchStartX.current - e.changedTouches[0].clientX;
     if (diff > 50) goNext();
+    else if (diff < -50 && currentCard > 0) {
+      setCurrentCard(c => c - 1);
+      triggerHaptic('light');
+    }
     touchStartX.current = null;
   };
 
