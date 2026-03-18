@@ -170,17 +170,13 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
   const touchStartX = useRef(null);
 
   const isDark = theme.bg === '#1c1917';
-  const circleBg = isDark ? 'rgba(250,204,21,0.12)' : '#fef9c3';
-  const codePillBg = isDark ? 'rgba(250,204,21,0.12)' : '#fefce8';
 
   const cards = [
     {
-      emoji: '🙌',
-      title: 'No account needed',
-      description: 'Jump straight in. No sign-up, no password. Just create a list and go.',
+      isWelcome: true,
     },
     {
-      emoji: '🏪',
+      emoji: '🗂️',
       title: 'Smart organisation',
       description: 'Items are sorted by store section automatically — Dairy, Frozen, Bakery and more. Shop aisle by aisle.',
     },
@@ -201,9 +197,9 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
       description: "Reorder categories to match your store, hide ones you don't use, or create your own.",
     },
     {
-      emoji: '🛒',
+      emoji: '🏪',
       title: 'Shop by store',
-      description: 'Save a layout for each shop you visit. Switch stores and your list reorders itself to match that store\'s aisles.',
+      description: "Save a layout for each shop you visit. Switch stores and your list reorders itself to match that store's aisles.",
     },
     {
       emoji: '👨‍🍳',
@@ -240,6 +236,9 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
     touchStartX.current = null;
   };
 
+  const circleBg = isDark ? 'rgba(250,204,21,0.12)' : 'rgba(255, 248, 204, 0.75)';
+  const ctaLabel = currentCard === 0 ? 'Get started' : isLastCard ? 'Start Shopping' : 'Next';
+
   return (
     <div
       className="fixed inset-0 z-[100] flex flex-col select-none"
@@ -247,23 +246,57 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Emoji area — top ~55% of screen */}
+      {/* Top area — ~55% of screen */}
       <div className="flex items-center justify-center" style={{ height: '55%' }}>
-        <div
-          key={`circle-${currentCard}`}
-          style={{
-            width: 220,
-            height: 220,
-            borderRadius: '50%',
-            backgroundColor: circleBg,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            animation: 'onboardSlideIn 0.35s ease-out',
-          }}
-        >
-          <span style={{ fontSize: 72, lineHeight: 1, display: 'block' }}>{card.emoji}</span>
-        </div>
+        {card.isWelcome ? (
+          <div
+            key="welcome-hero"
+            className="flex flex-col items-center"
+            style={{ gap: 16, animation: 'onboardSlideIn 0.35s ease-out' }}
+          >
+            {/* Three Breadcrumbs dots */}
+            <div className="flex items-center gap-2">
+              <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: YELLOW }} />
+              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
+              <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
+            </div>
+            {/* Wordmark */}
+            <div
+              style={{
+                fontSize: 28,
+                fontWeight: 300,
+                letterSpacing: '-0.025em',
+                color: '#292524',
+              }}
+            >
+              Breadcrumbs
+            </div>
+            {/* Tagline */}
+            <div style={{ fontSize: 14, color: '#78716c', fontWeight: 300 }}>
+              Never get lost in the aisles again.
+            </div>
+          </div>
+        ) : (
+          <div
+            key={`circle-${currentCard}`}
+            style={{
+              width: 220,
+              height: 220,
+              borderRadius: '50%',
+              backgroundColor: circleBg,
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              border: '1px solid rgba(255, 255, 255, 0.9)',
+              boxShadow: '0 8px 32px rgba(250, 204, 21, 0.12), 0 2px 8px rgba(0,0,0,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              animation: 'onboardSlideIn 0.35s ease-out',
+            }}
+          >
+            <span style={{ fontSize: 72, lineHeight: 1, display: 'block' }}>{card.emoji}</span>
+          </div>
+        )}
       </div>
 
       {/* Content area — bottom ~45% */}
@@ -276,54 +309,54 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
           paddingBottom: 'max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))',
         }}
       >
-        {/* Card text */}
-        <div
-          key={`text-${currentCard}`}
-          className="text-center"
-          style={{ animation: 'onboardSlideIn 0.35s ease-out' }}
-        >
-          <h2
-            style={{
-              fontSize: 20,
-              fontWeight: 600,
-              color: theme.text,
-              marginBottom: 10,
-              lineHeight: 1.3,
-            }}
+        {/* Card text — non-welcome cards only */}
+        {!card.isWelcome && (
+          <div
+            key={`text-${currentCard}`}
+            className="text-center"
+            style={{ animation: 'onboardSlideIn 0.35s ease-out' }}
           >
-            {card.title}
-          </h2>
-          <p
-            style={{
-              fontSize: 14,
-              lineHeight: 1.65,
-              color: theme.textSecondary,
-              margin: 0,
-            }}
-          >
-            {card.description}
-          </p>
-          {card.showCode && (
-            <div className="flex justify-center mt-4">
-              <div
-                className="font-mono tracking-widest"
-                style={{
-                  fontSize: 22,
-                  paddingLeft: 24,
-                  paddingRight: 24,
-                  paddingTop: 10,
-                  paddingBottom: 10,
-                  borderRadius: 9999,
-                  backgroundColor: codePillBg,
-                  border: `2px solid ${YELLOW}`,
-                  color: theme.text,
-                }}
-              >
-                {listCode || 'ABC123'}
+            <h2
+              style={{
+                fontSize: 20,
+                fontWeight: 600,
+                color: theme.text,
+                marginBottom: 10,
+                lineHeight: 1.3,
+              }}
+            >
+              {card.title}
+            </h2>
+            <p
+              style={{
+                fontSize: 14,
+                lineHeight: 1.65,
+                color: theme.textSecondary,
+                margin: 0,
+              }}
+            >
+              {card.description}
+            </p>
+            {card.showCode && (
+              <div className="flex justify-center mt-4">
+                <div
+                  className="font-mono tracking-widest"
+                  style={{
+                    paddingLeft: 24,
+                    paddingRight: 24,
+                    paddingTop: 8,
+                    paddingBottom: 8,
+                    borderRadius: 9999,
+                    border: `1.5px solid ${YELLOW}`,
+                    color: '#292524',
+                  }}
+                >
+                  {listCode || 'ABC123'}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Push bottom controls to the bottom */}
         <div style={{ flex: 1 }} />
@@ -356,7 +389,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                backgroundColor: i === currentCard ? YELLOW : theme.border,
+                backgroundColor: i === currentCard ? YELLOW : '#e7e5e4',
                 transition: 'background-color 0.3s',
               }}
             />
@@ -370,14 +403,15 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
           style={{
             height: 52,
             borderRadius: 9999,
-            backgroundColor: YELLOW,
+            background: 'linear-gradient(135deg, #FDE047 0%, #FACC15 100%)',
             color: '#292524',
             fontSize: 16,
             border: 'none',
             cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(250, 204, 21, 0.4)',
           }}
         >
-          {isLastCard ? 'Start Shopping' : 'Next'}
+          {ctaLabel}
         </button>
       </div>
 
