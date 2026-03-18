@@ -174,6 +174,9 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
   const cards = [
     {
       isWelcome: true,
+      title: 'Welcome',
+      description: 'Never get lost in the aisles again.',
+      subtitle: 'The smartest path to a stocked home.',
     },
     {
       emoji: '🗂️',
@@ -251,30 +254,12 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
         {card.isWelcome ? (
           <div
             key="welcome-hero"
-            className="flex flex-col items-center"
-            style={{ gap: 16, animation: 'onboardSlideIn 0.35s ease-out' }}
+            className="flex items-center gap-4"
+            style={{ animation: 'onboardSlideIn 0.35s ease-out' }}
           >
-            {/* Three Breadcrumbs dots */}
-            <div className="flex items-center gap-2">
-              <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: YELLOW }} />
-              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
-              <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
-            </div>
-            {/* Wordmark */}
-            <div
-              style={{
-                fontSize: 28,
-                fontWeight: 300,
-                letterSpacing: '-0.025em',
-                color: '#292524',
-              }}
-            >
-              Breadcrumbs
-            </div>
-            {/* Tagline */}
-            <div style={{ fontSize: 14, color: '#78716c', fontWeight: 300 }}>
-              Never get lost in the aisles again.
-            </div>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', backgroundColor: YELLOW }} />
+            <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
+            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
           </div>
         ) : (
           <div
@@ -309,35 +294,46 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
           paddingBottom: 'max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))',
         }}
       >
-        {/* Card text — non-welcome cards only */}
-        {!card.isWelcome && (
-          <div
-            key={`text-${currentCard}`}
-            className="text-center"
-            style={{ animation: 'onboardSlideIn 0.35s ease-out' }}
+        {/* Card text */}
+        <div
+          key={`text-${currentCard}`}
+          className="text-center"
+          style={{ animation: 'onboardSlideIn 0.35s ease-out' }}
+        >
+          <h2
+            style={{
+              fontSize: 20,
+              fontWeight: 600,
+              color: theme.text,
+              marginBottom: 10,
+              lineHeight: 1.3,
+            }}
           >
-            <h2
-              style={{
-                fontSize: 20,
-                fontWeight: 600,
-                color: theme.text,
-                marginBottom: 10,
-                lineHeight: 1.3,
-              }}
-            >
-              {card.title}
-            </h2>
+            {card.title}
+          </h2>
+          <p
+            style={{
+              fontSize: 14,
+              lineHeight: 1.65,
+              color: theme.textSecondary,
+              margin: 0,
+            }}
+          >
+            {card.description}
+          </p>
+          {card.subtitle && (
             <p
               style={{
                 fontSize: 14,
                 lineHeight: 1.65,
                 color: theme.textSecondary,
-                margin: 0,
+                margin: '4px 0 0',
               }}
             >
-              {card.description}
+              {card.subtitle}
             </p>
-            {card.showCode && (
+          )}
+          {card.showCode && (
               <div className="flex justify-center mt-4">
                 <div
                   className="font-mono tracking-widest"
@@ -355,8 +351,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
                 </div>
               </div>
             )}
-          </div>
-        )}
+        </div>
 
         {/* Push bottom controls to the bottom */}
         <div style={{ flex: 1 }} />
@@ -2218,13 +2213,6 @@ export default function App() {
               Breadcrumbs
             </h1>
 
-            {/* Taglines */}
-            <p className="fade-up-2 mt-3 text-sm" style={{ color: theme.textSecondary, fontWeight: 400 }}>
-              Never get lost in the aisles again.
-            </p>
-            <p style={{ color: theme.textTertiary, fontSize: 14, fontWeight: 300, marginTop: 2 }}>
-              The smartest path to a stocked home.
-            </p>
           </div>
 
           {/* CTA card */}
