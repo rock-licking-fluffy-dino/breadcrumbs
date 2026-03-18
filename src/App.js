@@ -201,6 +201,11 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
       description: "Reorder categories to match your store, hide ones you don't use, or create your own.",
     },
     {
+      emoji: '🗺️',
+      title: 'Shop by store',
+      description: 'Save a layout for each shop you visit. Switch stores and your list reorders itself to match that store\'s aisles.',
+    },
+    {
       emoji: '👨‍🍳',
       title: 'Recipes',
       description: 'Save your favourite recipes and add all the ingredients to your list in one tap.',
