@@ -884,6 +884,7 @@ export default function App() {
       setActiveStoreLayoutId('default');
       setListName('');
       setEditingListName('');
+      checkOnboarding();
       // Main document: items and recipes only
       await setDoc(doc(db, 'lists', code), {
         items: [],
@@ -898,7 +899,6 @@ export default function App() {
         updatedAt: new Date().toISOString()
       });
       localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
-      checkOnboarding();
       setCreateAnim(false);
     }, 400);
   };
@@ -914,6 +914,7 @@ export default function App() {
         setListId(code);
         setItems(data.items || []);
         setRecipes(data.recipes || []);
+        checkOnboarding();
 
         // Load categories from the subcollection
         const catSnap = await getDoc(doc(db, 'lists', code, 'meta', 'categories'));
@@ -943,7 +944,6 @@ export default function App() {
 
         setJoinCode('');
         localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
-        checkOnboarding();
       } else {
         alert('List not found. Check the code and try again.');
       }
