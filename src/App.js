@@ -472,6 +472,7 @@ export default function App() {
   const [activeStoreLayoutId, setActiveStoreLayoutId] = useState('default');
   const [showStorePicker, setShowStorePicker] = useState(false);
   const [editingStoreLayout, setEditingStoreLayout] = useState(null);
+  const [editingStoreLayoutData, setEditingStoreLayoutData] = useState(null);
   
   // Navigation and UI state
   const [activeTab, setActiveTab] = useState('list'); // 'list', 'recipes', 'settings'
@@ -1783,7 +1784,7 @@ export default function App() {
                       <div className="flex items-center gap-1">
                         {/* Edit button */}
                         <button
-                          onClick={() => setEditingStoreLayout(layout.id)}
+                          onClick={() => { setEditingStoreLayout(layout.id); setEditingStoreLayoutData(storeLayouts.find(s => s.id === layout.id)); }}
                           className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
                           style={{ backgroundColor: theme.bgTertiary }}
                         >
@@ -1816,6 +1817,7 @@ export default function App() {
                   if (name && name.trim()) {
                     const newLayout = await createCustomStoreLayout(name);
                     setEditingStoreLayout(newLayout.id);
+                    setEditingStoreLayoutData(newLayout);
                   }
                 }}
                 className="w-full py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]"
@@ -1835,23 +1837,33 @@ export default function App() {
               >
                 {/* Header */}
                 <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: theme.border }}>
-                  <button 
-                    onClick={() => setEditingStoreLayout(null)} 
+                  <button
+                    onClick={async () => {
+                      if (editingStoreLayoutData) {
+                        await updateStoreLayoutOrder(editingStoreLayout, editingStoreLayoutData.categoryOrder);
+                      }
+                      setEditingStoreLayout(null);
+                      setEditingStoreLayoutData(null);
+                    }}
                     className="text-sm font-medium"
                     style={{ color: theme.textSecondary }}
                   >
                     Done
                   </button>
                   <h2 className="text-base font-semibold" style={{ color: theme.text }}>
-                    Edit {storeLayouts.find(s => s.id === editingStoreLayout)?.name}
+                    Edit {editingStoreLayoutData?.name}
                   </h2>
                   <button
                     onClick={() => {
-                      resetStoreLayoutToDefault(editingStoreLayout);
+                      const defaultLayout = DEFAULT_STORE_LAYOUTS.find(s => s.id === editingStoreLayout);
+                      if (defaultLayout && editingStoreLayoutData) {
+                        setEditingStoreLayoutData({ ...editingStoreLayoutData, categoryOrder: defaultLayout.categoryOrder });
+                        showToastMessage('Layout reset to default');
+                      }
                     }}
                     className="text-sm font-medium"
-                    style={{ color: storeLayouts.find(s => s.id === editingStoreLayout)?.isDefault ? YELLOW : theme.textTertiary }}
-                    disabled={!storeLayouts.find(s => s.id === editingStoreLayout)?.isDefault}
+                    style={{ color: editingStoreLayoutData?.isDefault ? YELLOW : theme.textTertiary }}
+                    disabled={!editingStoreLayoutData?.isDefault}
                   >
                     Reset
                   </button>
@@ -1865,7 +1877,7 @@ export default function App() {
                 <div className="flex-1 overflow-y-auto px-5 pb-8">
                   <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                     {(() => {
-                      const layout = storeLayouts.find(s => s.id === editingStoreLayout);
+                      const layout = editingStoreLayoutData;
                       // Use DEFAULT_CATEGORIES as primary source for category names
                       // This ensures all 20 categories appear even if user's categories differ
                       const allCategories = [...DEFAULT_CATEGORIES, ...categories.filter(c => !DEFAULT_CATEGORIES.find(d => d.id === c.id))];
@@ -1892,10 +1904,10 @@ export default function App() {
                               onClick={() => {
                                 if (!isFirst) {
                                   triggerHaptic('light');
-                                  const newOrder = [...layout.categoryOrder];
+                                  const newOrder = [...editingStoreLayoutData.categoryOrder];
                                   const catIdx = newOrder.indexOf(cat.id);
                                   [newOrder[catIdx - 1], newOrder[catIdx]] = [newOrder[catIdx], newOrder[catIdx - 1]];
-                                  updateStoreLayoutOrder(editingStoreLayout, newOrder);
+                                  setEditingStoreLayoutData({ ...editingStoreLayoutData, categoryOrder: newOrder });
                                 }
                               }}
                               disabled={isFirst}
@@ -1917,10 +1929,10 @@ export default function App() {
                               onClick={() => {
                                 if (!isLast) {
                                   triggerHaptic('light');
-                                  const newOrder = [...layout.categoryOrder];
+                                  const newOrder = [...editingStoreLayoutData.categoryOrder];
                                   const catIdx = newOrder.indexOf(cat.id);
                                   [newOrder[catIdx], newOrder[catIdx + 1]] = [newOrder[catIdx + 1], newOrder[catIdx]];
-                                  updateStoreLayoutOrder(editingStoreLayout, newOrder);
+                                  setEditingStoreLayoutData({ ...editingStoreLayoutData, categoryOrder: newOrder });
                                 }
                               }}
                               disabled={isLast}
