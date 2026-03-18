@@ -167,129 +167,55 @@ const triggerHaptic = (style = 'light') => {
 // Onboarding Modal Component
 const OnboardingModal = ({ listCode, onComplete, theme }) => {
   const [currentCard, setCurrentCard] = useState(0);
-  const [slideDirection, setSlideDirection] = useState('right');
+  const touchStartX = useRef(null);
+
+  const isDark = theme.bg === '#1c1917';
+  const circleBg = isDark ? 'rgba(250,204,21,0.12)' : '#fef9c3';
+  const codePillBg = isDark ? 'rgba(250,204,21,0.12)' : '#fefce8';
 
   const cards = [
     {
-      icon: '🏪',
-      title: 'Smart Organisation',
-      description: 'Your shopping list is organised by store section — just like a real supermarket. Shop faster and never miss an aisle.',
-      visual: (
-        <div className="flex flex-col gap-2 mt-4">
-          {['🥬 Fruits & Veg', '🧀 Dairy & Eggs', '🧊 Frozen'].map((cat, i) => (
-            <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ backgroundColor: theme.bgTertiary }}>
-              <span className="text-sm" style={{ color: theme.text }}>{cat}</span>
-            </div>
-          ))}
-        </div>
-      )
+      emoji: '🙌',
+      title: 'No account needed',
+      description: 'Jump straight in. No sign-up, no password. Just create a list and go.',
     },
     {
-      icon: '🔗',
-      title: 'Share in Seconds',
-      description: 'Invite anyone to shop together — no accounts needed. Just share your 6-character code and start collaborating instantly.',
-      visual: (
-        <div className="mt-4 flex flex-col items-center">
-          <div className="px-6 py-3 rounded-full text-2xl font-mono tracking-widest" style={{ backgroundColor: '#fefce8', border: `2px solid ${YELLOW}` }}>
-            {listCode || 'ABC123'}
-          </div>
-          <p className="text-xs mt-3" style={{ color: theme.textSecondary }}>You'll find your code at the top of your list</p>
-        </div>
-      )
+      emoji: '🏪',
+      title: 'Smart organisation',
+      description: 'Items are sorted by store section automatically — Dairy, Frozen, Bakery and more. Shop aisle by aisle.',
     },
     {
-      icon: '⚡',
-      title: 'Shop Together, Live',
-      description: 'See items being ticked off in real-time as your group shops. Stay in sync across all devices — no refresh needed.',
-      visual: (
-        <div className="mt-4 flex justify-center gap-4">
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-16 h-24 rounded-xl border-2 flex flex-col items-center justify-center gap-1" style={{ borderColor: theme.border }}>
-              <div className="w-8 h-1 rounded" style={{ backgroundColor: theme.border }}></div>
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: YELLOW }}></div>
-              <div className="w-8 h-1 rounded" style={{ backgroundColor: theme.border }}></div>
-            </div>
-            <span className="text-xs" style={{ color: theme.textSecondary }}>You</span>
-          </div>
-          <div className="flex items-center">
-            <span style={{ color: YELLOW }}>⟷</span>
-          </div>
-          <div className="flex flex-col items-center gap-2">
-            <div className="w-16 h-24 rounded-xl border-2 flex flex-col items-center justify-center gap-1" style={{ borderColor: theme.border }}>
-              <div className="w-8 h-1 rounded" style={{ backgroundColor: theme.border }}></div>
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: YELLOW }}></div>
-              <div className="w-8 h-1 rounded" style={{ backgroundColor: theme.border }}></div>
-            </div>
-            <span className="text-xs" style={{ color: theme.textSecondary }}>Them</span>
-          </div>
-        </div>
-      )
+      emoji: '🔗',
+      title: 'Share & collaborate',
+      description: 'Share your 6-character code with anyone. They join instantly and your list updates for everyone.',
+      showCode: true,
     },
     {
-      icon: '📖',
-      title: 'Save Your Recipes',
-      description: 'Create recipes with ingredients and add them all to your list in one tap. Perfect for weekly meal planning.',
-      visual: (
-        <div className="mt-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: theme.bgTertiary }}>
-            <span className="text-sm" style={{ color: theme.text }}>Sunday Roast</span>
-            <span className="text-xs" style={{ color: theme.textSecondary }}>8 items</span>
-          </div>
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: theme.bgTertiary }}>
-            <span className="text-sm" style={{ color: theme.text }}>Pasta Bolognese</span>
-            <span className="text-xs" style={{ color: theme.textSecondary }}>6 items</span>
-          </div>
-        </div>
-      )
+      emoji: '⚡',
+      title: 'Real-time sync',
+      description: 'Tick something off and it disappears for your whole household in seconds. No refresh needed.',
     },
     {
-      icon: '🎛️',
-      title: 'Make It Yours',
-      description: 'Name your list, reorder categories, hide ones you don\'t need, create custom categories, and toggle dark mode.',
-      visual: (
-        <div className="mt-4 flex flex-col gap-2">
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: '#fefce8', border: `1px solid ${YELLOW}` }}>
-            <span className="text-sm font-medium" style={{ color: '#292524' }}>Weekly Shop</span>
-            <span className="text-xs" style={{ color: '#78716c' }}>ABC123</span>
-          </div>
-          <div className="flex items-center justify-between px-3 py-2 rounded-lg" style={{ backgroundColor: theme.bgTertiary }}>
-            <span className="text-sm" style={{ color: theme.text }}>Dark Mode</span>
-            <div className="w-8 h-4 rounded-full" style={{ backgroundColor: YELLOW }}></div>
-          </div>
-        </div>
-      )
+      emoji: '🎛️',
+      title: 'Customise it',
+      description: "Reorder categories to match your store, hide ones you don't use, or create your own.",
     },
     {
-      icon: '🎉',
-      title: "You're All Set!",
-      description: 'Your list is ready. Tap + to add items, or tap the recipe book to save your favourite meals.',
-      visual: (
-        <div className="mt-6 flex justify-center">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: YELLOW }}></div>
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
-          </div>
-        </div>
-      )
-    }
+      emoji: '👨‍🍳',
+      title: 'Recipes',
+      description: 'Save your favourite recipes and add all the ingredients to your list in one tap.',
+    },
   ];
 
+  const isLastCard = currentCard === cards.length - 1;
+  const card = cards[currentCard];
+
   const goNext = () => {
-    if (currentCard < cards.length - 1) {
-      setSlideDirection('right');
-      setCurrentCard(currentCard + 1);
+    if (!isLastCard) {
+      setCurrentCard(c => c + 1);
       triggerHaptic('light');
     } else {
       onComplete();
-    }
-  };
-
-  const goBack = () => {
-    if (currentCard > 0) {
-      setSlideDirection('left');
-      setCurrentCard(currentCard - 1);
-      triggerHaptic('light');
     }
   };
 
@@ -298,37 +224,163 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
     onComplete();
   };
 
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (diff > 50) goNext();
+    touchStartX.current = null;
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-      <div className="w-full max-w-sm rounded-3xl overflow-hidden" style={{ backgroundColor: theme.bgSecondary, maxHeight: '90vh', boxShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)' }}>
-        <div className="flex justify-end p-4 pb-0">
-          <button onClick={skip} className="text-sm" style={{ color: theme.textTertiary }}>Skip</button>
-        </div>
-        <div className="px-6 pb-6 overflow-hidden">
-          <div key={currentCard} className="text-center" style={{ animation: `${slideDirection === 'right' ? 'slideInRight' : 'slideInLeft'} 0.3s ease-out` }}>
-            <div className="text-4xl mb-4">{cards[currentCard].icon}</div>
-            <h2 className="text-xl font-semibold mb-2" style={{ color: theme.text }}>{cards[currentCard].title}</h2>
-            <p className="text-sm leading-relaxed" style={{ color: theme.textSecondary }}>{cards[currentCard].description}</p>
-            {cards[currentCard].visual}
-          </div>
-        </div>
-        <div className="flex justify-center gap-2 pb-4">
-          {cards.map((_, i) => (
-            <div key={i} className="w-2 h-2 rounded-full transition-all duration-300" style={{ backgroundColor: i === currentCard ? YELLOW : theme.border }}></div>
-          ))}
-        </div>
-        <div className="flex gap-3 p-4 pt-0">
-          {currentCard > 0 && (
-            <button onClick={goBack} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.98]" style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary }}>Back</button>
-          )}
-          <button onClick={goNext} className="flex-1 py-3 text-sm font-medium rounded-full transition-all active:scale-[0.97]" style={{ backgroundColor: YELLOW, color: '#292524', boxShadow: '0 4px 20px rgba(250,204,21,0.35)' }}>
-            {currentCard === cards.length - 1 ? 'Start Shopping' : 'Next'}
-          </button>
+    <div
+      className="fixed inset-0 z-50 flex flex-col select-none"
+      style={{ backgroundColor: theme.bg, fontFamily: 'Inter, sans-serif' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Emoji area — top ~55% of screen */}
+      <div className="flex items-center justify-center" style={{ height: '55%' }}>
+        <div
+          key={`circle-${currentCard}`}
+          style={{
+            width: 220,
+            height: 220,
+            borderRadius: '50%',
+            backgroundColor: circleBg,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            animation: 'onboardSlideIn 0.35s ease-out',
+          }}
+        >
+          <span style={{ fontSize: 72, lineHeight: 1, display: 'block' }}>{card.emoji}</span>
         </div>
       </div>
+
+      {/* Content area — bottom ~45% */}
+      <div
+        className="flex flex-col"
+        style={{
+          height: '45%',
+          paddingLeft: 32,
+          paddingRight: 32,
+          paddingBottom: 'max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))',
+        }}
+      >
+        {/* Card text */}
+        <div
+          key={`text-${currentCard}`}
+          className="text-center"
+          style={{ animation: 'onboardSlideIn 0.35s ease-out' }}
+        >
+          <h2
+            style={{
+              fontSize: 20,
+              fontWeight: 600,
+              color: theme.text,
+              marginBottom: 10,
+              lineHeight: 1.3,
+            }}
+          >
+            {card.title}
+          </h2>
+          <p
+            style={{
+              fontSize: 14,
+              lineHeight: 1.65,
+              color: theme.textSecondary,
+              margin: 0,
+            }}
+          >
+            {card.description}
+          </p>
+          {card.showCode && (
+            <div className="flex justify-center mt-4">
+              <div
+                className="font-mono tracking-widest"
+                style={{
+                  fontSize: 22,
+                  paddingLeft: 24,
+                  paddingRight: 24,
+                  paddingTop: 10,
+                  paddingBottom: 10,
+                  borderRadius: 9999,
+                  backgroundColor: codePillBg,
+                  border: `2px solid ${YELLOW}`,
+                  color: theme.text,
+                }}
+              >
+                {listCode || 'ABC123'}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Push bottom controls to the bottom */}
+        <div style={{ flex: 1 }} />
+
+        {/* Skip link — only on non-last cards */}
+        {!isLastCard && (
+          <div className="text-center" style={{ marginBottom: 12 }}>
+            <button
+              onClick={skip}
+              style={{
+                fontSize: 13,
+                color: '#a8a29e',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px 8px',
+              }}
+            >
+              Skip
+            </button>
+          </div>
+        )}
+
+        {/* Dot indicators */}
+        <div className="flex justify-center" style={{ gap: 8, marginBottom: 16 }}>
+          {cards.map((_, i) => (
+            <div
+              key={i}
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: i === currentCard ? YELLOW : theme.border,
+                transition: 'background-color 0.3s',
+              }}
+            />
+          ))}
+        </div>
+
+        {/* CTA button */}
+        <button
+          onClick={goNext}
+          className="w-full font-semibold transition-all active:scale-[0.97]"
+          style={{
+            height: 52,
+            borderRadius: 9999,
+            backgroundColor: YELLOW,
+            color: '#292524',
+            fontSize: 16,
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          {isLastCard ? 'Start Shopping' : 'Next'}
+        </button>
+      </div>
+
       <style>{`
-        @keyframes slideInRight { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes slideInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes onboardSlideIn {
+          from { opacity: 0; transform: translateX(28px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
       `}</style>
     </div>
   );
