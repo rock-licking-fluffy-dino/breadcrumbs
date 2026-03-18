@@ -237,7 +237,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col select-none"
+      className="fixed inset-0 z-[100] flex flex-col select-none"
       style={{ backgroundColor: theme.bg, fontFamily: 'Inter, sans-serif' }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
