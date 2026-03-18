@@ -1876,7 +1876,7 @@ export default function App() {
                 </p>
 
                 {/* Category reorder list */}
-                <div className="flex-1 overflow-y-auto px-5 pb-8">
+                <div className="flex-1 overflow-y-auto px-5" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
                   <div className="rounded-2xl overflow-hidden" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                     {(() => {
                       const layout = editingStoreLayoutData;
@@ -2299,14 +2299,14 @@ export default function App() {
       {/* Store Picker Modal */}
       {showStorePicker && (
         <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setShowStorePicker(false)}>
-          <div 
-            className="w-full max-h-[60vh] rounded-t-3xl overflow-hidden"
+          <div
+            className="w-full max-h-[75vh] rounded-t-3xl overflow-hidden flex flex-col"
             style={{ backgroundColor: theme.bg }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-5 py-4 border-b flex items-center justify-between" style={{ borderColor: theme.border }}>
+            <div className="px-5 py-4 border-b flex items-center justify-between flex-shrink-0" style={{ borderColor: theme.border }}>
               <h2 className="text-base font-semibold" style={{ color: theme.text }}>Switch Store</h2>
-              <button 
+              <button
                 onClick={() => setShowStorePicker(false)}
                 className="w-8 h-8 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: theme.bgTertiary }}
@@ -2314,7 +2314,7 @@ export default function App() {
                 <span style={{ color: theme.textSecondary }}>✕</span>
               </button>
             </div>
-            <div className="overflow-y-auto p-4" style={{ maxHeight: 'calc(60vh - 60px)' }}>
+            <div className="overflow-y-auto p-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
               {storeLayouts.map((layout) => {
                 const isActive = layout.id === activeStoreLayoutId;
                 return (
