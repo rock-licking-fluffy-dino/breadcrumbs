@@ -248,56 +248,69 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex flex-col select-none"
-      style={{ backgroundColor: theme.bg, fontFamily: 'Inter, sans-serif' }}
+      className="fixed inset-0 z-[100] flex items-end select-none"
+      style={{ backgroundColor: 'rgba(0,0,0,0.15)', fontFamily: 'Inter, sans-serif' }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Top area — ~55% of screen */}
-      <div className="flex items-center justify-center" style={{ height: '55%' }}>
-        {card.isWelcome ? (
-          <div
-            key="welcome-hero"
-            className="flex items-center gap-4"
-            style={{ animation: 'onboardSlideIn 0.35s ease-out' }}
-          >
-            <div style={{ width: 80, height: 80, borderRadius: '50%', backgroundColor: YELLOW }} />
-            <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
-            <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
-          </div>
-        ) : (
-          <div
-            key={`circle-${currentCard}`}
-            style={{
-              width: 220,
-              height: 220,
-              borderRadius: '50%',
-              backgroundColor: circleBg,
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
-              border: '1px solid rgba(255, 255, 255, 0.9)',
-              boxShadow: '0 8px 32px rgba(250, 204, 21, 0.12), 0 2px 8px rgba(0,0,0,0.06)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              animation: 'onboardSlideIn 0.35s ease-out',
-            }}
-          >
-            <span style={{ fontSize: 72, lineHeight: 1, display: 'block' }}>{card.emoji}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Content area — bottom ~45% */}
       <div
-        className="flex flex-col"
+        className="w-full flex flex-col"
         style={{
-          height: '45%',
-          paddingLeft: 32,
-          paddingRight: 32,
-          paddingBottom: 'max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))',
+          backgroundColor: '#fafaf9',
+          borderRadius: '24px 24px 0 0',
+          maxHeight: '92vh',
+          overflowY: 'auto',
         }}
       >
+        {/* Drag handle */}
+        <div className="flex justify-center" style={{ marginTop: 12, marginBottom: 12 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: '#e7e5e4' }} />
+        </div>
+
+        {/* Top area — emoji / welcome hero */}
+        <div className="flex items-center justify-center" style={{ paddingTop: 16, paddingBottom: 24 }}>
+          {card.isWelcome ? (
+            <div
+              key="welcome-hero"
+              className="flex items-center gap-4"
+              style={{ animation: 'onboardSlideIn 0.35s ease-out' }}
+            >
+              <div style={{ width: 80, height: 80, borderRadius: '50%', backgroundColor: YELLOW }} />
+              <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
+              <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
+            </div>
+          ) : (
+            <div
+              key={`circle-${currentCard}`}
+              style={{
+                width: 220,
+                height: 220,
+                borderRadius: '50%',
+                backgroundColor: circleBg,
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.9)',
+                boxShadow: '0 8px 32px rgba(250, 204, 21, 0.12), 0 2px 8px rgba(0,0,0,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                animation: 'onboardSlideIn 0.35s ease-out',
+              }}
+            >
+              <span style={{ fontSize: 72, lineHeight: 1, display: 'block' }}>{card.emoji}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Content area */}
+        <div
+          className="flex flex-col"
+          style={{
+            paddingLeft: 32,
+            paddingRight: 32,
+            paddingBottom: 'max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))',
+          }}
+        >
         {/* Card text */}
         <div
           key={`text-${currentCard}`}
@@ -412,14 +425,15 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
         >
           {ctaLabel}
         </button>
-      </div>
+        </div>
 
-      <style>{`
-        @keyframes onboardSlideIn {
-          from { opacity: 0; transform: translateX(28px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-      `}</style>
+        <style>{`
+          @keyframes onboardSlideIn {
+            from { opacity: 0; transform: translateX(28px); }
+            to   { opacity: 1; transform: translateX(0); }
+          }
+        `}</style>
+      </div>
     </div>
   );
 };
