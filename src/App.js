@@ -256,7 +256,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
       <div
         className="w-full flex flex-col"
         style={{
-          backgroundColor: '#fafaf9',
+          backgroundColor: theme.bg,
           borderRadius: '24px 24px 0 0',
           maxHeight: '92vh',
           overflowY: 'auto',
@@ -264,7 +264,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
       >
         {/* Drag handle */}
         <div className="flex justify-center" style={{ marginTop: 12, marginBottom: 12 }}>
-          <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: '#e7e5e4' }} />
+          <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: theme.border }} />
         </div>
 
         {/* Top area — emoji / welcome hero */}
@@ -361,7 +361,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
                     paddingBottom: 8,
                     borderRadius: 9999,
                     border: `1.5px solid ${YELLOW}`,
-                    color: '#292524',
+                    color: theme.text,
                   }}
                 >
                   {listCode || 'ABC123'}
@@ -373,24 +373,22 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
         {/* Push bottom controls to the bottom */}
         <div style={{ flex: 1 }} />
 
-        {/* Skip link — only on non-last cards */}
-        {!isLastCard && (
-          <div className="text-center" style={{ marginBottom: 12 }}>
-            <button
-              onClick={skip}
-              style={{
-                fontSize: 13,
-                color: '#a8a29e',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px 8px',
-              }}
-            >
-              Skip
-            </button>
-          </div>
-        )}
+        {/* Skip link — hidden on last card but always occupies space */}
+        <div className="text-center" style={{ marginBottom: 12, visibility: isLastCard ? 'hidden' : 'visible' }}>
+          <button
+            onClick={skip}
+            style={{
+              fontSize: 13,
+              color: '#a8a29e',
+              background: 'none',
+              border: 'none',
+              cursor: isLastCard ? 'default' : 'pointer',
+              padding: '4px 8px',
+            }}
+          >
+            Skip
+          </button>
+        </div>
 
         {/* Dot indicators */}
         <div className="flex justify-center" style={{ gap: 8, marginBottom: 16 }}>
