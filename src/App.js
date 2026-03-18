@@ -268,12 +268,12 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
         </div>
 
         {/* Top area — emoji / welcome hero */}
-        <div className="flex items-center justify-center" style={{ paddingTop: 16, paddingBottom: 24 }}>
+        <div className="flex items-center justify-center" style={{ height: 180 }}>
           {card.isWelcome ? (
             <div
               key="welcome-hero"
               className="flex items-center gap-4"
-              style={{ animation: 'onboardSlideIn 0.35s ease-out' }}
+              style={{ animation: 'onboardSlideIn 0.65s ease-out' }}
             >
               <div style={{ width: 80, height: 80, borderRadius: '50%', backgroundColor: YELLOW }} />
               <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
@@ -283,8 +283,8 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
             <div
               key={`circle-${currentCard}`}
               style={{
-                width: 220,
-                height: 220,
+                width: 140,
+                height: 140,
                 borderRadius: '50%',
                 backgroundColor: circleBg,
                 backdropFilter: 'blur(8px)',
@@ -294,10 +294,10 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                animation: 'onboardSlideIn 0.35s ease-out',
+                animation: 'onboardSlideIn 0.65s ease-out',
               }}
             >
-              <span style={{ fontSize: 72, lineHeight: 1, display: 'block' }}>{card.emoji}</span>
+              <span style={{ fontSize: 44, lineHeight: 1, display: 'block' }}>{card.emoji}</span>
             </div>
           )}
         </div>
@@ -315,7 +315,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
         <div
           key={`text-${currentCard}`}
           className="text-center"
-          style={{ animation: 'onboardSlideIn 0.35s ease-out' }}
+          style={{ animation: 'onboardSlideIn 0.65s ease-out', minHeight: 130 }}
         >
           <h2
             style={{
@@ -427,7 +427,7 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
 
         <style>{`
           @keyframes onboardSlideIn {
-            from { opacity: 0; transform: translateX(28px); }
+            from { opacity: 0; transform: translateX(20px); }
             to   { opacity: 1; transform: translateX(0); }
           }
         `}</style>
