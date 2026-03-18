@@ -653,8 +653,13 @@ export default function App() {
           if (data.storeLayouts) {
             const storedLayouts = data.storeLayouts;
             const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
+            // Merge stored categoryOrder into default layouts so user reordering is preserved
+            const mergedDefaultLayouts = DEFAULT_STORE_LAYOUTS.map(defaultLayout => {
+              const stored = storedLayouts.find(l => l.id === defaultLayout.id);
+              return stored ? { ...defaultLayout, categoryOrder: stored.categoryOrder } : defaultLayout;
+            });
             const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
-            setStoreLayouts([...DEFAULT_STORE_LAYOUTS, ...customLayouts]);
+            setStoreLayouts([...mergedDefaultLayouts, ...customLayouts]);
           }
           if (data.activeStoreLayoutId) setActiveStoreLayoutId(data.activeStoreLayoutId);
         }
