@@ -551,7 +551,9 @@ export default function App() {
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
   });
   const [editingQuantityId, setEditingQuantityId] = useState(null);
-  
+  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768);
+  const [isWide, setIsWide] = useState(() => window.innerWidth >= 1200);
+
   // Recipe state
   const [recipes, setRecipes] = useState([]);
   const [showCreateRecipe, setShowCreateRecipe] = useState(false);
@@ -678,6 +680,18 @@ export default function App() {
     };
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setIsWide(window.innerWidth >= 1200);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
   }, []);
 
   useEffect(() => {
@@ -1097,8 +1111,8 @@ export default function App() {
           const updatedItems = items.filter(i => i.id !== id);
           setItems(updatedItems);
           await saveList(updatedItems);
-        }, 1500);
-        
+        }, 3000);
+
         // Add to pending deletes for undo capability
         setPendingDeletes(prev => [...prev, { id, name: item.name, timeoutId }]);
       }
@@ -1384,12 +1398,162 @@ export default function App() {
     .code-input::placeholder { color: #d6d3d1; letter-spacing: 0.15em; }
   `;
 
+  // Desktop sidebar and right panel (shared across list, recipes, and settings views)
+  const navTabs = [
+    {
+      id: 'list',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+          <line x1="3" y1="6" x2="21" y2="6"/>
+          <path d="M16 10a4 4 0 01-8 0"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'recipes',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6z"/>
+          <line x1="6" y1="17" x2="18" y2="17"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'settings',
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/>
+        </svg>
+      ),
+    },
+  ];
+
+  const desktopSidebar = isDesktop && (
+    <div
+      style={{
+        position: 'fixed',
+        left: 0,
+        top: 0,
+        bottom: 0,
+        width: 68,
+        backgroundColor: theme.bg,
+        borderRight: `1px solid ${theme.border}`,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingTop: 20,
+        paddingBottom: 20,
+        zIndex: 50,
+        gap: 4,
+      }}
+    >
+      {navTabs.map(tab => (
+        <button
+          key={tab.id}
+          onClick={() => { triggerHaptic('light'); setActiveTab(tab.id); }}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 6,
+            padding: '12px 0',
+            width: '100%',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            color: '#78716c',
+          }}
+        >
+          {tab.icon}
+          {activeTab === tab.id && (
+            <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: YELLOW }} />
+          )}
+        </button>
+      ))}
+    </div>
+  );
+
+  const desktopRightPanel = isDesktop && listId && (
+    <div
+      style={{
+        position: 'fixed',
+        right: 0,
+        top: 0,
+        bottom: 0,
+        width: 300,
+        backgroundColor: theme.bgSecondary,
+        borderLeft: `1px solid ${theme.border}`,
+        boxShadow: theme.cardShadow,
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 24,
+        zIndex: 50,
+        gap: 12,
+      }}
+    >
+      <p
+        style={{
+          fontSize: 11,
+          color: theme.textSecondary,
+          fontWeight: 500,
+          textTransform: 'uppercase',
+          letterSpacing: '0.1em',
+          margin: 0,
+        }}
+      >
+        Share this code to shop together
+      </p>
+      <div
+        style={{
+          fontFamily: 'monospace',
+          fontSize: 32,
+          fontWeight: 700,
+          letterSpacing: '0.15em',
+          color: theme.text,
+        }}
+      >
+        {listId}
+      </div>
+      <button
+        onClick={() => {
+          navigator.clipboard?.writeText(listId);
+          triggerHaptic('success');
+          showToastMessage('Code copied!');
+        }}
+        style={{
+          padding: '8px 20px',
+          borderRadius: 9999,
+          backgroundColor: theme.bgTertiary,
+          color: theme.text,
+          fontSize: 13,
+          border: 'none',
+          cursor: 'pointer',
+          alignSelf: 'flex-start',
+        }}
+      >
+        Copy
+      </button>
+      {listName && (
+        <div style={{ fontSize: 14, color: theme.text, fontWeight: 600 }}>{listName}</div>
+      )}
+    </div>
+  );
+
   // Recipes Screen
   if (activeTab === 'recipes' && listId) {
     return (
-      <div 
-        className="min-h-screen pb-20" 
-        style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}
+      <div
+        className="min-h-screen"
+        style={{
+          fontFamily: 'Inter, system-ui, sans-serif',
+          background: theme.bgGradient,
+          backgroundAttachment: 'fixed',
+          paddingLeft: isDesktop ? 68 : 0,
+          paddingRight: isDesktop ? 300 : 0,
+          paddingBottom: isDesktop ? 0 : 80,
+        }}
         onClick={(e) => {
           // Close recipe input if clicking outside input area
           if (recipeAddingTo && !e.target.closest('.recipe-input-area')) {
@@ -1398,6 +1562,8 @@ export default function App() {
         }}
       >
         <style>{styles}</style>
+        {desktopSidebar}
+        {desktopRightPanel}
         <Toast message={toastMessage} visible={showToast} theme={theme} />
         
         <div className="sticky top-0 z-40" style={{ backgroundColor: darkMode ? theme.bg : 'rgba(250,249,248,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${theme.border}` }}>
@@ -1421,7 +1587,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="px-5 py-6 pb-28">
+        <div className="px-5 py-6" style={{ paddingBottom: isDesktop ? 24 : 112 }}>
           {showCreateRecipe ? (
             // Create Recipe Form
             <div className="fade-in">
@@ -1535,7 +1701,7 @@ export default function App() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className={isDesktop ? '' : 'space-y-3'} style={isDesktop ? { display: 'grid', gridTemplateColumns: isWide ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: 16 } : {}}>
                   {recipes.map((recipe, index) => {
                     // Generate ingredient preview
                     const ingredientNames = recipe.ingredients.map(i => i.name.toLowerCase());
@@ -1660,7 +1826,7 @@ export default function App() {
         )}
         
         {/* Bottom Navigation */}
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />
+        {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />}
       </div>
     );
   }
@@ -1668,8 +1834,20 @@ export default function App() {
   // Settings Page
   if (activeTab === 'settings' && listId) {
     return (
-      <div className="min-h-screen pb-20" style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}>
+      <div
+        className="min-h-screen"
+        style={{
+          fontFamily: 'Inter, system-ui, sans-serif',
+          background: theme.bgGradient,
+          backgroundAttachment: 'fixed',
+          paddingLeft: isDesktop ? 68 : 0,
+          paddingRight: isDesktop ? 300 : 0,
+          paddingBottom: isDesktop ? 0 : 80,
+        }}
+      >
         <style>{styles}</style>
+        {desktopSidebar}
+        {desktopRightPanel}
         <Toast message={toastMessage} visible={showToast} theme={theme} />
         <div className="sticky top-0 z-40" style={{ backgroundColor: darkMode ? theme.bg : 'rgba(250,249,248,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${theme.border}` }}>
           <div className="px-5 py-4 flex items-center justify-center">
@@ -1700,7 +1878,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="px-5 py-6 pb-24">
+        <div className="px-5 py-6 pb-24" style={isDesktop ? { maxWidth: 480, margin: '0 auto' } : {}}>
           {/* General Tab */}
           {settingsTab === 'general' && (
             <>
@@ -2168,7 +2346,7 @@ export default function App() {
         </div>
         
         {/* Bottom Navigation */}
-        <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />
+        {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />}
       </div>
     );
   }
@@ -2314,9 +2492,15 @@ export default function App() {
 
   // Main List
   return (
-    <div 
-      className="min-h-screen" 
-      style={{ fontFamily: 'Inter, system-ui, sans-serif', background: theme.bgGradient, backgroundAttachment: 'fixed' }}
+    <div
+      className="min-h-screen"
+      style={{
+        fontFamily: 'Inter, system-ui, sans-serif',
+        background: theme.bgGradient,
+        backgroundAttachment: 'fixed',
+        paddingLeft: isDesktop ? 68 : 0,
+        paddingRight: isDesktop ? 300 : 0,
+      }}
       onClick={(e) => {
         // Close adding input if clicking outside input area
         if (addingTo && !e.target.closest('.adding-input-area')) {
@@ -2329,7 +2513,8 @@ export default function App() {
       }}
     >
       <style>{styles}</style>
-      
+      {desktopSidebar}
+      {desktopRightPanel}
       <Toast message={toastMessage} visible={showToast} theme={theme} />
       
       {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} theme={theme} />}
@@ -2497,7 +2682,7 @@ export default function App() {
           </div>
           
           {/* Progress bar with hide/clear controls */}
-          {totalItems > 0 && (
+          {totalItems > 0 && completedBehavior !== 'auto-remove' && (
             <div className="flex items-center gap-3 mt-3">
               <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: theme.border }}>
                 <div className="h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${(checkedCount / totalItems) * 100}%`, backgroundColor: YELLOW }} />
@@ -2527,7 +2712,7 @@ export default function App() {
         </div>
       </div>
       
-      <div className="px-4 py-3 pb-24">
+      <div className="px-4 py-3" style={{ paddingBottom: isDesktop ? 24 : 96 }}>
         {visibleCategories.map((category, categoryIndex) => {
           const categoryItems = items.filter(item => item.category === category.id);
           const uncheckedCount = categoryItems.filter(i => !i.checked).length;
@@ -2575,7 +2760,7 @@ export default function App() {
                 </div>
               )}
               {hasItems && (
-                <div className="mt-1 ml-4 mr-4">
+                <div className="mt-1 ml-4 mr-4" style={isDesktop ? { display: 'grid', gridTemplateColumns: isWide ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '0 16px' } : {}}>
                   {categoryItems
                     .filter(item => !hideCompleted || !item.checked)
                     .map(item => {
@@ -2675,9 +2860,13 @@ export default function App() {
           className="fixed left-4 right-4 flex justify-center fade-in z-40"
           style={{ bottom: `${80 + index * 50}px` }}
         >
-          <div 
+          <div
             className="flex items-center gap-3 px-4 py-2 rounded-full shadow-lg"
-            style={{ backgroundColor: theme.text, color: theme.bg }}
+            style={{
+              backgroundColor: darkMode ? theme.bgSecondary : theme.text,
+              color: darkMode ? theme.text : theme.bg,
+              border: darkMode ? `1px solid ${theme.border}` : 'none',
+            }}
           >
             <span className="text-sm">Removing "{pending.name}"</span>
             <button 
@@ -2692,7 +2881,7 @@ export default function App() {
       ))}
 
       {/* Bottom Navigation */}
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />
+      {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />}
     </div>
   );
 }
