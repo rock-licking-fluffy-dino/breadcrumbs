@@ -1398,10 +1398,11 @@ export default function App() {
     .code-input::placeholder { color: #d6d3d1; letter-spacing: 0.15em; }
   `;
 
-  // Desktop sidebar and right panel (shared across list, recipes, and settings views)
+  // Desktop sidebar (shared across list, recipes, and settings views)
   const navTabs = [
     {
       id: 'list',
+      label: 'List',
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
@@ -1412,6 +1413,7 @@ export default function App() {
     },
     {
       id: 'recipes',
+      label: 'Recipes',
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6z"/>
@@ -1421,6 +1423,7 @@ export default function App() {
     },
     {
       id: 'settings',
+      label: 'Settings',
       icon: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="3"/>
@@ -1437,16 +1440,15 @@ export default function App() {
         left: 0,
         top: 0,
         bottom: 0,
-        width: 68,
+        width: 88,
         backgroundColor: theme.bg,
         borderRight: `1px solid ${theme.border}`,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        paddingTop: 20,
-        paddingBottom: 20,
+        justifyContent: 'center',
+        gap: 32,
         zIndex: 50,
-        gap: 4,
       }}
     >
       {navTabs.map(tab => (
@@ -1457,16 +1459,16 @@ export default function App() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 6,
-            padding: '12px 0',
-            width: '100%',
+            gap: 4,
             background: 'none',
             border: 'none',
             cursor: 'pointer',
             color: '#78716c',
+            padding: 0,
           }}
         >
           {tab.icon}
+          <span style={{ fontSize: 11, color: activeTab === tab.id ? theme.text : theme.textSecondary, fontWeight: activeTab === tab.id ? 500 : 400 }}>{tab.label}</span>
           {activeTab === tab.id && (
             <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: YELLOW }} />
           )}
@@ -1475,71 +1477,145 @@ export default function App() {
     </div>
   );
 
-  const desktopRightPanel = isDesktop && listId && (
-    <div
-      style={{
-        position: 'fixed',
-        right: 0,
-        top: 0,
-        bottom: 0,
-        width: 300,
-        backgroundColor: theme.bgSecondary,
-        borderLeft: `1px solid ${theme.border}`,
-        boxShadow: theme.cardShadow,
-        display: 'flex',
-        flexDirection: 'column',
-        padding: 24,
-        zIndex: 50,
-        gap: 12,
-      }}
-    >
-      <p
-        style={{
-          fontSize: 11,
-          color: theme.textSecondary,
-          fontWeight: 500,
-          textTransform: 'uppercase',
-          letterSpacing: '0.1em',
-          margin: 0,
-        }}
-      >
-        Share this code to shop together
-      </p>
-      <div
-        style={{
-          fontFamily: 'monospace',
-          fontSize: 32,
-          fontWeight: 700,
-          letterSpacing: '0.15em',
-          color: theme.text,
-        }}
-      >
-        {listId}
+  // Per-category renderer (used in both single-column and two-column layouts)
+  const renderCategory = (category) => {
+    const categoryItems = items.filter(item => item.category === category.id);
+    const uncheckedCount = categoryItems.filter(i => !i.checked).length;
+    const hasItems = categoryItems.length > 0;
+    const isAdding = addingTo === category.id;
+    return (
+      <div key={category.id} className="mb-1">
+        <div
+          className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all"
+          style={{
+            backgroundColor: hasItems ? theme.bgSecondary : (darkMode ? 'rgba(63,63,70,0.3)' : 'rgba(245,245,244,0.5)'),
+            boxShadow: hasItems ? theme.cardShadow : 'none'
+          }}
+        >
+          <span className="text-sm" style={{ color: hasItems ? theme.text : theme.textTertiary, fontWeight: hasItems ? 600 : 500 }}>
+            {category.name}
+            {hasItems && <span className="ml-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>{uncheckedCount}</span>}
+          </span>
+          <button
+            onClick={() => isAdding ? cancelAdding() : startAdding(category.id)}
+            className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 adding-input-area"
+            style={{
+              backgroundColor: isAdding ? theme.text : 'transparent',
+              border: isAdding ? 'none' : `1.5px solid ${darkMode ? '#57534e' : '#d6d3d1'}`,
+              color: isAdding ? theme.bg : theme.textTertiary
+            }}
+          >
+            <span className="text-base leading-none transition-transform duration-200" style={{ transform: isAdding ? 'rotate(45deg)' : 'none', fontWeight: 300 }}>+</span>
+          </button>
+        </div>
+        {isAdding && (
+          <div className="mt-1 ml-4 mr-4 fade-in adding-input-area">
+            <div className="flex items-center gap-3">
+              <input ref={inputRef} type="text" value={newItemText} onChange={(e) => setNewItemText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') addItem(); if (e.key === 'Escape') cancelAdding(); }}
+                placeholder={`Add to ${category.name}...`}
+                className="flex-1 py-2 text-sm focus:outline-none bg-transparent"
+                style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }} />
+              <button onClick={addItem} disabled={!newItemText.trim()}
+                className="px-4 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95"
+                style={{ backgroundColor: newItemText.trim() ? YELLOW : 'transparent', color: '#292524', opacity: newItemText.trim() ? 1 : 0.3 }}>
+                Add
+              </button>
+            </div>
+          </div>
+        )}
+        {hasItems && (
+          <div className="mt-1 ml-4 mr-4" style={isDesktop ? { display: 'grid', gridTemplateColumns: isWide ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '0 16px' } : {}}>
+            {categoryItems
+              .filter(item => !hideCompleted || !item.checked)
+              .map(item => {
+              const isChecking = checkingItems.has(item.id);
+              const isEditingQty = editingQuantityId === item.id;
+              const quantity = item.quantity || 1;
+              const isPendingDelete = pendingDeletes.some(p => p.id === item.id);
+
+              // Don't render items that are pending deletion
+              if (isPendingDelete) return null;
+
+              return (
+                <div key={item.id} className="flex items-center gap-3 py-3 item-row fade-in" style={{ borderBottom: `1px solid ${theme.borderLight}`, opacity: item.checked ? 0.5 : 1, transition: 'opacity 0.3s ease' }}>
+                  <button onClick={() => toggleItem(item.id)}
+                    className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-all active:scale-90 ${isChecking ? 'fill-check check-pop' : ''}`}
+                    style={{ border: `2px solid ${item.checked || isChecking ? YELLOW : theme.border}`, backgroundColor: item.checked || isChecking ? YELLOW : 'transparent' }}>
+                    {(item.checked || isChecking) && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <path className={isChecking ? 'draw-check' : ''} d="M4 12l6 6L20 6"/>
+                      </svg>
+                    )}
+                  </button>
+                  {editingId === item.id ? (
+                    <input type="text" value={editText} onChange={(e) => setEditText(e.target.value)}
+                      onBlur={saveEdit} onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
+                      className="flex-1 text-sm py-1 px-2 rounded-lg focus:outline-none" style={{ backgroundColor: theme.bgTertiary, color: theme.text }} autoFocus />
+                  ) : (
+                    <span className={`flex-1 text-sm transition-all ${item.checked ? 'line-through' : ''}`}
+                      style={{ color: item.checked ? theme.textTertiary : theme.text }}
+                      onClick={() => !item.checked && startEdit(item)}>
+                      {item.name}
+                    </span>
+                  )}
+
+                  {/* Quantity badge - always show for unchecked items */}
+                  {!item.checked && !isEditingQty && (
+                    <button
+                      onClick={() => setEditingQuantityId(item.id)}
+                      className="text-xs font-medium px-2 py-0.5 rounded-full transition-all active:scale-95"
+                      style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary, backgroundColor: 'transparent' }}
+                    >
+                      ×{quantity}
+                    </button>
+                  )}
+
+                  {/* Quantity controls */}
+                  {isEditingQty && (
+                    <div className="flex items-center gap-1 fade-in quantity-editor">
+                      <button
+                        onClick={() => updateQuantity(item.id, -1)}
+                        className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90"
+                        style={{ backgroundColor: theme.bgTertiary, color: theme.text }}
+                      >
+                        <span className="text-sm">−</span>
+                      </button>
+                      <span className="text-sm font-medium w-6 text-center" style={{ color: theme.text }}>{quantity}</span>
+                      <button
+                        onClick={() => updateQuantity(item.id, 1)}
+                        className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90"
+                        style={{ backgroundColor: theme.bgTertiary, color: theme.text }}
+                      >
+                        <span className="text-sm">+</span>
+                      </button>
+                      <button
+                        onClick={() => setEditingQuantityId(null)}
+                        className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90 ml-1"
+                        style={{ backgroundColor: YELLOW, color: '#292524' }}
+                      >
+                        <span className="text-xs">✓</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {!isEditingQty && (
+                    <button
+                      onClick={() => deleteItem(item.id)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90"
+                      style={{ color: '#a8a29e' }}
+                    >
+                      <span className="text-lg font-light">×</span>
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-      <button
-        onClick={() => {
-          navigator.clipboard?.writeText(listId);
-          triggerHaptic('success');
-          showToastMessage('Code copied!');
-        }}
-        style={{
-          padding: '8px 20px',
-          borderRadius: 9999,
-          backgroundColor: theme.bgTertiary,
-          color: theme.text,
-          fontSize: 13,
-          border: 'none',
-          cursor: 'pointer',
-          alignSelf: 'flex-start',
-        }}
-      >
-        Copy
-      </button>
-      {listName && (
-        <div style={{ fontSize: 14, color: theme.text, fontWeight: 600 }}>{listName}</div>
-      )}
-    </div>
-  );
+    );
+  };
 
   // Recipes Screen
   if (activeTab === 'recipes' && listId) {
@@ -1550,8 +1626,7 @@ export default function App() {
           fontFamily: 'Inter, system-ui, sans-serif',
           background: theme.bgGradient,
           backgroundAttachment: 'fixed',
-          paddingLeft: isDesktop ? 68 : 0,
-          paddingRight: isDesktop ? 300 : 0,
+          paddingLeft: isDesktop ? 88 : 0,
           paddingBottom: isDesktop ? 0 : 80,
         }}
         onClick={(e) => {
@@ -1563,7 +1638,6 @@ export default function App() {
       >
         <style>{styles}</style>
         {desktopSidebar}
-        {desktopRightPanel}
         <Toast message={toastMessage} visible={showToast} theme={theme} />
         
         <div className="sticky top-0 z-40" style={{ backgroundColor: darkMode ? theme.bg : 'rgba(250,249,248,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${theme.border}` }}>
@@ -1840,14 +1914,12 @@ export default function App() {
           fontFamily: 'Inter, system-ui, sans-serif',
           background: theme.bgGradient,
           backgroundAttachment: 'fixed',
-          paddingLeft: isDesktop ? 68 : 0,
-          paddingRight: isDesktop ? 300 : 0,
+          paddingLeft: isDesktop ? 88 : 0,
           paddingBottom: isDesktop ? 0 : 80,
         }}
       >
         <style>{styles}</style>
         {desktopSidebar}
-        {desktopRightPanel}
         <Toast message={toastMessage} visible={showToast} theme={theme} />
         <div className="sticky top-0 z-40" style={{ backgroundColor: darkMode ? theme.bg : 'rgba(250,249,248,0.9)', backdropFilter: 'blur(10px)', borderBottom: `1px solid ${theme.border}` }}>
           <div className="px-5 py-4 flex items-center justify-center">
@@ -1878,11 +1950,10 @@ export default function App() {
           </div>
         </div>
 
-        <div className="px-5 py-6 pb-24" style={isDesktop ? { maxWidth: 480, margin: '0 auto' } : {}}>
+        <div className="px-5 py-6 pb-24">
           {/* General Tab */}
-          {settingsTab === 'general' && (
-            <>
-              {/* Card 1 — Share Code (most prominent) */}
+          {settingsTab === 'general' && (() => {
+            const shareCodeCard = (
               <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                 <label className="text-xs font-medium mb-3 block" style={{ color: theme.textSecondary }}>Share Code</label>
                 <div className="flex items-center justify-between">
@@ -1901,8 +1972,8 @@ export default function App() {
                 </div>
                 <p className="text-xs mt-3" style={{ color: theme.textTertiary, fontWeight: 300 }}>Share this code so others can join your list</p>
               </div>
-
-              {/* Card 2 — List Details */}
+            );
+            const listDetailsCard = (
               <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>List Name</label>
                 <input
@@ -1917,7 +1988,6 @@ export default function App() {
                   style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }}
                 />
                 <p className="text-xs mt-2 mb-5" style={{ color: theme.textTertiary, fontWeight: 300 }}>Give your list a name to easily identify it. Saved on this device only.</p>
-                
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>Appearance</label>
                 <div className="flex gap-1 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
                   {[
@@ -1943,8 +2013,8 @@ export default function App() {
                   {appearanceMode === 'system' ? 'Follows your device theme' : appearanceMode === 'dark' ? 'Always use dark theme' : 'Always use light theme'}
                 </p>
               </div>
-
-              {/* Card 3 — When items are completed */}
+            );
+            const completedCard = (
               <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>When items are completed</label>
                 <div className="flex gap-1 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
@@ -1968,44 +2038,52 @@ export default function App() {
                   ))}
                 </div>
                 <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>
-                  {completedBehavior === 'nothing' ? 'Completed items stay visible in your list' : 
-                   completedBehavior === 'auto-hide' ? 'Completed items are hidden automatically' : 
+                  {completedBehavior === 'nothing' ? 'Completed items stay visible in your list' :
+                   completedBehavior === 'auto-hide' ? 'Completed items are hidden automatically' :
                    'Completed items are removed after a short delay (with undo)'}
                 </p>
               </div>
-
-              {/* Card 4 — Inactivity Policy */}
-              <div className="rounded-2xl p-4 mb-6 flex items-start gap-3" style={{ backgroundColor: darkMode ? '#3f3f46' : '#fefce8' }}>
+            );
+            const inactivityCard = (
+              <div className="rounded-2xl p-4 mb-3 flex items-start gap-3" style={{ backgroundColor: darkMode ? '#3f3f46' : '#fefce8' }}>
                 <span className="text-lg">💤</span>
                 <div>
                   <p className="text-sm font-medium mb-1" style={{ color: theme.text }}>Inactivity Policy</p>
                   <p className="text-xs" style={{ color: theme.textSecondary, fontWeight: 300 }}>Lists inactive for 90 days are automatically reset. Items, recipes, custom categories, and settings will be cleared.</p>
                 </div>
               </div>
-
-              {/* Danger Zone */}
-              <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textTertiary }}>⚠️ Danger Zone</h2>
-              
-              <div className="rounded-2xl p-4" style={{ backgroundColor: 'rgba(239,68,68,0.03)' }}>
-                <button 
-                  onClick={() => { triggerHaptic('light'); setActiveTab('list'); setTimeout(() => setShowClearAllConfirm(true), 100); }}
-                  disabled={items.length === 0}
-                  className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-all mb-3" 
-                  style={{ 
-                    border: '1.5px solid #ef4444', 
-                    color: items.length === 0 ? theme.textTertiary : '#ef4444',
-                    opacity: items.length === 0 ? 0.5 : 1
-                  }}
-                >
-                  Clear all items {items.length > 0 && `(${items.length})`}
-                </button>
-
-                <button onClick={() => { triggerHaptic('light'); setActiveTab('list'); setTimeout(() => setShowLeaveConfirm(true), 100); }} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-all" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
-                  Leave this list
-                </button>
+            );
+            const dangerZone = (
+              <>
+                <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textTertiary }}>⚠️ Danger Zone</h2>
+                <div className="rounded-2xl p-4" style={{ backgroundColor: 'rgba(239,68,68,0.03)' }}>
+                  <button
+                    onClick={() => { triggerHaptic('light'); setActiveTab('list'); setTimeout(() => setShowClearAllConfirm(true), 100); }}
+                    disabled={items.length === 0}
+                    className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-all mb-3"
+                    style={{
+                      border: '1.5px solid #ef4444',
+                      color: items.length === 0 ? theme.textTertiary : '#ef4444',
+                      opacity: items.length === 0 ? 0.5 : 1
+                    }}
+                  >
+                    Clear all items {items.length > 0 && `(${items.length})`}
+                  </button>
+                  <button onClick={() => { triggerHaptic('light'); setActiveTab('list'); setTimeout(() => setShowLeaveConfirm(true), 100); }} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-all" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
+                    Leave this list
+                  </button>
+                </div>
+              </>
+            );
+            return isDesktop ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+                <div>{shareCodeCard}{inactivityCard}{dangerZone}</div>
+                <div>{listDetailsCard}{completedCard}</div>
               </div>
-            </>
-          )}
+            ) : (
+              <>{shareCodeCard}{listDetailsCard}{completedCard}{inactivityCard}{dangerZone}</>
+            );
+          })()}
 
           {/* Stores Tab */}
           {settingsTab === 'stores' && (
@@ -2498,8 +2576,7 @@ export default function App() {
         fontFamily: 'Inter, system-ui, sans-serif',
         background: theme.bgGradient,
         backgroundAttachment: 'fixed',
-        paddingLeft: isDesktop ? 68 : 0,
-        paddingRight: isDesktop ? 300 : 0,
+        paddingLeft: isDesktop ? 88 : 0,
       }}
       onClick={(e) => {
         // Close adding input if clicking outside input area
@@ -2514,7 +2591,6 @@ export default function App() {
     >
       <style>{styles}</style>
       {desktopSidebar}
-      {desktopRightPanel}
       <Toast message={toastMessage} visible={showToast} theme={theme} />
       
       {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} theme={theme} />}
@@ -2713,17 +2789,28 @@ export default function App() {
       </div>
       
       <div className="px-4 py-3" style={{ paddingBottom: isDesktop ? 24 : 96 }}>
-        {visibleCategories.map((category, categoryIndex) => {
+        {isDesktop ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <div>{visibleCategories.filter((_, i) => i % 2 === 0).map(renderCategory)}</div>
+            <div>{visibleCategories.filter((_, i) => i % 2 === 1).map(renderCategory)}</div>
+          </div>
+        ) : (
+          visibleCategories.map(renderCategory)
+        )}
+      </div>
+
+      {/* NOTE: the old per-category inline map below has been replaced by renderCategory above */}
+      {false && visibleCategories.map((category, categoryIndex) => {
           const categoryItems = items.filter(item => item.category === category.id);
           const uncheckedCount = categoryItems.filter(i => !i.checked).length;
           const hasItems = categoryItems.length > 0;
           const isAdding = addingTo === category.id;
           return (
             <div key={category.id} className="mb-1">
-              <div 
-                className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all" 
-                style={{ 
-                  backgroundColor: hasItems ? theme.bgSecondary : (darkMode ? 'rgba(63,63,70,0.3)' : 'rgba(245,245,244,0.5)'), 
+              <div
+                className="flex items-center justify-between py-3 px-4 rounded-2xl transition-all"
+                style={{
+                  backgroundColor: hasItems ? theme.bgSecondary : (darkMode ? 'rgba(63,63,70,0.3)' : 'rgba(245,245,244,0.5)'),
                   boxShadow: hasItems ? theme.cardShadow : 'none'
                 }}
               >
@@ -2731,13 +2818,13 @@ export default function App() {
                   {category.name}
                   {hasItems && <span className="ml-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>{uncheckedCount}</span>}
                 </span>
-                <button 
-                  onClick={() => isAdding ? cancelAdding() : startAdding(category.id)} 
-                  className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 adding-input-area" 
-                  style={{ 
-                    backgroundColor: isAdding ? theme.text : 'transparent', 
+                <button
+                  onClick={() => isAdding ? cancelAdding() : startAdding(category.id)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 adding-input-area"
+                  style={{
+                    backgroundColor: isAdding ? theme.text : 'transparent',
                     border: isAdding ? 'none' : `1.5px solid ${darkMode ? '#57534e' : '#d6d3d1'}`,
-                    color: isAdding ? theme.bg : theme.textTertiary 
+                    color: isAdding ? theme.bg : theme.textTertiary
                   }}
                 >
                   <span className="text-base leading-none transition-transform duration-200" style={{ transform: isAdding ? 'rotate(45deg)' : 'none', fontWeight: 300 }}>+</span>
@@ -2760,7 +2847,7 @@ export default function App() {
                 </div>
               )}
               {hasItems && (
-                <div className="mt-1 ml-4 mr-4" style={isDesktop ? { display: 'grid', gridTemplateColumns: isWide ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '0 16px' } : {}}>
+                <div className="mt-1 ml-4 mr-4">
                   {categoryItems
                     .filter(item => !hideCompleted || !item.checked)
                     .map(item => {
@@ -2768,10 +2855,10 @@ export default function App() {
                     const isEditingQty = editingQuantityId === item.id;
                     const quantity = item.quantity || 1;
                     const isPendingDelete = pendingDeletes.some(p => p.id === item.id);
-                    
+
                     // Don't render items that are pending deletion
                     if (isPendingDelete) return null;
-                    
+
                     return (
                       <div key={item.id} className="flex items-center gap-3 py-3 item-row fade-in" style={{ borderBottom: `1px solid ${theme.borderLight}`, opacity: item.checked ? 0.5 : 1, transition: 'opacity 0.3s ease' }}>
                         <button onClick={() => toggleItem(item.id)}
@@ -2794,10 +2881,10 @@ export default function App() {
                             {item.name}
                           </span>
                         )}
-                        
+
                         {/* Quantity badge - always show for unchecked items */}
                         {!item.checked && !isEditingQty && (
-                          <button 
+                          <button
                             onClick={() => setEditingQuantityId(item.id)}
                             className="text-xs font-medium px-2 py-0.5 rounded-full transition-all active:scale-95"
                             style={{ border: `1.5px solid ${theme.border}`, color: theme.textSecondary, backgroundColor: 'transparent' }}
@@ -2805,11 +2892,11 @@ export default function App() {
                             ×{quantity}
                           </button>
                         )}
-                        
+
                         {/* Quantity controls */}
                         {isEditingQty && (
                           <div className="flex items-center gap-1 fade-in quantity-editor">
-                            <button 
+                            <button
                               onClick={() => updateQuantity(item.id, -1)}
                               className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90"
                               style={{ backgroundColor: theme.bgTertiary, color: theme.text }}
@@ -2817,14 +2904,14 @@ export default function App() {
                               <span className="text-sm">−</span>
                             </button>
                             <span className="text-sm font-medium w-6 text-center" style={{ color: theme.text }}>{quantity}</span>
-                            <button 
+                            <button
                               onClick={() => updateQuantity(item.id, 1)}
                               className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90"
                               style={{ backgroundColor: theme.bgTertiary, color: theme.text }}
                             >
                               <span className="text-sm">+</span>
                             </button>
-                            <button 
+                            <button
                               onClick={() => setEditingQuantityId(null)}
                               className="w-7 h-7 rounded-full flex items-center justify-center transition-all active:scale-90 ml-1"
                               style={{ backgroundColor: YELLOW, color: '#292524' }}
@@ -2851,7 +2938,6 @@ export default function App() {
             </div>
           );
         })}
-      </div>
 
       {/* Pending delete undo toasts */}
       {pendingDeletes.map((pending, index) => (
