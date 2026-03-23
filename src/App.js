@@ -1446,8 +1446,9 @@ export default function App() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: 32,
+        justifyContent: 'flex-start',
+        paddingTop: 24,
+        gap: 8,
         zIndex: 50,
       }}
     >
