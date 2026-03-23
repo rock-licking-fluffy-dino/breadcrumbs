@@ -1533,7 +1533,7 @@ export default function App() {
           </div>
         )}
         {hasItems && (
-          <div className="mt-1 ml-4 mr-4" style={isDesktop ? { display: 'grid', gridTemplateColumns: isWide ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '0 16px' } : {}}>
+          <div className="mt-1 ml-4 mr-4">
             {categoryItems
               .filter(item => !hideCompleted || !item.checked)
               .map(item => {
