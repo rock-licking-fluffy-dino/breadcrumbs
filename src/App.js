@@ -1446,35 +1446,42 @@ export default function App() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'flex-start',
-        paddingTop: 24,
-        gap: 8,
+        justifyContent: 'space-between',
+        paddingTop: 20,
+        paddingBottom: 24,
         zIndex: 50,
       }}
     >
-      {navTabs.map(tab => (
-        <button
-          key={tab.id}
-          onClick={() => { triggerHaptic('light'); setActiveTab(tab.id); }}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 4,
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: '#78716c',
-            padding: 0,
-          }}
-        >
-          {tab.icon}
-          <span style={{ fontSize: 11, color: activeTab === tab.id ? theme.text : theme.textSecondary, fontWeight: activeTab === tab.id ? 500 : 400 }}>{tab.label}</span>
-          {activeTab === tab.id && (
-            <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: YELLOW }} />
-          )}
-        </button>
-      ))}
+      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW }} />
+        <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
+        <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 24 }}>
+        {navTabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => { triggerHaptic('light'); setActiveTab(tab.id); }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 4,
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#78716c',
+              padding: 0,
+            }}
+          >
+            {tab.icon}
+            <span style={{ fontSize: 11, color: activeTab === tab.id ? theme.text : theme.textSecondary, fontWeight: activeTab === tab.id ? 500 : 400 }}>{tab.label}</span>
+            {activeTab === tab.id && (
+              <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: YELLOW }} />
+            )}
+          </button>
+        ))}
+      </div>
     </div>
   );
 
@@ -2078,8 +2085,8 @@ export default function App() {
             );
             return isDesktop ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
-                <div>{shareCodeCard}{inactivityCard}{dangerZone}</div>
-                <div>{listDetailsCard}{completedCard}</div>
+                <div>{shareCodeCard}{dangerZone}</div>
+                <div>{listDetailsCard}{completedCard}{inactivityCard}</div>
               </div>
             ) : (
               <>{shareCodeCard}{listDetailsCard}{completedCard}{inactivityCard}{dangerZone}</>
@@ -2718,11 +2725,13 @@ export default function App() {
           <div className="flex items-center justify-between">
             {/* Left side - Logo, title, and store pill */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: YELLOW }}></div>
-                <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
-                <div className="w-1 h-1 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
-              </div>
+              {!isDesktop && (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: YELLOW }}></div>
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.6 }}></div>
+                  <div className="w-1 h-1 rounded-full" style={{ backgroundColor: YELLOW, opacity: 0.3 }}></div>
+                </div>
+              )}
               <div className="flex items-center gap-2 min-w-0">
                 <h1 className="text-lg font-semibold tracking-tight" style={{ color: theme.text }}>
                   {listName || 'Breadcrumbs'}
