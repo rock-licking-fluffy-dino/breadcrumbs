@@ -1533,7 +1533,7 @@ export default function App() {
           </div>
         )}
         {hasItems && (
-          <div className="mt-1 ml-4 mr-4">
+          <div className="mt-1 ml-4 mr-4" style={{ display: 'flex', flexDirection: 'column' }}>
             {categoryItems
               .filter(item => !hideCompleted || !item.checked)
               .map(item => {
