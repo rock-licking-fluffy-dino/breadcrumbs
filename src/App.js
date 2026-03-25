@@ -1533,7 +1533,7 @@ export default function App() {
           </div>
         )}
         {hasItems && (
-          <div className="mt-1 ml-4 mr-4" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="mt-1 ml-4 mr-4" style={isDesktop ? { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' } : { display: 'flex', flexDirection: 'column' }}>
             {categoryItems
               .filter(item => !hideCompleted || !item.checked)
               .map(item => {
