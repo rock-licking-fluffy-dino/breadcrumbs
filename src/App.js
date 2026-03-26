@@ -119,6 +119,282 @@ const DEFAULT_STORE_LAYOUTS = [
   }
 ];
 
+// Category dictionary for Quick Add auto-categorization
+const CATEGORY_DICTIONARY = {
+  'fruit-veg': [
+    'apple', 'apples', 'avocado', 'avocados', 'banana', 'bananas', 'basil',
+    'bean sprouts', 'beetroot', 'bell pepper', 'bell peppers', 'blackberries',
+    'blueberries', 'bok choy', 'broccoli', 'brussels sprouts', 'butternut squash',
+    'cabbage', 'capsicum', 'carrot', 'carrots', 'cauliflower', 'celery',
+    'cherry tomatoes', 'chilli', 'chillies', 'chives', 'cilantro', 'clementine',
+    'clementines', 'coleslaw', 'collard greens', 'corn', 'corn on the cob',
+    'courgette', 'courgettes', 'cranberries', 'cucumber', 'cucumbers', 'dates',
+    'dill', 'edamame', 'eggplant', 'fennel', 'figs', 'fruit', 'fruit salad',
+    'garlic', 'ginger', 'grapes', 'green beans', 'green onion', 'green onions',
+    'green pepper', 'herbs', 'honeydew', 'jalapeño', 'jalapeños', 'kale',
+    'kiwi', 'kiwis', 'leek', 'leeks', 'lemon', 'lemons', 'lemongrass',
+    'lettuce', 'lime', 'limes', 'mandarin', 'mandarins', 'mango', 'mangoes',
+    'melon', 'mint', 'mixed greens', 'mixed salad', 'mushroom', 'mushrooms',
+    'nectarine', 'nectarines', 'okra', 'onion', 'onions', 'orange', 'oranges',
+    'pak choi', 'parsley', 'parsnip', 'parsnips', 'passion fruit', 'pea pods',
+    'peach', 'peaches', 'pear', 'pears', 'peas', 'pepper', 'peppers',
+    'pineapple', 'plantain', 'plum', 'plums', 'pomegranate', 'potato',
+    'potatoes', 'pumpkin', 'radicchio', 'radish', 'radishes', 'raspberries',
+    'red cabbage', 'red onion', 'red pepper', 'rhubarb', 'rocket', 'romaine',
+    'rosemary', 'runner beans', 'sage', 'salad', 'salad mix', 'satsuma',
+    'satsumas', 'scallion', 'scallions', 'shallot', 'shallots', 'snow peas',
+    'spinach', 'spring greens', 'spring onion', 'spring onions', 'squash',
+    'strawberries', 'sugar snap peas', 'swede', 'sweet corn', 'sweet potato',
+    'sweet potatoes', 'tangerine', 'tangerines', 'thyme', 'tomato', 'tomatoes',
+    'turnip', 'turnips', 'vine tomatoes', 'watercress', 'watermelon',
+    'yellow pepper', 'zucchini'
+  ],
+  'bakery': [
+    'bagel', 'bagels', 'baguette', 'banana bread', 'biscuits', 'bread',
+    'bread rolls', 'brioche', 'brown bread', 'bun', 'buns', 'ciabatta',
+    'cinnamon rolls', 'cornbread', 'crescent rolls', 'croissant', 'croissants',
+    'crumpets', 'danish', 'dinner rolls', 'donuts', 'doughnuts', 'english muffin',
+    'english muffins', 'flatbread', 'focaccia', 'french bread', 'garlic bread',
+    'hamburger buns', 'hot cross buns', 'hot dog buns', 'muffin', 'muffins',
+    'naan', 'naan bread', 'pancakes', 'pastries', 'pastry', 'pie crust',
+    'pikelets', 'pita', 'pita bread', 'pizza dough', 'pretzel', 'pretzels',
+    'raisin bread', 'rolls', 'rye bread', 'scone', 'scones', 'sliced bread',
+    'sourdough', 'teacakes', 'tiger bread', 'toast', 'tortilla', 'tortillas',
+    'waffles', 'white bread', 'wholemeal bread', 'wraps'
+  ],
+  'deli-chilled': [
+    'antipasto', 'baba ganoush', 'chicken breast', 'chicken pieces',
+    'chicken thighs', 'chicken wings', 'chorizo', 'cooked chicken',
+    'cooked ham', 'cooked meats', 'couscous', 'deli meat', 'deli meats',
+    'dip', 'dips', 'falafel', 'fresh juice', 'fresh pasta', 'fresh pizza',
+    'fresh ravioli', 'fresh salsa', 'fresh soup', 'guacamole', 'ham',
+    'houmous', 'hummus', 'meatballs', 'mortadella', 'olives', 'pastrami',
+    'pate', 'pepperoni', 'pork pie', 'prosciutto', 'quiche', 'ready meal',
+    'ready meals', 'rotisserie chicken', 'salami', 'sandwich', 'sandwiches',
+    'sausage rolls', 'scotch eggs', 'sliced ham', 'sliced turkey',
+    'spring rolls', 'stir fry', 'stuffing', 'sub roll', 'sushi',
+    'taramasalata', 'turkey slices', 'tzatziki', 'veggie burger',
+    'veggie burgers'
+  ],
+  'dairy-eggs': [
+    'almond milk', 'butter', 'buttermilk', 'cheddar', 'cheese',
+    'cheese slices', 'cheese spread', 'clotted cream', 'coconut milk',
+    'cottage cheese', 'cream', 'cream cheese', 'creme fraiche',
+    'double cream', 'egg', 'eggs', 'feta', 'free range eggs',
+    'goat cheese', 'greek yoghurt', 'greek yogurt', 'gruyere',
+    'halloumi', 'heavy cream', 'margarine', 'mascarpone', 'milk',
+    'mozzarella', 'oat milk', 'parmesan', 'plant milk', 'ricotta',
+    'single cream', 'skimmed milk', 'sour cream', 'soya milk',
+    'spread', 'whipping cream', 'whole milk', 'yoghurt', 'yogurt'
+  ],
+  'meat-poultry': [
+    'bacon', 'beef', 'beef mince', 'chicken', 'chicken drumsticks',
+    'duck', 'gammon', 'ground beef', 'ground pork', 'ground turkey',
+    'ham joint', 'hot dogs', 'kebab meat', 'lamb', 'lamb chops',
+    'lamb mince', 'liver', 'mince', 'minced beef', 'minced meat',
+    'pork', 'pork belly', 'pork chops', 'pork loin', 'pork mince',
+    'ribs', 'salami whole', 'sausage', 'sausages', 'sirloin',
+    'steak', 'steaks', 'stewing beef', 'stewing steak', 'turkey',
+    'turkey breast', 'turkey mince', 'veal', 'venison'
+  ],
+  'seafood': [
+    'anchovies', 'calamari', 'clams', 'cod', 'crab', 'crab meat',
+    'crab sticks', 'fish', 'fish cakes', 'fish fillets', 'fish fingers',
+    'fish sticks', 'haddock', 'halibut', 'king prawns', 'lobster',
+    'mackerel', 'mussels', 'oysters', 'plaice', 'pollock', 'prawns',
+    'salmon', 'salmon fillets', 'sardines', 'scallops', 'sea bass',
+    'seafood', 'seafood mix', 'shrimp', 'smoked mackerel', 'smoked salmon',
+    'sole', 'squid', 'swordfish', 'tilapia', 'trout', 'tuna steak',
+    'white fish'
+  ],
+  'frozen': [
+    'chicken nuggets', 'chips', 'fish fingers frozen', 'frozen berries',
+    'frozen chips', 'frozen fruit', 'frozen peas', 'frozen pizza',
+    'frozen prawns', 'frozen spinach', 'frozen veg', 'frozen vegetables',
+    'frozen yoghurt', 'ice cream', 'ice lollies', 'ice pops',
+    'oven chips', 'potato waffles', 'turkey dinosaurs', 'waffles frozen'
+  ],
+  'breakfast-cereals': [
+    'all bran', 'bran flakes', 'cereal', 'cereal bars', 'cheerios',
+    'coco pops', 'corn flakes', 'cornflakes', 'frosties', 'fruit and fibre',
+    'granola', 'honey', 'instant oats', 'jam', 'maple syrup', 'marmalade',
+    'muesli', 'nutella', 'oatmeal', 'oats', 'peanut butter', 'porridge',
+    'porridge oats', 'rice krispies', 'shreddies', 'special k',
+    'syrup', 'weetabix'
+  ],
+  'pasta-rice-grains': [
+    'arborio rice', 'basmati', 'basmati rice', 'brown rice', 'buckwheat',
+    'bulgur wheat', 'couscous dry', 'egg noodles', 'farfalle', 'fusilli',
+    'gnocchi', 'instant noodles', 'jasmine rice', 'lasagne', 'lasagne sheets',
+    'linguine', 'macaroni', 'noodles', 'orzo', 'pasta', 'penne', 'polenta',
+    'quinoa', 'ramen', 'rice', 'rice noodles', 'risotto rice', 'spaghetti',
+    'stuffing mix', 'tagliatelle', 'udon noodles', 'vermicelli',
+    'wholewheat pasta', 'wild rice'
+  ],
+  'canned-goods': [
+    'baked beans', 'black beans', 'butter beans', 'cannellini beans',
+    'canned tomatoes', 'canned tuna', 'chickpeas', 'chopped tomatoes',
+    'coconut cream', 'coconut milk tinned', 'condensed milk', 'corn canned',
+    'evaporated milk', 'green beans canned', 'kidney beans', 'lentils',
+    'mixed beans', 'mushy peas', 'passata', 'peaches canned',
+    'pineapple canned', 'soup', 'sweetcorn', 'tinned fruit',
+    'tinned peaches', 'tinned tomatoes', 'tomato paste', 'tomato puree',
+    'tuna', 'tuna tinned'
+  ],
+  'sauces-condiments': [
+    'barbecue sauce', 'bbq sauce', 'brown sauce', 'chilli sauce',
+    'chutney', 'cooking sauce', 'cranberry sauce', 'curry paste',
+    'curry sauce', 'fish sauce', 'gravy', 'gravy granules', 'harissa',
+    'hoisin sauce', 'horseradish', 'hot sauce', 'ketchup', 'mayo',
+    'mayonnaise', 'mint sauce', 'mustard', 'olive oil', 'oyster sauce',
+    'pasta sauce', 'pesto', 'pickle', 'relish', 'salad cream',
+    'salad dressing', 'salsa', 'soy sauce', 'sriracha', 'stir fry sauce',
+    'sweet chilli sauce', 'tabasco', 'tahini', 'tartar sauce',
+    'teriyaki sauce', 'tomato ketchup', 'tomato sauce', 'vinaigrette',
+    'vinegar', 'worcestershire sauce'
+  ],
+  'spices-seasonings': [
+    'all spice', 'basil dried', 'bay leaves', 'black pepper',
+    'bouillon', 'cardamom', 'cayenne pepper', 'chilli flakes',
+    'chilli powder', 'chinese five spice', 'cinnamon', 'cloves',
+    'coriander ground', 'cumin', 'curry powder', 'fennel seeds',
+    'garam masala', 'garlic granules', 'garlic powder', 'ground ginger',
+    'herbs dried', 'italian seasoning', 'mixed herbs', 'mixed spice',
+    'nutmeg', 'onion powder', 'oregano', 'paprika', 'parsley dried',
+    'pepper', 'peppercorns', 'rosemary dried', 'saffron', 'sage dried',
+    'salt', 'sea salt', 'seasoning', 'smoked paprika', 'star anise',
+    'stock cubes', 'thyme dried', 'turmeric', 'vanilla essence',
+    'vanilla extract'
+  ],
+  'snacks-confectionery': [
+    'biscuit', 'biscuits sweet', 'cake', 'candy', 'cereal bar',
+    'chewing gum', 'chips snack', 'chocolate', 'chocolate bar',
+    'chocolate biscuits', 'cookies', 'corn chips', 'crackers', 'crisps',
+    'dark chocolate', 'digestives', 'dried fruit', 'energy bar',
+    'flapjack', 'fruit snacks', 'gummy bears', 'haribo', 'hobnobs',
+    'jaffa cakes', 'jelly', 'jerky', 'liquorice', 'marshmallows',
+    'milk chocolate', 'mints', 'mixed nuts', 'nachos', 'nut bar',
+    'nuts', 'popcorn', 'pork scratchings', 'potato chips', 'pretzels snack',
+    'protein bar', 'rice cakes', 'shortbread', 'snack bar', 'sweets',
+    'toffee', 'trail mix', 'wine gums'
+  ],
+  'beverages': [
+    'apple juice', 'bottled water', 'club soda', 'coconut water', 'coffee',
+    'coffee beans', 'coffee pods', 'cola', 'cordial', 'decaf coffee',
+    'diet coke', 'drinking chocolate', 'energy drink', 'fizzy water',
+    'fruit juice', 'ginger ale', 'ginger beer', 'green tea',
+    'herbal tea', 'hot chocolate', 'iced coffee', 'iced tea', 'juice',
+    'kombucha', 'lemonade', 'lucozade', 'milkshake', 'mineral water',
+    'orange juice', 'pepsi', 'protein shake', 'ribena', 'smoothie',
+    'soda', 'sparkling water', 'squash drink', 'tea', 'tea bags',
+    'tonic water', 'water'
+  ],
+  'alcohol': [
+    'ale', 'beer', 'bourbon', 'brandy', 'champagne', 'cider', 'gin',
+    'ipa', 'lager', 'liqueur', 'merlot', 'port', 'prosecco',
+    'red wine', 'rose wine', 'rosé', 'rum', 'sauvignon blanc',
+    'scotch', 'sherry', 'spirits', 'stout', 'tequila', 'vermouth',
+    'vodka', 'whiskey', 'whisky', 'white wine', 'wine'
+  ],
+  'household': [
+    'air freshener', 'aluminium foil', 'batteries', 'bin bags', 'bin liners',
+    'bleach', 'candles', 'cleaning spray', 'cling film', 'cloths',
+    'descaler', 'dish soap', 'dishwasher salt', 'dishwasher tablets',
+    'disinfectant', 'drain cleaner', 'duster', 'fabric conditioner',
+    'fabric softener', 'flash', 'floor cleaner', 'foil', 'food bags',
+    'freezer bags', 'furniture polish', 'glass cleaner', 'greaseproof paper',
+    'hand soap', 'jay cloths', 'kitchen cleaner', 'kitchen roll',
+    'kitchen towel', 'laundry detergent', 'light bulb', 'light bulbs',
+    'matches', 'mop', 'napkins', 'oven cleaner', 'paper plates',
+    'paper towels', 'parchment paper', 'plastic bags', 'plastic wrap',
+    'rubber gloves', 'sandwich bags', 'scourer', 'scourers',
+    'sponge', 'sponges', 'stain remover', 'surface cleaner', 'tin foil',
+    'toilet cleaner', 'toilet roll', 'toilet tissue', 'trash bags',
+    'washing liquid', 'washing powder', 'washing up liquid', 'wipes',
+    'zip lock bags'
+  ],
+  'personal-care-health': [
+    'aftershave', 'antihistamines', 'bandages', 'body lotion', 'body wash',
+    'conditioner', 'condoms', 'cotton buds', 'cotton pads', 'cotton wool',
+    'cough medicine', 'dental floss', 'deodorant', 'eye drops',
+    'face cream', 'face wash', 'feminine hygiene', 'first aid',
+    'floss', 'hair dye', 'hair gel', 'hair spray', 'hand cream',
+    'hand sanitiser', 'hand sanitizer', 'ibuprofen', 'lip balm',
+    'moisturiser', 'moisturizer', 'mouthwash', 'multivitamins',
+    'nail polish', 'paracetamol', 'plasters', 'q-tips', 'razor',
+    'razor blades', 'sanitary pads', 'shampoo', 'shaving cream',
+    'shower gel', 'soap', 'suncream', 'sunscreen', 'tampons',
+    'tissues', 'toilet paper', 'toothbrush', 'toothpaste', 'vitamins',
+    'wet wipes'
+  ],
+  'baby': [
+    'baby food', 'baby formula', 'baby lotion', 'baby milk',
+    'baby shampoo', 'baby soap', 'baby wipes', 'diaper cream',
+    'diapers', 'formula', 'nappies', 'nappy bags', 'nappy cream',
+    'nappy sacks', 'sippy cup', 'teething gel'
+  ],
+  'pet-supplies': [
+    'bird seed', 'cat food', 'cat litter', 'cat treats', 'catnip',
+    'dog biscuits', 'dog food', 'dog treats', 'fish food',
+    'hamster food', 'kitty litter', 'pet food', 'puppy food',
+    'puppy pads', 'rabbit food'
+  ],
+  'other': [
+    'baking powder', 'baking soda', 'bicarbonate of soda', 'brown sugar',
+    'caster sugar', 'cocoa', 'cocoa powder', 'coconut flakes',
+    'corn flour', 'cornstarch', 'cream of tartar', 'dark chocolate chips',
+    'desiccated coconut', 'dried yeast', 'egg noodles dry', 'flour',
+    'food colouring', 'gelatine', 'golden syrup', 'icing',
+    'icing sugar', 'lard', 'marzipan', 'mixed peel',
+    'plain flour', 'self raising flour', 'semolina', 'shortening',
+    'sugar', 'sunflower oil', 'treacle', 'vegetable oil',
+    'white chocolate chips', 'yeast'
+  ]
+};
+
+// Pre-sort longest-first at module level so matching is fast at runtime
+const SORTED_DICTIONARY = Object.entries(CATEGORY_DICTIONARY)
+  .flatMap(([categoryId, keywords]) => keywords.map(kw => ({ keyword: kw.toLowerCase(), categoryId })))
+  .sort((a, b) => b.keyword.length - a.keyword.length);
+
+const findCategoryForItem = (itemName) => {
+  const normalised = itemName.toLowerCase().trim();
+  if (!normalised) return null;
+
+  // 1. Check localStorage corrections
+  try {
+    const saved = localStorage.getItem('breadcrumbs-category-mappings');
+    if (saved) {
+      const corrections = JSON.parse(saved);
+      if (corrections[normalised]) {
+        return { categoryId: corrections[normalised], source: 'correction' };
+      }
+    }
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+
+  // 2. Check keyword dictionary (longest match wins, already sorted)
+  for (const entry of SORTED_DICTIONARY) {
+    if (normalised.includes(entry.keyword)) {
+      return { categoryId: entry.categoryId, source: 'dictionary' };
+    }
+  }
+
+  return null;
+};
+
+const saveCategoryCorrection = (itemName, categoryId) => {
+  try {
+    const saved = localStorage.getItem('breadcrumbs-category-mappings');
+    const corrections = saved ? JSON.parse(saved) : {};
+    corrections[itemName.toLowerCase().trim()] = categoryId;
+    localStorage.setItem('breadcrumbs-category-mappings', JSON.stringify(corrections));
+  } catch (e) {
+    // Ignore localStorage errors
+  }
+};
+
 // Theme colors
 const themes = {
   light: {
@@ -583,7 +859,19 @@ export default function App() {
     return saved || 'nothing'; // 'nothing', 'auto-hide', 'auto-remove'
   });
   const [pendingDeletes, setPendingDeletes] = useState([]); // [{id, name, timeoutId}]
-  
+
+  // Quick Add state
+  const [addMode, setAddMode] = useState(() => {
+    return localStorage.getItem('breadcrumbs-add-mode') || 'classic';
+  });
+  const [fabOpen, setFabOpen] = useState(false);
+  const [fabInput, setFabInput] = useState('');
+  const [fabNoMatchMode, setFabNoMatchMode] = useState(false);
+  const [showingCategoryTag, setShowingCategoryTag] = useState(new Set());
+  const [longPressItem, setLongPressItem] = useState(null);
+  const longPressTimerRef = useRef(null);
+  const fabInputRef = useRef(null);
+
   const inputRef = useRef(null);
   const recipeInputRef = useRef(null);
   const listNameInputRef = useRef(null);
@@ -609,6 +897,25 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('breadcrumbs-completed-behavior', completedBehavior);
   }, [completedBehavior]);
+
+  // Persist add mode preference
+  useEffect(() => {
+    localStorage.setItem('breadcrumbs-add-mode', addMode);
+  }, [addMode]);
+
+  // Focus fab input when opened
+  useEffect(() => {
+    if (fabOpen && fabInputRef.current) {
+      setTimeout(() => fabInputRef.current.focus(), 50);
+    }
+  }, [fabOpen]);
+
+  // Close fab when switching tabs
+  useEffect(() => {
+    setFabOpen(false);
+    setFabInput('');
+    setFabNoMatchMode(false);
+  }, [activeTab]);
 
   // Load list name from localStorage when listId changes
   useEffect(() => {
@@ -1085,6 +1392,127 @@ export default function App() {
     setNewItemText('');
   };
 
+  // Quick Add functions
+  const handleFabAdd = async () => {
+    if (!fabInput.trim()) return;
+    const itemName = fabInput.trim();
+    const result = findCategoryForItem(itemName);
+
+    if (result) {
+      // Match found - add directly
+      triggerHaptic('success');
+      const existingItem = items.find(i =>
+        i.name.toLowerCase() === itemName.toLowerCase() &&
+        i.category === result.categoryId &&
+        !i.checked
+      );
+
+      let newItems;
+      let newItemId;
+      if (existingItem) {
+        newItemId = existingItem.id;
+        newItems = items.map(i =>
+          i.id === existingItem.id
+            ? { ...i, quantity: (i.quantity || 1) + 1 }
+            : i
+        );
+      } else {
+        newItemId = generateId();
+        const item = {
+          id: newItemId,
+          name: itemName,
+          category: result.categoryId,
+          checked: false,
+          quantity: 1,
+          addedAt: Date.now()
+        };
+        newItems = [...items, item];
+      }
+
+      setItems(newItems);
+      setFabInput('');
+      setFabNoMatchMode(false);
+      await saveList(newItems);
+
+      // Show category tag
+      setShowingCategoryTag(prev => new Set([...prev, newItemId]));
+      setTimeout(() => {
+        setShowingCategoryTag(prev => {
+          const next = new Set(prev);
+          next.delete(newItemId);
+          return next;
+        });
+      }, 2000);
+    } else {
+      // No match - show chip picker
+      setFabNoMatchMode(true);
+    }
+  };
+
+  const handleChipSelect = async (categoryId) => {
+    if (!fabInput.trim()) return;
+    const itemName = fabInput.trim();
+    triggerHaptic('success');
+
+    const existingItem = items.find(i =>
+      i.name.toLowerCase() === itemName.toLowerCase() &&
+      i.category === categoryId &&
+      !i.checked
+    );
+
+    let newItems;
+    let newItemId;
+    if (existingItem) {
+      newItemId = existingItem.id;
+      newItems = items.map(i =>
+        i.id === existingItem.id
+          ? { ...i, quantity: (i.quantity || 1) + 1 }
+          : i
+      );
+    } else {
+      newItemId = generateId();
+      const item = {
+        id: newItemId,
+        name: itemName,
+        category: categoryId,
+        checked: false,
+        quantity: 1,
+        addedAt: Date.now()
+      };
+      newItems = [...items, item];
+    }
+
+    setItems(newItems);
+    saveCategoryCorrection(itemName, categoryId);
+    setFabInput('');
+    setFabNoMatchMode(false);
+    await saveList(newItems);
+
+    // Show category tag
+    setShowingCategoryTag(prev => new Set([...prev, newItemId]));
+    setTimeout(() => {
+      setShowingCategoryTag(prev => {
+        const next = new Set(prev);
+        next.delete(newItemId);
+        return next;
+      });
+    }, 2000);
+
+    // Refocus input
+    if (fabInputRef.current) fabInputRef.current.focus();
+  };
+
+  const handleLongPressReassign = async (item, newCategoryId) => {
+    triggerHaptic('success');
+    const newItems = items.map(i =>
+      i.id === item.id ? { ...i, category: newCategoryId } : i
+    );
+    setItems(newItems);
+    saveCategoryCorrection(item.name, newCategoryId);
+    setLongPressItem(null);
+    await saveList(newItems);
+  };
+
   const toggleItem = async (id) => {
     const item = items.find(i => i.id === id);
     const willCheck = !item.checked;
@@ -1396,6 +1824,14 @@ export default function App() {
     .breathe-3 { animation: breathe 3.6s ease-in-out infinite; animation-delay: 0.7s; }
     input { font-size: 16px !important; }
     .code-input::placeholder { color: #d6d3d1; letter-spacing: 0.15em; }
+    @keyframes fabSlideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes fabSlideDown {
+      from { transform: translateY(0); opacity: 1; }
+      to { transform: translateY(100%); opacity: 0; }
+    }
   `;
 
   // Desktop sidebar (shared across list, recipes, and settings views)
@@ -1504,6 +1940,7 @@ export default function App() {
             {category.name}
             {hasItems && <span className="ml-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>{uncheckedCount}</span>}
           </span>
+          {addMode === 'classic' && (
           <button
             onClick={() => isAdding ? cancelAdding() : startAdding(category.id)}
             className="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 adding-input-area"
@@ -1515,8 +1952,9 @@ export default function App() {
           >
             <span className="text-base leading-none transition-transform duration-200" style={{ transform: isAdding ? 'rotate(45deg)' : 'none', fontWeight: 300 }}>+</span>
           </button>
+          )}
         </div>
-        {isAdding && (
+        {addMode === 'classic' && isAdding && (
           <div className="mt-1 ml-4 mr-4 fade-in adding-input-area">
             <div className="flex items-center gap-3">
               <input ref={inputRef} type="text" value={newItemText} onChange={(e) => setNewItemText(e.target.value)}
@@ -1546,7 +1984,18 @@ export default function App() {
               if (isPendingDelete) return null;
 
               return (
-                <div key={item.id} className="flex items-center gap-3 py-3 item-row fade-in" style={{ borderBottom: `1px solid ${theme.borderLight}`, opacity: item.checked ? 0.5 : 1, transition: 'opacity 0.3s ease' }}>
+                <div key={item.id} className="flex items-center gap-3 py-3 item-row fade-in" style={{ borderBottom: `1px solid ${theme.borderLight}`, opacity: item.checked ? 0.5 : 1, transition: 'opacity 0.3s ease' }}
+                  onTouchStart={() => {
+                    if (addMode === 'quick-add' && !item.checked) {
+                      longPressTimerRef.current = setTimeout(() => {
+                        triggerHaptic('light');
+                        setLongPressItem(item);
+                      }, 500);
+                    }
+                  }}
+                  onTouchEnd={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
+                  onTouchMove={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
+                >
                   <button onClick={() => toggleItem(item.id)}
                     className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center transition-all active:scale-90 ${isChecking ? 'fill-check check-pop' : ''}`}
                     style={{ border: `2px solid ${item.checked || isChecking ? YELLOW : theme.border}`, backgroundColor: item.checked || isChecking ? YELLOW : 'transparent' }}>
@@ -1565,6 +2014,11 @@ export default function App() {
                       style={{ color: item.checked ? theme.textTertiary : theme.text }}
                       onClick={() => !item.checked && startEdit(item)}>
                       {item.name}
+                      {showingCategoryTag.has(item.id) && (
+                        <span style={{ fontSize: 11, color: theme.textSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 9999, padding: '2px 8px', marginLeft: 6, display: 'inline-block', animation: 'fadeIn 0.2s ease-out', transition: 'opacity 0.5s', whiteSpace: 'nowrap' }}>
+                          {categories.find(c => c.id === item.category)?.name || item.category}
+                        </span>
+                      )}
                     </span>
                   )}
 
@@ -2083,13 +2537,41 @@ export default function App() {
                 </div>
               </>
             );
+            const addModeCard = (
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+                <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>How to add items</label>
+                <div className="flex gap-1 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
+                  {[
+                    { id: 'classic', label: 'Classic' },
+                    { id: 'quick-add', label: 'Quick Add (Beta)' }
+                  ].map(option => (
+                    <button
+                      key={option.id}
+                      onClick={() => { setAddMode(option.id); triggerHaptic('light'); }}
+                      className="flex-1 py-2 text-xs font-medium rounded-full transition-all"
+                      style={{
+                        backgroundColor: addMode === option.id ? YELLOW : 'transparent',
+                        color: addMode === option.id ? '#292524' : theme.textSecondary,
+                        boxShadow: addMode === option.id ? theme.yellowGlowSubtle : 'none'
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>
+                  {addMode === 'classic' ? 'Add items using the + button on each category' : 'Add items with the floating button — categories are auto-detected'}
+                </p>
+              </div>
+            );
+
             return isDesktop ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
                 <div>{shareCodeCard}{dangerZone}</div>
-                <div>{listDetailsCard}{completedCard}{inactivityCard}</div>
+                <div>{listDetailsCard}{completedCard}{addModeCard}{inactivityCard}</div>
               </div>
             ) : (
-              <>{shareCodeCard}{listDetailsCard}{completedCard}{inactivityCard}{dangerZone}</>
+              <>{shareCodeCard}{listDetailsCard}{completedCard}{addModeCard}{inactivityCard}{dangerZone}</>
             );
           })()}
 
@@ -2595,6 +3077,12 @@ export default function App() {
         if (editingQuantityId && !e.target.closest('.quantity-editor')) {
           setEditingQuantityId(null);
         }
+        // Close fab input bar if clicking outside
+        if (fabOpen && !e.target.closest('.fab-area')) {
+          setFabOpen(false);
+          setFabInput('');
+          setFabNoMatchMode(false);
+        }
       }}
     >
       <style>{styles}</style>
@@ -2975,6 +3463,157 @@ export default function App() {
           </div>
         </div>
       ))}
+
+      {/* Quick Add FAB */}
+      {addMode === 'quick-add' && activeTab === 'list' && listId && !isDesktop && (
+        <button
+          className="fab-area"
+          onClick={() => {
+            triggerHaptic('light');
+            if (fabOpen) {
+              setFabOpen(false);
+              setFabInput('');
+              setFabNoMatchMode(false);
+            } else {
+              setFabOpen(true);
+            }
+          }}
+          style={{
+            position: 'fixed',
+            bottom: 88,
+            right: 20,
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            backgroundColor: YELLOW,
+            border: 'none',
+            boxShadow: theme.yellowGlow,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 45,
+            cursor: 'pointer',
+            transition: 'transform 0.1s',
+          }}
+        >
+          <span style={{
+            fontSize: 28,
+            fontWeight: 300,
+            color: '#292524',
+            lineHeight: 1,
+            display: 'block',
+            transition: 'transform 200ms ease',
+            transform: fabOpen ? 'rotate(45deg)' : 'none',
+          }}>+</span>
+        </button>
+      )}
+
+      {/* Quick Add Input Bar */}
+      {fabOpen && addMode === 'quick-add' && !isDesktop && (
+        <div
+          className="fab-area"
+          style={{
+            position: 'fixed',
+            bottom: 72,
+            left: 0,
+            right: 0,
+            backgroundColor: theme.bgSecondary,
+            borderTop: `1px solid ${theme.border}`,
+            padding: '12px 16px',
+            paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+            zIndex: 44,
+            animation: 'fabSlideUp 250ms ease-out',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <input
+              ref={fabInputRef}
+              type="text"
+              value={fabInput}
+              onChange={(e) => { setFabInput(e.target.value); setFabNoMatchMode(false); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleFabAdd(); if (e.key === 'Escape') { setFabOpen(false); setFabInput(''); setFabNoMatchMode(false); } }}
+              placeholder="What do you need?"
+              className="flex-1 py-2 text-sm focus:outline-none bg-transparent"
+              style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }}
+            />
+            <button
+              onClick={handleFabAdd}
+              disabled={!fabInput.trim()}
+              className="px-4 py-1.5 text-sm font-medium rounded-full transition-all active:scale-95"
+              style={{ backgroundColor: fabInput.trim() ? YELLOW : 'transparent', color: '#292524', opacity: fabInput.trim() ? 1 : 0.3 }}
+            >
+              Add
+            </button>
+          </div>
+          {/* Category chip picker for no-match */}
+          {fabNoMatchMode && (
+            <div className="fade-in" style={{ marginTop: 10, overflowX: 'auto', whiteSpace: 'nowrap', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
+              {visibleCategories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => handleChipSelect(cat.id)}
+                  className="transition-all active:scale-95"
+                  style={{
+                    display: 'inline-block',
+                    backgroundColor: theme.bgTertiary,
+                    color: theme.text,
+                    fontSize: 12,
+                    borderRadius: 9999,
+                    padding: '6px 14px',
+                    border: `1.5px solid ${theme.border}`,
+                    marginRight: 8,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Long-press reassign bottom sheet */}
+      {longPressItem && addMode === 'quick-add' && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setLongPressItem(null)}>
+          <div
+            className="w-full max-h-[75vh] rounded-t-3xl overflow-hidden flex flex-col"
+            style={{ backgroundColor: theme.bg }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-center" style={{ marginTop: 12, marginBottom: 4 }}>
+              <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: theme.border }} />
+            </div>
+            <div className="px-5 py-3 border-b flex-shrink-0" style={{ borderColor: theme.border }}>
+              <h2 className="text-base font-semibold" style={{ color: theme.text }}>Move to...</h2>
+            </div>
+            <div className="overflow-y-auto p-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+              {visibleCategories.map((cat) => {
+                const isCurrent = cat.id === longPressItem.category;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleLongPressReassign(longPressItem, cat.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-2 transition-all active:scale-[0.98]"
+                    style={{
+                      backgroundColor: isCurrent ? (darkMode ? '#3f3f46' : '#fefce8') : theme.bgSecondary,
+                      border: isCurrent ? `1.5px solid ${YELLOW}` : '1.5px solid transparent'
+                    }}
+                  >
+                    <span className="flex-1 text-left text-sm font-medium" style={{ color: theme.text }}>{cat.name}</span>
+                    {isCurrent && (
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={YELLOW} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 12l6 6L20 6"/>
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Navigation */}
       {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />}
