@@ -2402,7 +2402,8 @@ export default function App() {
                   backgroundColor: settingsTab === tab.id ? YELLOW : theme.bgTertiary,
                   color: settingsTab === tab.id ? '#292524' : theme.text,
                   fontWeight: settingsTab === tab.id ? 600 : 400,
-                  boxShadow: settingsTab === tab.id ? theme.yellowGlowSubtle : 'none'
+                  boxShadow: settingsTab === tab.id ? theme.yellowGlowSubtle : 'none',
+                  border: settingsTab === tab.id ? 'none' : `1.5px solid ${theme.border}`,
                 }}
               >
                 {tab.label}
@@ -2414,8 +2415,9 @@ export default function App() {
         <div className="px-5 py-6 pb-24">
           {/* General Tab */}
           {settingsTab === 'general' && (() => {
+            const cardShadow = isDesktop ? '0 4px 20px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.06)' : theme.cardShadow;
             const shareCodeCard = (
-              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: cardShadow }}>
                 <label className="text-xs font-medium mb-3 block" style={{ color: theme.textSecondary }}>Share Code</label>
                 <div className="flex items-center justify-between">
                   <span className="text-2xl font-mono tracking-widest" style={{ color: theme.text }}>{listId}</span>
@@ -2435,7 +2437,7 @@ export default function App() {
               </div>
             );
             const listNameCard = (
-              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>List Name</label>
                 <input
                   ref={listNameInputRef}
@@ -2452,7 +2454,7 @@ export default function App() {
               </div>
             );
             const appearanceCard = (
-              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>Appearance</label>
                 <div className="flex gap-1 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
                   {[
@@ -2480,7 +2482,7 @@ export default function App() {
               </div>
             );
             const completedCard = (
-              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>When items are completed</label>
                 <div className="flex gap-1 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
                   {[
@@ -2541,7 +2543,7 @@ export default function App() {
               </>
             );
             const addModeCard = (
-              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>How to add items</label>
                 <div className="flex gap-1 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
                   {[
@@ -2569,10 +2571,13 @@ export default function App() {
             );
 
             return isDesktop ? (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
-                <div>{shareCodeCard}{dangerZone}</div>
-                <div>{listNameCard}{appearanceCard}{addModeCard}{completedCard}{inactivityCard}</div>
-              </div>
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start', marginBottom: 16 }}>
+                  <div>{shareCodeCard}{inactivityCard}</div>
+                  <div>{listNameCard}{appearanceCard}{addModeCard}{completedCard}</div>
+                </div>
+                {dangerZone}
+              </>
             ) : (
               <>{shareCodeCard}{listNameCard}{appearanceCard}{addModeCard}{completedCard}{inactivityCard}{dangerZone}</>
             );
