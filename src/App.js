@@ -2435,7 +2435,7 @@ export default function App() {
                 <p className="text-xs mt-3" style={{ color: theme.textTertiary, fontWeight: 300 }}>Share this code so others can join your list</p>
               </div>
             );
-            const listDetailsCard = (
+            const listNameCard = (
               <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>List Name</label>
                 <input
@@ -2449,7 +2449,11 @@ export default function App() {
                   className="w-full py-2 text-sm focus:outline-none bg-transparent"
                   style={{ borderBottom: `1px solid ${theme.border}`, color: theme.text }}
                 />
-                <p className="text-xs mt-2 mb-5" style={{ color: theme.textTertiary, fontWeight: 300 }}>Give your list a name to easily identify it. Saved on this device only.</p>
+                <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>Give your list a name to easily identify it. Saved on this device only.</p>
+              </div>
+            );
+            const appearanceCard = (
+              <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: theme.cardShadow }}>
                 <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>Appearance</label>
                 <div className="flex gap-1 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
                   {[
@@ -2568,10 +2572,10 @@ export default function App() {
             return isDesktop ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
                 <div>{shareCodeCard}{dangerZone}</div>
-                <div>{listDetailsCard}{completedCard}{addModeCard}{inactivityCard}</div>
+                <div>{listNameCard}{appearanceCard}{addModeCard}{completedCard}{inactivityCard}</div>
               </div>
             ) : (
-              <>{shareCodeCard}{listDetailsCard}{completedCard}{addModeCard}{inactivityCard}{dangerZone}</>
+              <>{shareCodeCard}{listNameCard}{appearanceCard}{addModeCard}{completedCard}{inactivityCard}{dangerZone}</>
             );
           })()}
 
