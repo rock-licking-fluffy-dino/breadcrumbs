@@ -450,40 +450,39 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
   const cards = [
     {
       isWelcome: true,
-      title: 'Welcome',
+      title: 'Welcome to Breadcrumbs',
       description: 'Never get lost in the aisles again.',
-      subtitle: 'The smartest path to a stocked home.',
-    },
-    {
-      emoji: '🗂️',
-      title: 'Smart organisation',
-      description: 'Items are sorted by store section automatically — Dairy, Frozen, Bakery and more. Shop aisle by aisle.',
-    },
-    {
-      emoji: '🔗',
-      title: 'Share & collaborate',
-      description: 'Share your 6-character code with anyone. They join instantly and your list updates for everyone.',
-      showCode: true,
     },
     {
       emoji: '⚡',
-      title: 'Real-time sync',
-      description: 'Tick something off and it disappears for your whole household in seconds. No refresh needed.',
+      title: 'Quick add',
+      description: 'Tap the yellow button and type anything. Breadcrumbs drops it into the right category automatically — no fussing around.',
     },
     {
-      emoji: '🎛️',
-      title: 'Customise it',
-      description: "Reorder categories to match your store, hide ones you don't use, or create your own.",
+      emoji: '🗂️',
+      title: 'Organised like a real shop',
+      description: 'Items are sorted by aisle automatically — Dairy, Bakery, Frozen and more. Switch to your store and the order updates to match.',
     },
     {
-      emoji: '🏪',
-      title: 'Shop by store',
-      description: "Save a layout for each shop you visit. Switch stores and your list reorders itself to match that store's aisles.",
+      emoji: '🔗',
+      title: 'Shop together',
+      description: 'Share your 6-character code with anyone. They join instantly — no account needed — and your list updates for everyone in real time.',
+      showCode: true,
     },
     {
       emoji: '👨‍🍳',
       title: 'Recipes',
-      description: 'Save your favourite recipes and add all the ingredients to your list in one tap.',
+      description: 'Save your favourite meals and add every ingredient to your list in one tap.',
+    },
+    {
+      emoji: '🎛️',
+      title: 'Make it yours',
+      description: "Hide categories you don't need, reorder them to match your store, or create your own. Dark mode and auto-remove completed items are in Settings.",
+    },
+    {
+      emoji: '🏪',
+      title: 'Shop by store',
+      description: "Save a layout for every supermarket you visit. Switch stores and your list reorders itself to match that store's aisles.",
     },
   ];
 
