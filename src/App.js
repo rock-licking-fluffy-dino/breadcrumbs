@@ -3491,20 +3491,22 @@ export default function App() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 45,
+            zIndex: 50,
             cursor: 'pointer',
             transition: 'transform 0.1s',
+            padding: 0,
+            lineHeight: 1,
           }}
         >
-          <span style={{
-            fontSize: 28,
-            fontWeight: 300,
-            color: '#292524',
-            lineHeight: 1,
-            display: 'block',
-            transition: 'transform 200ms ease',
-            transform: fabOpen ? 'rotate(45deg)' : 'none',
-          }}>+</span>
+          {fabOpen ? (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+          )}
         </button>
       )}
 
@@ -3521,7 +3523,7 @@ export default function App() {
             borderTop: `1px solid ${theme.border}`,
             padding: '12px 16px',
             paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
-            zIndex: 44,
+            zIndex: 45,
             animation: 'fabSlideUp 250ms ease-out',
           }}
         >
