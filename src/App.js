@@ -444,6 +444,7 @@ const triggerHaptic = (style = 'light') => {
 const OnboardingModal = ({ listCode, onComplete, theme }) => {
   const [currentCard, setCurrentCard] = useState(0);
   const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
 
   const isDark = theme.bg === '#1c1917';
 
@@ -538,7 +539,12 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
         }}
       >
         {/* Drag handle */}
-        <div className="flex justify-center" style={{ marginTop: 12, marginBottom: 12 }}>
+        <div
+          className="flex justify-center"
+          style={{ marginTop: 12, marginBottom: 12 }}
+          onTouchStart={(e) => { touchStartY.current = e.touches[0].clientY; }}
+          onTouchEnd={(e) => { if (touchStartY.current !== null && e.changedTouches[0].clientY - touchStartY.current > 60) skip(); touchStartY.current = null; }}
+        >
           <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: theme.border }} />
         </div>
 
@@ -711,6 +717,229 @@ const OnboardingModal = ({ listCode, onComplete, theme }) => {
   );
 };
 
+// Quick Add Onboarding Modal
+const QuickAddOnboardingModal = ({ onComplete, theme }) => {
+  const [currentCard, setCurrentCard] = useState(0);
+  const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
+
+  const isDark = theme.bg === '#1c1917';
+
+  const cards = [
+    {
+      heroType: 'dots',
+      title: 'Quick Add (Beta)',
+      description: 'A faster way to build your list. Type what you need and we figure out the category. No hunting around.',
+      showSkip: true,
+    },
+    {
+      heroType: 'input-fab',
+      title: 'One button to add anything',
+      description: 'Tap the yellow button at the bottom of your list. Type any item and hit Add. It will land in the right category automatically.',
+    },
+    {
+      heroType: 'item-tag',
+      title: 'We will tell you where it went',
+      description: 'A small label appears on the item so you can see which category it landed in. It fades away on its own after a moment.',
+    },
+    {
+      heroType: 'chips',
+      title: 'Not sure? You pick',
+      description: 'If we cannot figure out the category, we will ask you to choose. We remember your answer, so you will never be asked twice for the same item.',
+    },
+    {
+      heroType: 'move',
+      title: 'Easy to fix mistakes',
+      description: 'Got it wrong? Long-press any item to move it to a different category. We will remember that correction too.',
+    },
+  ];
+
+  const isLastCard = currentCard === cards.length - 1;
+  const card = cards[currentCard];
+
+  const goNext = () => {
+    if (!isLastCard) {
+      setCurrentCard(c => c + 1);
+      triggerHaptic('light');
+    } else {
+      onComplete();
+    }
+  };
+
+  const skip = () => {
+    triggerHaptic('light');
+    onComplete();
+  };
+
+  const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (diff > 50) goNext();
+    else if (diff < -50 && currentCard > 0) { setCurrentCard(c => c - 1); triggerHaptic('light'); }
+    touchStartX.current = null;
+  };
+
+  const renderHero = () => {
+    if (card.heroType === 'dots') {
+      return (
+        <div key="qa-dots" className="flex items-center gap-4" style={{ animation: 'onboardSlideIn 0.65s ease-out' }}>
+          <div className="breathe-1 rounded-full" style={{ width: 80, height: 80, backgroundColor: YELLOW }} />
+          <div className="breathe-2 rounded-full" style={{ width: 56, height: 56, backgroundColor: YELLOW, opacity: 0.6 }} />
+          <div className="breathe-3 rounded-full" style={{ width: 40, height: 40, backgroundColor: YELLOW, opacity: 0.3 }} />
+        </div>
+      );
+    }
+    if (card.heroType === 'input-fab') {
+      return (
+        <div key="qa-input-fab" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, animation: 'onboardSlideIn 0.65s ease-out' }}>
+          <div style={{ backgroundColor: isDark ? '#292524' : '#fff', borderRadius: 16, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: 248, boxShadow: '0 2px 8px rgba(0,0,0,0.10)', border: isDark ? '1px solid #3f3f46' : '1px solid #f5f5f4' }}>
+            <span style={{ fontSize: 13, color: '#a8a29e' }}>What do you need?</span>
+            <div style={{ backgroundColor: YELLOW, borderRadius: 9999, padding: '4px 12px', fontSize: 12, fontWeight: 600, color: '#292524' }}>Add</div>
+          </div>
+          <div style={{ width: 44, height: 44, borderRadius: '50%', backgroundColor: YELLOW, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(250,204,21,0.4)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+          </div>
+        </div>
+      );
+    }
+    if (card.heroType === 'item-tag') {
+      return (
+        <div key="qa-item-tag" style={{ backgroundColor: isDark ? '#292524' : '#fff', borderRadius: 16, padding: '12px 16px', width: 248, boxShadow: '0 2px 8px rgba(0,0,0,0.10)', border: isDark ? '1px solid #3f3f46' : '1px solid #f5f5f4', animation: 'onboardSlideIn 0.65s ease-out' }}>
+          <p style={{ fontSize: 10, fontWeight: 600, color: '#78716c', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dairy &amp; Eggs</p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, opacity: 0.5 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 18, height: 18, borderRadius: '50%', backgroundColor: YELLOW, flexShrink: 0 }} />
+              <span style={{ fontSize: 13, color: '#78716c', textDecoration: 'line-through' }}>Oat milk</span>
+            </div>
+            <div style={{ backgroundColor: '#fef9c3', borderRadius: 9999, padding: '2px 8px', fontSize: 10, color: '#854d0e', marginLeft: 8, flexShrink: 0 }}>Dairy &amp; Eggs</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 18, height: 18, borderRadius: '50%', border: '1.5px solid #d6d3d1', flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: isDark ? '#e7e5e4' : '#292524' }}>Eggs</span>
+          </div>
+        </div>
+      );
+    }
+    if (card.heroType === 'chips') {
+      return (
+        <div key="qa-chips" style={{ backgroundColor: isDark ? '#292524' : '#fff', borderRadius: 16, padding: '12px 16px', width: 248, boxShadow: '0 2px 8px rgba(0,0,0,0.10)', border: isDark ? '1px solid #3f3f46' : '1px solid #f5f5f4', animation: 'onboardSlideIn 0.65s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: isDark ? '#e7e5e4' : '#292524' }}>Kimchi</span>
+            <div style={{ borderRadius: 9999, padding: '3px 10px', fontSize: 11, border: '1px solid #d6d3d1', color: '#a8a29e' }}>Add</div>
+          </div>
+          <p style={{ fontSize: 11, color: '#a8a29e', marginBottom: 8 }}>Which category?</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {['Canned Goods', 'Deli & Chilled', 'Sauces', 'Other'].map(cat => (
+              <div key={cat} style={{ borderRadius: 9999, padding: '4px 10px', fontSize: 11, backgroundColor: cat === 'Deli & Chilled' ? YELLOW : (isDark ? '#3f3f46' : '#f5f5f4'), color: cat === 'Deli & Chilled' ? '#292524' : '#78716c' }}>{cat}</div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    if (card.heroType === 'move') {
+      return (
+        <div key="qa-move" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, animation: 'onboardSlideIn 0.65s ease-out' }}>
+          <div style={{ backgroundColor: isDark ? '#292524' : '#fff', borderRadius: 12, padding: '8px 14px', width: 220, boxShadow: '0 2px 6px rgba(0,0,0,0.08)', border: isDark ? '1px solid #3f3f46' : '1px solid #f5f5f4' }}>
+            <p style={{ fontSize: 9, fontWeight: 600, color: '#78716c', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bakery</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 12, color: isDark ? '#e7e5e4' : '#292524' }}>Chicken breast</span>
+              <div style={{ fontSize: 9, backgroundColor: isDark ? '#3f3f46' : '#f5f5f4', borderRadius: 9999, padding: '2px 6px', color: '#a8a29e' }}>hold</div>
+            </div>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9l6 6 6-6"/>
+          </svg>
+          <div style={{ backgroundColor: isDark ? '#292524' : '#fff', borderRadius: 12, padding: '8px 14px', width: 220, boxShadow: '0 2px 6px rgba(0,0,0,0.08)', border: isDark ? '1px solid #3f3f46' : '1px solid #f5f5f4' }}>
+            <p style={{ fontSize: 9, color: '#a8a29e', marginBottom: 4 }}>Move to...</p>
+            {[['Meat & Poultry', true], ['Seafood', false], ['Deli & Chilled', false]].map(([cat, checked], i, arr) => (
+              <div key={cat} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: i > 0 ? 5 : 0, paddingBottom: i < arr.length - 1 ? 5 : 0, borderBottom: i < arr.length - 1 ? `1px solid ${isDark ? '#3f3f46' : '#f5f5f4'}` : 'none' }}>
+                <span style={{ fontSize: 12, color: isDark ? '#e7e5e4' : '#292524' }}>{cat}</span>
+                {checked && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={YELLOW} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6L9 17l-5-5"/>
+                  </svg>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end select-none"
+      style={{ backgroundColor: 'rgba(0,0,0,0.15)', fontFamily: 'Inter, sans-serif' }}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div
+        className="w-full flex flex-col"
+        style={{ backgroundColor: theme.bg, borderRadius: '24px 24px 0 0', maxHeight: '92vh', overflowY: 'auto' }}
+      >
+        {/* Drag handle — drag down to dismiss */}
+        <div
+          className="flex justify-center"
+          style={{ marginTop: 12, marginBottom: 12 }}
+          onTouchStart={(e) => { touchStartY.current = e.touches[0].clientY; }}
+          onTouchEnd={(e) => { if (touchStartY.current !== null && e.changedTouches[0].clientY - touchStartY.current > 60) skip(); touchStartY.current = null; }}
+        >
+          <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: theme.border }} />
+        </div>
+
+        {/* Hero area */}
+        <div className="flex items-center justify-center" style={{ height: 180 }}>
+          {renderHero()}
+        </div>
+
+        {/* Content area */}
+        <div className="flex flex-col" style={{ paddingLeft: 32, paddingRight: 32, paddingBottom: 'max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))' }}>
+          {/* Card text */}
+          <div key={`qa-text-${currentCard}`} className="text-center" style={{ animation: 'onboardSlideIn 0.65s ease-out', minHeight: 130 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 600, color: theme.text, marginBottom: 10, lineHeight: 1.3 }}>{card.title}</h2>
+            <p style={{ fontSize: 14, lineHeight: 1.65, color: theme.textSecondary, margin: 0 }}>{card.description}</p>
+          </div>
+
+          <div style={{ flex: 1 }} />
+
+          {/* Skip — only card 1 */}
+          <div className="text-center" style={{ marginBottom: 12, visibility: card.showSkip ? 'visible' : 'hidden' }}>
+            <button onClick={skip} style={{ fontSize: 13, color: '#a8a29e', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>Skip</button>
+          </div>
+
+          {/* Dot indicators */}
+          <div className="flex justify-center" style={{ gap: 8, marginBottom: 16 }}>
+            {cards.map((_, i) => (
+              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: i === currentCard ? YELLOW : '#e7e5e4', transition: 'background-color 0.3s' }} />
+            ))}
+          </div>
+
+          {/* CTA button */}
+          <button
+            onClick={goNext}
+            className="w-full font-semibold transition-all active:scale-[0.97]"
+            style={{ height: 52, borderRadius: 9999, background: 'linear-gradient(135deg, #FDE047 0%, #FACC15 100%)', color: '#292524', fontSize: 16, border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(250,204,21,0.4)' }}
+          >
+            {isLastCard ? 'Got it' : 'Next'}
+          </button>
+        </div>
+
+        <style>{`
+          @keyframes onboardSlideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to   { opacity: 1; transform: translateX(0); }
+          }
+        `}</style>
+      </div>
+    </div>
+  );
+};
+
 // Toast Component
 const Toast = ({ message, visible, theme }) => {
   if (!visible) return null;
@@ -812,6 +1041,7 @@ export default function App() {
   const [checkingItems, setCheckingItems] = useState(new Set());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showQuickAddOnboarding, setShowQuickAddOnboarding] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
@@ -863,6 +1093,7 @@ export default function App() {
   const [addMode, setAddMode] = useState(() => {
     return localStorage.getItem('breadcrumbs-add-mode') || 'classic';
   });
+  const [hasUsedQuickAdd, setHasUsedQuickAdd] = useState(() => !!localStorage.getItem('breadcrumbs-has-used-quick-add'));
   const [fabOpen, setFabOpen] = useState(false);
   const [fabInput, setFabInput] = useState('');
   const [fabNoMatchMode, setFabNoMatchMode] = useState(false);
@@ -963,6 +1194,12 @@ export default function App() {
   const completeOnboarding = () => {
     localStorage.setItem('breadcrumbs-has-seen-onboarding', 'true');
     setShowOnboarding(false);
+    triggerHaptic('success');
+  };
+
+  const completeQuickAddOnboarding = () => {
+    localStorage.setItem('breadcrumbs-has-seen-quick-add-onboarding', 'true');
+    setShowQuickAddOnboarding(false);
     triggerHaptic('success');
   };
 
@@ -2544,7 +2781,7 @@ export default function App() {
             );
             const addModeCard = (
               <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: cardShadow }}>
-                <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>How to add items</label>
+                <label className="text-xs font-medium mb-2 block" style={{ color: theme.textSecondary }}>Adding items</label>
                 <div className="flex gap-1 p-1 rounded-full" style={{ backgroundColor: theme.bgTertiary }}>
                   {[
                     { id: 'classic', label: 'Classic' },
@@ -2552,7 +2789,20 @@ export default function App() {
                   ].map(option => (
                     <button
                       key={option.id}
-                      onClick={() => { setAddMode(option.id); triggerHaptic('light'); }}
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setAddMode(option.id);
+                        localStorage.setItem('breadcrumbs-add-mode', option.id);
+                        if (option.id === 'quick-add') {
+                          if (!localStorage.getItem('breadcrumbs-has-used-quick-add')) {
+                            localStorage.setItem('breadcrumbs-has-used-quick-add', 'true');
+                            setHasUsedQuickAdd(true);
+                          }
+                          if (!localStorage.getItem('breadcrumbs-has-seen-quick-add-onboarding')) {
+                            setTimeout(() => setShowQuickAddOnboarding(true), 150);
+                          }
+                        }
+                      }}
                       className="flex-1 py-2 text-xs font-medium rounded-full transition-all"
                       style={{
                         backgroundColor: addMode === option.id ? YELLOW : 'transparent',
@@ -2565,18 +2815,56 @@ export default function App() {
                   ))}
                 </div>
                 <p className="text-xs mt-2" style={{ color: theme.textTertiary, fontWeight: 300 }}>
-                  {addMode === 'classic' ? 'Add items using the + button on each category' : 'Add items with the floating button — categories are auto-detected'}
+                  {addMode === 'classic' ? 'Per-category add buttons appear on your list' : 'One button adds anything — category assigned automatically'}
                 </p>
               </div>
             );
 
+            const helpSection = (
+              <>
+                <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textTertiary }}>Help</h2>
+                <div className="rounded-2xl mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: cardShadow, overflow: 'hidden' }}>
+                  <button
+                    onClick={() => { localStorage.removeItem('breadcrumbs-has-seen-onboarding'); setShowOnboarding(true); }}
+                    className="w-full flex items-center justify-between px-4 py-3 text-left transition-all active:opacity-70"
+                    style={{ borderBottom: `1px solid ${theme.border}`, background: 'none', border: 'none', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}
+                  >
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: theme.text }}>App intro</p>
+                      <p className="text-xs" style={{ color: theme.textSecondary, fontWeight: 300 }}>Replay the welcome walkthrough</p>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!hasUsedQuickAdd) return;
+                      localStorage.removeItem('breadcrumbs-has-seen-quick-add-onboarding');
+                      setShowQuickAddOnboarding(true);
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: hasUsedQuickAdd ? 'pointer' : 'default', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', opacity: hasUsedQuickAdd ? 1 : 0.4 }}
+                    className="transition-all active:opacity-70"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-left" style={{ color: theme.text }}>Quick Add guide</p>
+                      <p className="text-xs text-left" style={{ color: theme.textSecondary, fontWeight: 300 }}>Replay the Quick Add walkthrough</p>
+                    </div>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <path d="M9 18l6-6-6-6"/>
+                    </svg>
+                  </button>
+                </div>
+              </>
+            );
+
             return isDesktop ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
-                <div>{shareCodeCard}{inactivityCard}{dangerZone}</div>
-                <div>{listNameCard}{appearanceCard}{addModeCard}{completedCard}</div>
+                <div>{shareCodeCard}{inactivityCard}{helpSection}{dangerZone}</div>
+                <div>{listNameCard}{appearanceCard}{completedCard}{addModeCard}</div>
               </div>
             ) : (
-              <>{shareCodeCard}{listNameCard}{appearanceCard}{addModeCard}{completedCard}{inactivityCard}{dangerZone}</>
+              <>{shareCodeCard}{listNameCard}{appearanceCard}{completedCard}{addModeCard}{inactivityCard}{helpSection}{dangerZone}</>
             );
           })()}
 
@@ -3095,6 +3383,7 @@ export default function App() {
       <Toast message={toastMessage} visible={showToast} theme={theme} />
       
       {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} theme={theme} />}
+      {showQuickAddOnboarding && <QuickAddOnboardingModal onComplete={completeQuickAddOnboarding} theme={theme} />}
       
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
