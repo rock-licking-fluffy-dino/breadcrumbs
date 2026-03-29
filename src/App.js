@@ -3465,7 +3465,7 @@ export default function App() {
       ))}
 
       {/* Quick Add FAB */}
-      {addMode === 'quick-add' && activeTab === 'list' && listId && !isDesktop && (
+      {addMode === 'quick-add' && activeTab === 'list' && listId && (
         <button
           className="fab-area"
           onClick={() => {
@@ -3480,7 +3480,7 @@ export default function App() {
           }}
           style={{
             position: 'fixed',
-            bottom: 88,
+            bottom: isDesktop ? 24 : 88,
             right: 20,
             width: 56,
             height: 56,
@@ -3511,18 +3511,18 @@ export default function App() {
       )}
 
       {/* Quick Add Input Bar */}
-      {fabOpen && addMode === 'quick-add' && !isDesktop && (
+      {fabOpen && addMode === 'quick-add' && (
         <div
           className="fab-area"
           style={{
             position: 'fixed',
-            bottom: 72,
-            left: 0,
+            bottom: isDesktop ? 0 : 72,
+            left: isDesktop ? 88 : 0,
             right: 0,
             backgroundColor: theme.bgSecondary,
             borderTop: `1px solid ${theme.border}`,
             padding: '12px 16px',
-            paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+            paddingBottom: isDesktop ? '12px' : 'calc(12px + env(safe-area-inset-bottom, 0px))',
             zIndex: 45,
             animation: 'fabSlideUp 250ms ease-out',
           }}
