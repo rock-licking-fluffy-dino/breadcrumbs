@@ -3464,20 +3464,10 @@ export default function App() {
         </div>
       ))}
 
-      {/* Quick Add FAB */}
-      {addMode === 'quick-add' && activeTab === 'list' && listId && (
+      {/* Quick Add FAB — hidden while input bar is open */}
+      {addMode === 'quick-add' && activeTab === 'list' && listId && !fabOpen && (
         <button
-          className="fab-area"
-          onClick={() => {
-            triggerHaptic('light');
-            if (fabOpen) {
-              setFabOpen(false);
-              setFabInput('');
-              setFabNoMatchMode(false);
-            } else {
-              setFabOpen(true);
-            }
-          }}
+          onClick={() => { triggerHaptic('light'); setFabOpen(true); }}
           style={{
             position: 'fixed',
             bottom: isDesktop ? 24 : 88,
@@ -3498,15 +3488,9 @@ export default function App() {
             lineHeight: 1,
           }}
         >
-          {fabOpen ? (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          ) : (
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-          )}
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
         </button>
       )}
 
@@ -3516,18 +3500,41 @@ export default function App() {
           className="fab-area"
           style={{
             position: 'fixed',
-            bottom: isDesktop ? 0 : 72,
+            bottom: isDesktop ? 0 : 64,
             left: isDesktop ? 88 : 0,
             right: 0,
-            backgroundColor: theme.bgSecondary,
+            backgroundColor: theme.bg,
             borderTop: `1px solid ${theme.border}`,
-            padding: '12px 16px',
-            paddingBottom: isDesktop ? '12px' : 'calc(12px + env(safe-area-inset-bottom, 0px))',
+            paddingTop: 8,
+            paddingLeft: 16,
+            paddingRight: 16,
+            paddingBottom: isDesktop ? 12 : 'calc(12px + env(safe-area-inset-bottom, 0px))',
             zIndex: 45,
             animation: 'fabSlideUp 250ms ease-out',
           }}
         >
-          <div className="flex items-center gap-3">
+          {/* Dismiss row */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+            <button
+              onClick={() => { setFabOpen(false); setFabInput(''); setFabNoMatchMode(false); }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: theme.textSecondary,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          {/* Input row */}
+          <div className="flex items-center gap-3" style={{ marginBottom: fabNoMatchMode ? 0 : 4 }}>
             <input
               ref={fabInputRef}
               type="text"
