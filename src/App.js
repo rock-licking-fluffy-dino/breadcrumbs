@@ -2523,11 +2523,11 @@ export default function App() {
             const dangerZone = (
               <>
                 <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textTertiary }}>⚠️ Danger Zone</h2>
-                <div className="rounded-2xl p-4" style={{ backgroundColor: 'rgba(239,68,68,0.03)' }}>
+                <div className="rounded-2xl p-3" style={{ backgroundColor: 'rgba(239,68,68,0.03)' }}>
                   <button
                     onClick={() => { triggerHaptic('light'); setActiveTab('list'); setTimeout(() => setShowClearAllConfirm(true), 100); }}
                     disabled={items.length === 0}
-                    className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-all mb-3"
+                    className="w-full py-2 text-xs font-medium rounded-full active:scale-[0.98] transition-all mb-2"
                     style={{
                       border: '1.5px solid #ef4444',
                       color: items.length === 0 ? theme.textTertiary : '#ef4444',
@@ -2536,7 +2536,7 @@ export default function App() {
                   >
                     Clear all items {items.length > 0 && `(${items.length})`}
                   </button>
-                  <button onClick={() => { triggerHaptic('light'); setActiveTab('list'); setTimeout(() => setShowLeaveConfirm(true), 100); }} className="w-full py-3 text-sm font-medium rounded-full active:scale-[0.98] transition-all" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
+                  <button onClick={() => { triggerHaptic('light'); setActiveTab('list'); setTimeout(() => setShowLeaveConfirm(true), 100); }} className="w-full py-2 text-xs font-medium rounded-full active:scale-[0.98] transition-all" style={{ border: '1.5px solid #ef4444', color: '#ef4444' }}>
                     Leave this list
                   </button>
                 </div>
@@ -2571,13 +2571,10 @@ export default function App() {
             );
 
             return isDesktop ? (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start', marginBottom: 16 }}>
-                  <div>{shareCodeCard}{inactivityCard}</div>
-                  <div>{listNameCard}{appearanceCard}{addModeCard}{completedCard}</div>
-                </div>
-                {dangerZone}
-              </>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+                <div>{shareCodeCard}{inactivityCard}{dangerZone}</div>
+                <div>{listNameCard}{appearanceCard}{addModeCard}{completedCard}</div>
+              </div>
             ) : (
               <>{shareCodeCard}{listNameCard}{appearanceCard}{addModeCard}{completedCard}{inactivityCard}{dangerZone}</>
             );
