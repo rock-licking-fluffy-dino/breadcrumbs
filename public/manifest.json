@@ -1,0 +1,37 @@
+{
+  "name": "Breadcrumbs",
+  "short_name": "Breadcrumbs",
+  "description": "Never get lost in the aisles again. The smartest path to a stocked home.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fafaf9",
+  "theme_color": "#fafaf9",
+  "scope": "/",
+  "lang": "en-GB",
+  "categories": ["food", "lifestyle", "utilities"],
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Open My List",
+      "short_name": "My List",
+      "description": "Jump straight to your shopping list",
+      "url": "/",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
