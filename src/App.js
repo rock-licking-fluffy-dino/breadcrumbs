@@ -2860,11 +2860,11 @@ export default function App() {
 
             return isDesktop ? (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
-                <div>{shareCodeCard}{inactivityCard}{helpSection}{dangerZone}</div>
+                <div>{shareCodeCard}{inactivityCard}{dangerZone}{helpSection}</div>
                 <div>{listNameCard}{appearanceCard}{completedCard}{addModeCard}</div>
               </div>
             ) : (
-              <>{shareCodeCard}{listNameCard}{appearanceCard}{completedCard}{addModeCard}{inactivityCard}{helpSection}{dangerZone}</>
+              <>{shareCodeCard}{listNameCard}{appearanceCard}{completedCard}{addModeCard}{inactivityCard}{dangerZone}{helpSection}</>
             );
           })()}
 
