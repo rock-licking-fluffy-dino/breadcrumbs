@@ -440,282 +440,56 @@ const triggerHaptic = (style = 'light') => {
   }
 };
 
-// Onboarding Modal Component
-const OnboardingModal = ({ listCode, onComplete, theme }) => {
-  const [currentCard, setCurrentCard] = useState(0);
-  const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
-
-  const isDark = theme.bg === '#1c1917';
-
-  const cards = [
-    {
-      isWelcome: true,
-      title: 'Welcome to Breadcrumbs',
-      description: 'Never get lost in the aisles again.',
-    },
-    {
-      emoji: '⚡',
-      title: 'Quick add',
-      description: 'Tap the yellow button and type anything. Breadcrumbs drops it into the right category automatically — no fussing around.',
-    },
-    {
-      emoji: '🗂️',
-      title: 'Organised like a real shop',
-      description: 'Items are sorted by aisle automatically — Dairy, Bakery, Frozen and more. Switch to your store and the order updates to match.',
-    },
-    {
-      emoji: '🔗',
-      title: 'Shop together',
-      description: 'Share your 6-character code with anyone. They join instantly — no account needed — and your list updates for everyone in real time.',
-      showCode: true,
-    },
-    {
-      emoji: '👨‍🍳',
-      title: 'Recipes',
-      description: 'Save your favourite meals and add every ingredient to your list in one tap.',
-    },
-    {
-      emoji: '🎛️',
-      title: 'Make it yours',
-      description: "Hide categories you don't need, reorder them to match your store, or create your own. Dark mode and auto-remove completed items are in Settings.",
-    },
-    {
-      emoji: '🏪',
-      title: 'Shop by store',
-      description: "Save a layout for every supermarket you visit. Switch stores and your list reorders itself to match that store's aisles.",
-    },
-  ];
-
-  const isLastCard = currentCard === cards.length - 1;
-  const card = cards[currentCard];
-
-  const goNext = () => {
-    if (!isLastCard) {
-      setCurrentCard(c => c + 1);
-      triggerHaptic('light');
-    } else {
-      onComplete();
-    }
-  };
-
-  const skip = () => {
-    triggerHaptic('light');
-    onComplete();
-  };
-
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = (e) => {
-    if (touchStartX.current === null) return;
-    const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (diff > 50) goNext();
-    else if (diff < -50 && currentCard > 0) {
-      setCurrentCard(c => c - 1);
-      triggerHaptic('light');
-    }
-    touchStartX.current = null;
-  };
-
-  const circleBg = isDark ? 'rgba(250,204,21,0.12)' : 'rgba(255, 248, 204, 0.75)';
-  const ctaLabel = currentCard === 0 ? 'Get started' : isLastCard ? 'Start Shopping' : 'Next';
-
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end select-none"
-      style={{ backgroundColor: 'rgba(0,0,0,0.15)', fontFamily: 'Inter, sans-serif' }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
-      <div
-        className="w-full flex flex-col"
-        style={{
-          backgroundColor: theme.bg,
-          borderRadius: '24px 24px 0 0',
-          maxHeight: '92vh',
-          overflowY: 'auto',
-        }}
-      >
-        {/* Drag handle */}
-        <div
-          className="flex justify-center"
-          style={{ marginTop: 12, marginBottom: 12 }}
-          onTouchStart={(e) => { touchStartY.current = e.touches[0].clientY; }}
-          onTouchEnd={(e) => { if (touchStartY.current !== null && e.changedTouches[0].clientY - touchStartY.current > 60) skip(); touchStartY.current = null; }}
-        >
-          <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: theme.border }} />
-        </div>
-
-        {/* Top area — emoji / welcome hero */}
-        <div className="flex items-center justify-center" style={{ height: 180 }}>
-          {card.isWelcome ? (
-            <div
-              key="welcome-hero"
-              className="flex items-center gap-4"
-              style={{ animation: 'onboardSlideIn 0.65s ease-out' }}
-            >
-              <div style={{ width: 80, height: 80, borderRadius: '50%', backgroundColor: YELLOW }} />
-              <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
-              <div style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
-            </div>
-          ) : (
-            <div
-              key={`circle-${currentCard}`}
-              style={{
-                width: 140,
-                height: 140,
-                borderRadius: '50%',
-                backgroundColor: circleBg,
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.9)',
-                boxShadow: '0 8px 32px rgba(250, 204, 21, 0.12), 0 2px 8px rgba(0,0,0,0.06)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                animation: 'onboardSlideIn 0.65s ease-out',
-              }}
-            >
-              <span style={{ fontSize: 44, lineHeight: 1, display: 'block' }}>{card.emoji}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Content area */}
-        <div
-          className="flex flex-col"
-          style={{
-            paddingLeft: 32,
-            paddingRight: 32,
-            paddingBottom: 'max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))',
-          }}
-        >
-        {/* Card text */}
-        <div
-          key={`text-${currentCard}`}
-          className="text-center"
-          style={{ animation: 'onboardSlideIn 0.65s ease-out', minHeight: 130 }}
-        >
-          <h2
-            style={{
-              fontSize: 20,
-              fontWeight: 600,
-              color: theme.text,
-              marginBottom: 10,
-              lineHeight: 1.3,
-            }}
-          >
-            {card.title}
-          </h2>
-          <p
-            style={{
-              fontSize: 14,
-              lineHeight: 1.65,
-              color: theme.textSecondary,
-              margin: 0,
-            }}
-          >
-            {card.description}
-          </p>
-          {card.subtitle && (
-            <p
-              style={{
-                fontSize: 14,
-                lineHeight: 1.65,
-                color: theme.textSecondary,
-                margin: '4px 0 0',
-              }}
-            >
-              {card.subtitle}
-            </p>
-          )}
-          {card.showCode && (
-              <div className="flex justify-center mt-4">
-                <div
-                  className="font-mono tracking-widest"
-                  style={{
-                    paddingLeft: 24,
-                    paddingRight: 24,
-                    paddingTop: 8,
-                    paddingBottom: 8,
-                    borderRadius: 9999,
-                    border: `1.5px solid ${YELLOW}`,
-                    color: theme.text,
-                  }}
-                >
-                  {listCode || 'ABC123'}
-                </div>
-              </div>
-            )}
-        </div>
-
-        {/* Push bottom controls to the bottom */}
-        <div style={{ flex: 1 }} />
-
-        {/* Skip link — hidden on last card but always occupies space */}
-        <div className="text-center" style={{ marginBottom: 12, visibility: isLastCard ? 'hidden' : 'visible' }}>
-          <button
-            onClick={skip}
-            style={{
-              fontSize: 13,
-              color: '#a8a29e',
-              background: 'none',
-              border: 'none',
-              cursor: isLastCard ? 'default' : 'pointer',
-              padding: '4px 8px',
-            }}
-          >
-            Skip
-          </button>
-        </div>
-
-        {/* Dot indicators */}
-        <div className="flex justify-center" style={{ gap: 8, marginBottom: 16 }}>
-          {cards.map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                backgroundColor: i === currentCard ? YELLOW : '#e7e5e4',
-                transition: 'background-color 0.3s',
-              }}
-            />
-          ))}
-        </div>
-
-        {/* CTA button */}
-        <button
-          onClick={goNext}
-          className="w-full font-semibold transition-all active:scale-[0.97]"
-          style={{
-            height: 52,
-            borderRadius: 9999,
-            background: 'linear-gradient(135deg, #FDE047 0%, #FACC15 100%)',
-            color: '#292524',
-            fontSize: 16,
-            border: 'none',
-            cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(250, 204, 21, 0.4)',
-          }}
-        >
-          {ctaLabel}
-        </button>
-        </div>
-
-        <style>{`
-          @keyframes onboardSlideIn {
-            from { opacity: 0; transform: translateX(20px); }
-            to   { opacity: 1; transform: translateX(0); }
-          }
-        `}</style>
-      </div>
-    </div>
-  );
-};
+const TOUR_STEPS = [
+  {
+    label: 'Step 1 of 8',
+    instruction: 'Tap the yellow button and add your first item',
+    icon: 'plus',
+    tab: 'list',
+  },
+  {
+    label: 'Step 2 of 8',
+    instruction: 'Tap the circle next to your item to tick it off',
+    icon: 'check',
+    tab: 'list',
+  },
+  {
+    label: 'Step 3 of 8',
+    instruction: 'Tin of beans landed in the wrong place — long-press it to move it to Canned Goods',
+    icon: 'move',
+    tab: 'list',
+  },
+  {
+    label: 'Step 4 of 8',
+    instruction: 'Tap Clear to remove your ticked item',
+    icon: 'trash',
+    tab: 'list',
+  },
+  {
+    label: 'Step 5 of 8',
+    instruction: 'Go to Recipes and add a recipe to your list',
+    icon: 'recipe',
+    tab: 'recipes',
+  },
+  {
+    label: 'Step 6 of 8',
+    instruction: 'Tap the store name at the top to switch your aisle order',
+    icon: 'store',
+    tab: 'list',
+  },
+  {
+    label: 'Step 7 of 8',
+    instruction: 'Go to Settings and hide a category you do not need',
+    icon: 'settings',
+    tab: 'settings',
+  },
+  {
+    label: 'Step 8 of 8',
+    instruction: 'Still in Settings — switch the appearance to Dark',
+    icon: 'moon',
+    tab: 'settings',
+  },
+];
 
 // Quick Add Onboarding Modal
 const QuickAddOnboardingModal = ({ onComplete, theme }) => {
@@ -1014,6 +788,102 @@ const BottomNav = ({ activeTab, onTabChange, theme }) => {
   );
 };
 
+const TourStrip = ({ step, steps, activeTab, onAbandon, theme }) => {
+  const current = steps[step];
+  if (!current) return null;
+  const tabNames = { list: 'List', recipes: 'Recipes', settings: 'Settings' };
+  const wrongTab = activeTab !== current.tab;
+
+  const iconPaths = {
+    plus: <path d="M12 5v14M5 12h14"/>,
+    check: <path d="M4 12l6 6L20 6"/>,
+    move: (<><polyline points="5 9 2 12 5 15"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/></>),
+    trash: (<><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></>),
+    recipe: (<><path d="M6 13.87A4 4 0 017.41 6a5 5 0 018.18 0A4 4 0 0118 13.87V21H6z"/><line x1="6" y1="17" x2="18" y2="17"/></>),
+    store: (<><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></>),
+    settings: (<><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4"/></>),
+    moon: <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>,
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        bottom: 56,
+        left: 0,
+        right: 0,
+        zIndex: 45,
+        background: '#292524',
+        padding: '12px 16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+      }}
+    >
+      {/* Icon circle */}
+      <div
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: '50%',
+          background: YELLOW,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#292524" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          {iconPaths[current.icon]}
+        </svg>
+      </div>
+
+      {/* Text */}
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 10, color: '#78716c', marginBottom: 1 }}>{current.label}</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#fafaf9', lineHeight: 1.35 }}>{current.instruction}</div>
+        {wrongTab && (
+          <div style={{ fontSize: 10, color: YELLOW, marginTop: 2 }}>
+            Head to the {tabNames[current.tab]} tab to continue
+          </div>
+        )}
+      </div>
+
+      {/* Progress dots + abandon */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+          {steps.map((_, i) => (
+            <div
+              key={i}
+              style={{
+                width: i === step ? 14 : 5,
+                height: 5,
+                borderRadius: i === step ? 3 : '50%',
+                background: i <= step ? YELLOW : '#57534e',
+                transition: 'all 0.2s',
+              }}
+            />
+          ))}
+        </div>
+        <button
+          onClick={onAbandon}
+          style={{
+            color: '#57534e',
+            fontSize: 15,
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '0 2px',
+            lineHeight: 1,
+          }}
+        >
+          ×
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function App() {
   const [listId, setListId] = useState(() => {
     const saved = localStorage.getItem('breadcrumbs-current-list');
@@ -1040,8 +910,12 @@ export default function App() {
   const [createAnim, setCreateAnim] = useState(false);
   const [checkingItems, setCheckingItems] = useState(new Set());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [showQuickAddOnboarding, setShowQuickAddOnboarding] = useState(false);
+  const [tourStep, setTourStep] = useState(null);
+  const tourBeanItemIdRef = useRef(null);
+  const tourStep3HadCheckedRef = useRef(false);
+  const tourStep5InitialStoreRef = useRef(null);
+  const tourStep6InitialHiddenRef = useRef(null);
   const [syncing, setSyncing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
@@ -1186,22 +1060,157 @@ export default function App() {
     return sortedCategories.filter(cat => !hiddenCategories.includes(cat.id));
   })();
 
-  const checkOnboarding = useCallback(() => {
-    const hasSeenOnboarding = localStorage.getItem('breadcrumbs-has-seen-onboarding');
-    if (!hasSeenOnboarding) setShowOnboarding(true);
-  }, []);
-
-  const completeOnboarding = () => {
-    localStorage.setItem('breadcrumbs-has-seen-onboarding', 'true');
-    setShowOnboarding(false);
-    triggerHaptic('success');
-  };
-
   const completeQuickAddOnboarding = () => {
     localStorage.setItem('breadcrumbs-has-seen-quick-add-onboarding', 'true');
     setShowQuickAddOnboarding(false);
     triggerHaptic('success');
   };
+
+  // Tour initialisation — runs when listId first becomes available
+  useEffect(() => {
+    if (!listId) return;
+    if (localStorage.getItem('breadcrumbs-has-seen-onboarding')) {
+      localStorage.setItem('breadcrumbs-has-completed-tour', 'true');
+      return;
+    }
+    if (!localStorage.getItem('breadcrumbs-has-completed-tour')) {
+      setTourStep(0);
+    }
+  }, [listId]);
+
+  const advanceTour = async () => {
+    const nextStep = tourStep + 1;
+
+    // Step 2: seed "tin of beans" into fruit-veg
+    if (nextStep === 2) {
+      const beanId = generateId();
+      tourBeanItemIdRef.current = beanId;
+      const beanItem = {
+        id: beanId,
+        name: 'tin of beans',
+        category: 'fruit-veg',
+        checked: false,
+        quantity: 1,
+        addedAt: Date.now(),
+        isTourItem: true,
+      };
+      const newItems = [...items, beanItem];
+      setItems(newItems);
+      await saveList(newItems);
+    }
+
+    // Step 4: seed demo recipe if none exist, then navigate to Recipes tab
+    if (nextStep === 4) {
+      if (recipes.length === 0) {
+        const demoRecipe = {
+          id: generateId(),
+          name: 'Pasta Bolognese',
+          ingredients: [
+            { id: generateId(), name: 'minced beef', category: 'meat-poultry', quantity: 1 },
+            { id: generateId(), name: 'spaghetti', category: 'pasta-rice-grains', quantity: 1 },
+            { id: generateId(), name: 'chopped tomatoes', category: 'canned-goods', quantity: 1 },
+            { id: generateId(), name: 'onion', category: 'fruit-veg', quantity: 1 },
+            { id: generateId(), name: 'garlic', category: 'fruit-veg', quantity: 1 },
+          ],
+          createdAt: Date.now(),
+        };
+        const newRecipes = [demoRecipe];
+        setRecipes(newRecipes);
+        await saveList(items, newRecipes);
+      }
+      setActiveTab('recipes');
+    }
+
+    // Step 5: navigate back to list
+    if (nextStep === 5) {
+      setActiveTab('list');
+    }
+
+    // Step 6: navigate to settings, record initial hidden count
+    if (nextStep === 6) {
+      tourStep6InitialHiddenRef.current = hiddenCategories.length;
+      setActiveTab('settings');
+    }
+
+    triggerHaptic('light');
+    setTourStep(nextStep);
+  };
+
+  const completeTour = () => {
+    triggerHaptic('success');
+    localStorage.setItem('breadcrumbs-has-completed-tour', 'true');
+    setTourStep(null);
+    showToastMessage('You are all set. Happy shopping!');
+  };
+
+  const abandonTour = () => {
+    triggerHaptic('light');
+    if (tourBeanItemIdRef.current) {
+      const beanItem = items.find(i => i.id === tourBeanItemIdRef.current);
+      if (beanItem && beanItem.category === 'fruit-veg') {
+        const cleaned = items.filter(i => i.id !== tourBeanItemIdRef.current);
+        setItems(cleaned);
+        saveList(cleaned);
+      }
+    }
+    localStorage.setItem('breadcrumbs-has-completed-tour', 'true');
+    setTourStep(null);
+  };
+
+  // Tour completion detection — Step 0 → 1: item added
+  useEffect(() => {
+    if (tourStep !== 0) return;
+    if (items.length > 0) advanceTour();
+  }, [items.length, tourStep]); 
+
+  // Step 1 → 2: item ticked
+  useEffect(() => {
+    if (tourStep !== 1) return;
+    if (items.some(i => i.checked)) advanceTour();
+  }, [items, tourStep]); 
+
+  // Step 2 → 3: tin of beans moved out of fruit-veg
+  useEffect(() => {
+    if (tourStep !== 2 || !tourBeanItemIdRef.current) return;
+    const beanItem = items.find(i => i.id === tourBeanItemIdRef.current);
+    if (beanItem && beanItem.category !== 'fruit-veg') advanceTour();
+  }, [items, tourStep]); 
+
+  // Step 3 → 4: checked items cleared
+  useEffect(() => {
+    if (tourStep !== 3) return;
+    const hasChecked = items.some(i => i.checked);
+    if (hasChecked) {
+      tourStep3HadCheckedRef.current = true;
+    } else if (tourStep3HadCheckedRef.current) {
+      advanceTour();
+    }
+  }, [items, tourStep]); 
+
+  // Step 4 → 5 is handled inside addRecipeToList
+
+  // Step 5 → 6: store switched
+  useEffect(() => {
+    if (tourStep !== 5) return;
+    if (!tourStep5InitialStoreRef.current) {
+      tourStep5InitialStoreRef.current = activeStoreLayoutId;
+      return;
+    }
+    if (activeStoreLayoutId !== tourStep5InitialStoreRef.current) advanceTour();
+  }, [activeStoreLayoutId, tourStep]); 
+
+  // Step 6 → 7: category hidden
+  useEffect(() => {
+    if (tourStep !== 6) return;
+    if (tourStep6InitialHiddenRef.current === null) return;
+    if (hiddenCategories.length > tourStep6InitialHiddenRef.current) advanceTour();
+  }, [hiddenCategories, tourStep]); 
+
+  // Step 7 → complete: dark mode selected
+  useEffect(() => {
+    if (tourStep !== 7) return;
+    if (appearanceMode === 'dark') completeTour();
+  }, [appearanceMode, tourStep]); 
 
   useEffect(() => {
     const updateOnlineStatus = () => setIsOnline(navigator.onLine);
@@ -1491,7 +1500,6 @@ export default function App() {
       setActiveStoreLayoutId('default');
       setListName('');
       setEditingListName('');
-      checkOnboarding();
       // Main document: items and recipes only
       await setDoc(doc(db, 'lists', code), {
         items: [],
@@ -1521,7 +1529,6 @@ export default function App() {
         setListId(code);
         setItems(data.items || []);
         setRecipes(data.recipes || []);
-        checkOnboarding();
 
         // Load categories from the subcollection
         const catSnap = await getDoc(doc(db, 'lists', code, 'meta', 'categories'));
@@ -1993,7 +2000,8 @@ export default function App() {
     
     setItems(newItems);
     await saveList(newItems);
-    
+    if (tourStep === 4) advanceTour();
+
     setTimeout(() => {
       setAddingRecipeId(null);
       showToastMessage(`Added ${recipe.ingredients.length} items to your list`);
@@ -2597,6 +2605,15 @@ export default function App() {
           </div>
         )}
         
+        {tourStep !== null && (
+          <TourStrip
+            step={tourStep}
+            steps={TOUR_STEPS}
+            activeTab={activeTab}
+            onAbandon={abandonTour}
+            theme={theme}
+          />
+        )}
         {/* Bottom Navigation */}
         {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />}
       </div>
@@ -2825,13 +2842,13 @@ export default function App() {
                 <h2 className="text-xs uppercase tracking-widest mb-3" style={{ color: theme.textTertiary }}>Help</h2>
                 <div className="rounded-2xl mb-3" style={{ backgroundColor: theme.bgSecondary, boxShadow: cardShadow, overflow: 'hidden' }}>
                   <button
-                    onClick={() => { localStorage.removeItem('breadcrumbs-has-seen-onboarding'); setShowOnboarding(true); }}
+                    onClick={() => { setTourStep(0); setActiveTab('list'); }}
                     className="w-full flex items-center justify-between px-4 py-3 text-left transition-all active:opacity-70"
                     style={{ borderBottom: `1px solid ${theme.border}`, background: 'none', border: 'none', borderBottom: `1px solid ${theme.border}`, cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}
                   >
                     <div>
                       <p className="text-sm font-medium" style={{ color: theme.text }}>App intro</p>
-                      <p className="text-xs" style={{ color: theme.textSecondary, fontWeight: 300 }}>Replay the welcome walkthrough</p>
+                      <p className="text-xs" style={{ color: theme.textSecondary, fontWeight: 300 }}>Replay the getting started tour</p>
                     </div>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                       <path d="M9 18l6-6-6-6"/>
@@ -3206,6 +3223,15 @@ export default function App() {
           )}
         </div>
         
+        {tourStep !== null && (
+          <TourStrip
+            step={tourStep}
+            steps={TOUR_STEPS}
+            activeTab={activeTab}
+            onAbandon={abandonTour}
+            theme={theme}
+          />
+        )}
         {/* Bottom Navigation */}
         {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />}
       </div>
@@ -3382,7 +3408,6 @@ export default function App() {
       {desktopSidebar}
       <Toast message={toastMessage} visible={showToast} theme={theme} />
       
-      {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} theme={theme} />}
       {showQuickAddOnboarding && <QuickAddOnboardingModal onComplete={completeQuickAddOnboarding} theme={theme} />}
       
       {showClearConfirm && (
@@ -3764,7 +3789,7 @@ export default function App() {
           onClick={() => { triggerHaptic('light'); setFabOpen(true); }}
           style={{
             position: 'fixed',
-            bottom: isDesktop ? 24 : 88,
+            bottom: isDesktop ? 24 : (tourStep !== null ? 148 : 88),
             right: 20,
             width: 56,
             height: 56,
@@ -3794,7 +3819,7 @@ export default function App() {
           className="fab-area"
           style={{
             position: 'fixed',
-            bottom: isDesktop ? 0 : 64,
+            bottom: isDesktop ? 0 : (tourStep !== null ? 128 : 72),
             left: isDesktop ? 88 : 0,
             right: 0,
             backgroundColor: theme.bg,
@@ -3918,6 +3943,15 @@ export default function App() {
         </div>
       )}
 
+      {tourStep !== null && (
+        <TourStrip
+          step={tourStep}
+          steps={TOUR_STEPS}
+          activeTab={activeTab}
+          onAbandon={abandonTour}
+          theme={theme}
+        />
+      )}
       {/* Bottom Navigation */}
       {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} theme={theme} />}
     </div>
