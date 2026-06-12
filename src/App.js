@@ -1557,7 +1557,7 @@ export default function App() {
           )}
         </div>
 
-        <div className="px-6 py-5" style={{ paddingBottom: isDesktop ? 24 : 120 }}>
+        <div className="px-6 py-5" style={{ paddingBottom: isDesktop ? 24 : 120, maxWidth: isDesktop ? 820 : 'none' }}>
           {showCreateRecipe ? (
             <div className="fade-in" style={{ paddingBottom: 90 }}>
               {/* Recipe name */}
@@ -1650,7 +1650,7 @@ export default function App() {
                   </p>
                 </div>
               ) : (
-                <div style={isDesktop ? { display: 'grid', gridTemplateColumns: isWide ? 'repeat(3, 1fr)' : 'repeat(2, 1fr)', gap: '0 32px' } : {}}>
+                <div style={isDesktop ? { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0 32px' } : {}}>
                   {recipes.map((recipe) => {
                     const ingredientNames = recipe.ingredients.map(i => i.name);
                     const preview = ingredientNames.slice(0, 4).join(', ') + (ingredientNames.length > 4 ? '…' : '');
@@ -1749,7 +1749,7 @@ export default function App() {
 
   // ════════════════ Settings Screen ════════════════
   if (activeTab === 'settings' && listId) {
-    const tabIndex = { general: 0, stores: 1, categories: 2 }[settingsTab];
+    const inSubSection = settingsTab !== 'general';
     return (
       <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? 88 : 0 }}>
         <style>{styles}</style>
@@ -1758,39 +1758,44 @@ export default function App() {
 
         {/* Black header with share code hero */}
         <div style={{ backgroundColor: INK, borderRadius: '0 0 28px 28px', padding: '18px 28px 22px' }}>
-          <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', margin: 0, color: PAPER }}>Settings</h1>
-          <div style={{ marginTop: 16, borderRadius: 18, border: '1.5px solid rgba(250,250,249,0.18)', padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: 'rgba(250,250,249,0.45)', textTransform: 'uppercase', margin: '0 0 6px' }}>Share code</p>
-              <span style={{ fontSize: 26, fontWeight: 700, fontFamily: MONO, letterSpacing: '0.14em', color: PAPER }}>{listId}</span>
+          {inSubSection ? (
+            <div className="flex items-center" style={{ gap: 12 }}>
+              <button
+                onClick={() => { setSettingsTab('general'); triggerHaptic('light'); }}
+                className="bc-press flex items-center"
+                style={{ gap: 6, fontSize: 14, fontWeight: 700, color: 'rgba(250,250,249,0.7)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+                Settings
+              </button>
+              <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.025em', margin: 0, color: PAPER }}>
+                {settingsTab === 'stores' ? 'Stores' : 'Categories'}
+              </h1>
             </div>
-            <button
-              onClick={() => { navigator.clipboard?.writeText(listId); triggerHaptic('success'); showToastMessage('Code copied!'); }}
-              className="bc-press"
-              style={{ padding: '11px 0', width: 86, fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: INK, cursor: 'pointer' }}
-            >
-              Copy
-            </button>
-          </div>
-          <p style={{ fontSize: 12, color: 'rgba(250,250,249,0.4)', margin: '10px 0 0' }}>Share this code so others can join your list.</p>
+          ) : (
+            <>
+              <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', margin: 0, color: PAPER }}>Settings</h1>
+              <div style={{ marginTop: 16, borderRadius: 18, border: '1.5px solid rgba(250,250,249,0.18)', padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: 'rgba(250,250,249,0.45)', textTransform: 'uppercase', margin: '0 0 6px' }}>Share code</p>
+                  <span style={{ fontSize: 26, fontWeight: 700, fontFamily: MONO, letterSpacing: '0.14em', color: PAPER }}>{listId}</span>
+                </div>
+                <button
+                  onClick={() => { navigator.clipboard?.writeText(listId); triggerHaptic('success'); showToastMessage('Code copied!'); }}
+                  className="bc-press"
+                  style={{ padding: '11px 0', width: 86, fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: INK, cursor: 'pointer' }}
+                >
+                  Copy
+                </button>
+              </div>
+              <p style={{ fontSize: 12, color: 'rgba(250,250,249,0.4)', margin: '10px 0 0' }}>Share this code so others can join your list.</p>
+            </>
+          )}
         </div>
 
         <div className="px-6 py-5" style={{ paddingBottom: isDesktop ? 24 : 120, maxWidth: isDesktop ? 560 : 'none' }}>
-          {/* Segmented tabs — sliding ink thumb */}
-          <div style={{ position: 'relative', display: 'flex', backgroundColor: theme.bgTertiary, borderRadius: 9999, padding: 3, marginBottom: 22 }}>
-            <div style={{ position: 'absolute', top: 3, bottom: 3, left: 3, width: 'calc(33.333% - 2px)', borderRadius: 9999, backgroundColor: INK, transform: `translateX(${tabIndex * 100}%)`, transition: 'transform 0.28s cubic-bezier(0.22,1,0.36,1)' }} />
-            {[['general', 'General'], ['stores', 'Stores'], ['categories', 'Categories']].map(([id, label]) => (
-              <button
-                key={id}
-                onClick={() => { setSettingsTab(id); triggerHaptic('light'); }}
-                style={{ flex: 1, padding: '11px 0', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', background: 'transparent', color: settingsTab === id ? YELLOW : theme.textSecondary, cursor: 'pointer', position: 'relative', zIndex: 1, transition: 'color 0.25s ease', fontFamily: 'inherit' }}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
 
-          {/* ── General ── */}
+          {/* ── General (main settings page) ── */}
           {settingsTab === 'general' && (
             <>
               <div style={{ padding: '15px 0', borderBottom: `1.5px solid ${theme.border}` }}>
@@ -1807,9 +1812,25 @@ export default function App() {
                 />
               </div>
 
+              {/* Navigation rows */}
+              {[['stores', 'Stores', 'Switch store layout and reorder aisles'], ['categories', 'Categories', 'Show or hide aisles, add custom ones']].map(([id, label, desc]) => (
+                <button
+                  key={id}
+                  onClick={() => { setSettingsTab(id); triggerHaptic('light'); }}
+                  className="w-full flex items-center justify-between bc-press"
+                  style={{ padding: '16px 0', borderBottom: `1.5px solid ${theme.border}`, background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer', textAlign: 'left' }}
+                >
+                  <div>
+                    <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: INK }}>{label}</span>
+                    <span style={{ display: 'block', fontSize: 12, color: theme.textTertiary, marginTop: 2 }}>{desc}</span>
+                  </div>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+              ))}
+
               <button
                 onClick={() => { localStorage.removeItem('breadcrumbs-has-seen-onboarding'); setShowOnboarding(true); }}
-                className="w-full flex items-center justify-between"
+                className="w-full flex items-center justify-between bc-press"
                 style={{ padding: '16px 0', borderBottom: `1.5px solid ${theme.border}`, background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
               >
                 <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Replay app intro</span>
@@ -1819,7 +1840,7 @@ export default function App() {
               {checkedCount > 0 && (
                 <button
                   onClick={() => { triggerHaptic('light'); setShowClearConfirm(true); }}
-                  className="w-full flex items-center justify-between"
+                  className="w-full flex items-center justify-between bc-press"
                   style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
                 >
                   <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Clear ticked items</span>
@@ -1830,7 +1851,7 @@ export default function App() {
               {totalItems > 0 && (
                 <button
                   onClick={() => { triggerHaptic('light'); setShowClearAllConfirm(true); }}
-                  className="w-full flex items-center justify-between"
+                  className="w-full flex items-center justify-between bc-press"
                   style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
                 >
                   <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Clear all items</span>
@@ -1840,7 +1861,7 @@ export default function App() {
 
               <button
                 onClick={() => { triggerHaptic('light'); setShowLeaveConfirm(true); }}
-                className="w-full flex items-center justify-between"
+                className="w-full flex items-center justify-between bc-press"
                 style={{ padding: '16px 0', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 <span style={{ fontSize: 15, fontWeight: 600, color: theme.textTertiary }}>Leave this list</span>
@@ -1920,8 +1941,8 @@ export default function App() {
                     autoFocus
                   />
                   <div className="flex gap-2">
-                    <button onClick={() => { setShowAddCategory(false); setNewCategoryName(''); }} className="flex-1 py-2.5 bc-press" style={{ fontSize: 13, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
-                    <button onClick={addCustomCategory} disabled={!newCategoryName.trim()} className="flex-1 py-2.5 bc-press" style={{ fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: newCategoryName.trim() ? YELLOW : theme.border, color: INK, cursor: 'pointer' }}>Create</button>
+                    <button onClick={() => { setShowAddCategory(false); setNewCategoryName(''); }} className="flex-1 py-2.5 bc-press" style={{ fontSize: 13, fontWeight: 700, borderRadius: 9999, border: `1.5px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
+                    <button onClick={addCustomCategory} disabled={!newCategoryName.trim()} className="flex-1 py-2.5 bc-press" style={{ fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: newCategoryName.trim() ? INK : theme.border, color: newCategoryName.trim() ? PAPER : theme.textTertiary, cursor: newCategoryName.trim() ? 'pointer' : 'default', transition: 'background-color 0.18s ease' }}>Create</button>
                   </div>
                 </div>
               ) : (
@@ -1939,8 +1960,8 @@ export default function App() {
                 const itemCount = items.filter(i => i.category === cat.id).length;
                 const isCustom = cat.isDefault === false;
                 return (
-                  <div key={cat.id} className="flex items-center gap-3" style={{ padding: '12px 0', borderBottom: `1.5px solid ${theme.borderLight}`, opacity: isHidden ? 0.45 : 1, transition: 'opacity 0.2s ease' }}>
-                    <div className="flex-1 min-w-0">
+                  <div key={cat.id} className="flex items-center gap-3" style={{ padding: '12px 0', borderBottom: `1.5px solid ${theme.borderLight}` }}>
+                    <div className="flex-1 min-w-0" style={{ opacity: isHidden ? 0.4 : 1, transition: 'opacity 0.2s ease' }}>
                       <div className="flex items-center gap-2">
                         <span className="truncate" style={{ fontSize: 15, fontWeight: 600, color: INK }}>{cat.name}</span>
                         {isCustom && (
@@ -1956,9 +1977,15 @@ export default function App() {
                     )}
                     <button
                       onClick={() => toggleCategoryVisibility(cat.id)}
-                      style={{ width: 46, height: 26, borderRadius: 9999, backgroundColor: isHidden ? theme.border : INK, position: 'relative', flexShrink: 0, border: 'none', cursor: 'pointer', transition: 'background-color 0.2s ease', padding: 0 }}
+                      className="bc-press"
+                      title={isHidden ? 'Show aisle' : 'Hide aisle'}
+                      style={{ width: 36, height: 36, borderRadius: '50%', border: `1.5px solid ${isHidden ? theme.border : theme.border}`, backgroundColor: isHidden ? 'transparent' : theme.bgTertiary, color: isHidden ? theme.textTertiary : theme.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', transition: 'background-color 0.18s ease, color 0.18s ease', padding: 0 }}
                     >
-                      <div style={{ position: 'absolute', top: 3, width: 20, height: 20, borderRadius: '50%', backgroundColor: isHidden ? '#fff' : YELLOW, left: isHidden ? 3 : 'calc(100% - 23px)', transition: 'left 0.22s cubic-bezier(0.22,1,0.36,1), background-color 0.2s ease' }} />
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        {isHidden
+                          ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                          : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
+                      </svg>
                     </button>
                   </div>
                 );
@@ -2221,9 +2248,8 @@ export default function App() {
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={YELLOW} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
             </span>
           </button>
-          <div className="flex items-center" style={{ gap: 8, padding: '6px 12px', borderRadius: 9999, border: '1.5px solid rgba(250,250,249,0.2)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', borderRadius: 9999, border: '1.5px solid rgba(250,250,249,0.2)', flexShrink: 0 }}>
             <SyncTrail active={isOnline && !syncing} />
-            <span style={{ fontSize: 11.5, fontFamily: MONO, fontWeight: 500, letterSpacing: '0.12em', color: PAPER }}>{listId}</span>
           </div>
         </div>
 
@@ -2232,18 +2258,30 @@ export default function App() {
             <span key={remainingCount} className="bc-num">{remainingCount}</span>
             <span style={{ fontSize: 16, fontWeight: 600, color: YELLOW, marginLeft: 8 }}>to go</span>
           </h1>
-          <button
-            onClick={() => { triggerHaptic('light'); setHideCompleted(!hideCompleted); }}
-            className="bc-press flex items-center"
-            style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: hideCompleted ? '1.5px solid transparent' : '1.5px solid rgba(250,250,249,0.25)', backgroundColor: hideCompleted ? YELLOW : 'transparent', color: hideCompleted ? INK : 'rgba(250,250,249,0.7)', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              {hideCompleted
-                ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>
-                : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
-            </svg>
-            Hide done
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {checkedCount > 0 && (
+              <button
+                onClick={() => { triggerHaptic('light'); setShowClearConfirm(true); }}
+                className="bc-press flex items-center"
+                style={{ gap: 5, padding: '8px 12px', borderRadius: 9999, border: '1.5px solid rgba(250,250,249,0.25)', backgroundColor: 'transparent', color: 'rgba(250,250,249,0.7)', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'background-color 0.2s ease' }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+                Clear
+              </button>
+            )}
+            <button
+              onClick={() => { triggerHaptic('light'); setHideCompleted(!hideCompleted); }}
+              className="bc-press flex items-center"
+              style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: hideCompleted ? '1.5px solid transparent' : '1.5px solid rgba(250,250,249,0.25)', backgroundColor: hideCompleted ? YELLOW : 'transparent', color: hideCompleted ? INK : 'rgba(250,250,249,0.7)', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                {hideCompleted
+                  ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                  : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
+              </svg>
+              Hide done
+            </button>
+          </div>
         </div>
 
         {/* Progress — ticks up to 24 items, bar beyond */}
