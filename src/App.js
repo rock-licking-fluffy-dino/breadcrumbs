@@ -559,7 +559,7 @@ const Toast = ({ message, visible }) => {
   );
 };
 
-// Bottom Navigation — black pill, yellow active label
+// Bottom Navigation — full-width bar, yellow active label
 const BottomNav = ({ activeTab, onTabChange }) => {
   const tabs = [
     { id: 'list', label: 'List' },
@@ -569,14 +569,14 @@ const BottomNav = ({ activeTab, onTabChange }) => {
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-50"
-      style={{ padding: '8px 48px calc(14px + env(safe-area-inset-bottom, 0px))', pointerEvents: 'none' }}
+      style={{ backgroundColor: INK, borderTop: '1px solid rgba(250,250,249,0.08)', paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', backgroundColor: INK, borderRadius: 9999, padding: '15px 10px', pointerEvents: 'auto', boxShadow: '0 10px 30px rgba(28,25,23,0.3)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '0 8px' }}>
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => { triggerHaptic('light'); onTabChange(tab.id); }}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', color: activeTab === tab.id ? '#FACC15' : 'rgba(250,250,249,0.4)', padding: '2px 12px', transition: 'color 0.2s ease' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit', color: activeTab === tab.id ? '#FACC15' : 'rgba(250,250,249,0.4)', padding: '18px 20px 16px', transition: 'color 0.2s ease', flex: 1 }}
           >
             {tab.label}
           </button>
@@ -675,11 +675,13 @@ export default function App() {
     }
   }, [fabOpen]);
 
-  // Close fab when switching tabs
+  // Close fab and modals when switching tabs
   useEffect(() => {
     setFabOpen(false);
     setFabInput('');
     setFabNoMatchMode(false);
+    setShowClearConfirm(false);
+    setShowClearAllConfirm(false);
   }, [activeTab]);
 
   // Load list name from localStorage when listId changes
@@ -1557,7 +1559,7 @@ export default function App() {
           )}
         </div>
 
-        <div className="px-6 py-5" style={{ paddingBottom: isDesktop ? 24 : 120, maxWidth: isDesktop ? 820 : 'none' }}>
+        <div className="px-6 py-5" style={{ paddingBottom: isDesktop ? 24 : 90, maxWidth: isDesktop ? 820 : 'none' }}>
           {showCreateRecipe ? (
             <div className="fade-in" style={{ paddingBottom: 90 }}>
               {/* Recipe name */}
@@ -1793,7 +1795,7 @@ export default function App() {
           )}
         </div>
 
-        <div className="px-6 py-5" style={{ paddingBottom: isDesktop ? 24 : 120, maxWidth: isDesktop ? 560 : 'none' }}>
+        <div className="px-6 py-5" style={{ paddingBottom: isDesktop ? 24 : 90, maxWidth: isDesktop ? 560 : 'none' }}>
 
           {/* ── General (main settings page) ── */}
           {settingsTab === 'general' && (
@@ -2301,7 +2303,7 @@ export default function App() {
       </div>
 
       {/* ── Aisles ── */}
-      <div className="px-7 pt-5" style={{ paddingBottom: isDesktop ? 24 : 120 }}>
+      <div className="px-7 pt-5" style={{ paddingBottom: isDesktop ? 24 : 90 }}>
         {totalItems === 0 ? (
           <div className="text-center" style={{ paddingTop: 70 }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 24 }}>
