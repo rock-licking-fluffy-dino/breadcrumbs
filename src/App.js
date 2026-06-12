@@ -393,25 +393,46 @@ const saveCategoryCorrection = (itemName, categoryId) => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// Bold Crumb theme — single theme, no dark mode.
-// Yellow has three jobs: signal, primary action, progress.
-// Black surfaces carry wayfinding; paper carries content.
-// Mono is reserved for data: codes, counts, quantities.
+// Morning Paper theme — light and dark variants of the same
+// stone palette. Yellow keeps its three jobs in both: signal,
+// primary action, progress. `ink` is the strong foreground and
+// flips to near-paper in dark; anything sitting ON yellow stays
+// literal #1c1917 (yellow is a light surface in both themes).
 // ─────────────────────────────────────────────────────────────
 const INK = '#1c1917';
 const PAPER = '#fafaf9';
 const MONO = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
-const theme = {
-  bg: PAPER,
-  bgSecondary: '#fff',
-  bgTertiary: '#f5f5f4',
-  text: '#292524',
-  textSecondary: '#78716c',
-  textTertiary: '#a8a29e',
-  border: '#e7e5e4',
-  borderLight: '#f5f5f4',
-  cardShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
-  yellowGlow: '0 4px 20px rgba(250,204,21,0.35)',
+const THEMES = {
+  light: {
+    bg: PAPER,
+    bgSecondary: '#fff',
+    bgTertiary: '#f5f5f4',
+    ink: INK,
+    text: '#292524',
+    textSecondary: '#78716c',
+    textTertiary: '#a8a29e',
+    border: '#e7e5e4',
+    borderLight: '#f5f5f4',
+    accentOnInk: '#FACC15',
+    overlay: 'rgba(28,25,23,0.5)',
+    cardShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
+    yellowGlow: '0 4px 20px rgba(250,204,21,0.35)',
+  },
+  dark: {
+    bg: '#161312',
+    bgSecondary: '#221e1c',
+    bgTertiary: '#2b2624',
+    ink: '#f5f4f2',
+    text: '#d6d3d1',
+    textSecondary: '#a8a29e',
+    textTertiary: '#78716c',
+    border: '#352f2c',
+    borderLight: '#2b2624',
+    accentOnInk: '#1c1917',
+    overlay: 'rgba(0,0,0,0.6)',
+    cardShadow: '0 2px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3)',
+    yellowGlow: '0 4px 20px rgba(250,204,21,0.2)',
+  },
 };
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -423,21 +444,8 @@ const triggerHaptic = (style = 'light') => {
   }
 };
 
-// Sync trail — the three-dot logo working as the live indicator
-const SyncTrail = ({ active = true, mono = false }) => (
-  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-    {[5, 4, 3].map((d, i) => (
-      <span
-        key={i}
-        className={active ? 'bc-sync-dot' : ''}
-        style={{ width: d, height: d, borderRadius: '50%', backgroundColor: mono ? '#a8a29e' : '#FACC15', animationDelay: `${i * 0.22}s`, opacity: active ? undefined : 0.4 }}
-      />
-    ))}
-  </span>
-);
-
 // Onboarding Modal Component
-const OnboardingModal = ({ listCode, onComplete }) => {
+const OnboardingModal = ({ listCode, onComplete, t }) => {
   const [currentCard, setCurrentCard] = useState(0);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
@@ -474,18 +482,18 @@ const OnboardingModal = ({ listCode, onComplete }) => {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-end select-none"
-      style={{ backgroundColor: 'rgba(28,25,23,0.4)', fontFamily: 'Inter, sans-serif' }}
+      style={{ backgroundColor: t.overlay, fontFamily: 'Inter, sans-serif' }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="w-full flex flex-col" style={{ backgroundColor: theme.bg, borderRadius: '28px 28px 0 0', maxHeight: '92vh', overflowY: 'auto' }}>
+      <div className="w-full flex flex-col" style={{ backgroundColor: t.bg, borderRadius: '28px 28px 0 0', maxHeight: '92vh', overflowY: 'auto' }}>
         <div
           className="flex justify-center"
           style={{ marginTop: 12, marginBottom: 12 }}
           onTouchStart={(e) => { touchStartY.current = e.touches[0].clientY; }}
           onTouchEnd={(e) => { if (touchStartY.current !== null && e.changedTouches[0].clientY - touchStartY.current > 60) skip(); touchStartY.current = null; }}
         >
-          <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: theme.border }} />
+          <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: t.border }} />
         </div>
 
         <div className="flex items-center justify-center" style={{ height: 170 }}>
@@ -496,7 +504,7 @@ const OnboardingModal = ({ listCode, onComplete }) => {
               <div className="breathe-3" style={{ width: 38, height: 38, borderRadius: '50%', backgroundColor: '#FACC15', opacity: 0.3 }} />
             </div>
           ) : (
-            <div key={`circle-${currentCard}`} style={{ width: 130, height: 130, borderRadius: '50%', backgroundColor: '#fff', border: `2px solid ${INK}`, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'onboardSlideIn 0.5s cubic-bezier(0.22,1,0.36,1)' }}>
+            <div key={`circle-${currentCard}`} style={{ width: 130, height: 130, borderRadius: '50%', backgroundColor: t.bgSecondary, border: `2px solid ${t.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'onboardSlideIn 0.5s cubic-bezier(0.22,1,0.36,1)' }}>
               <span style={{ fontSize: 44, lineHeight: 1, display: 'block' }}>{card.emoji}</span>
             </div>
           )}
@@ -504,11 +512,11 @@ const OnboardingModal = ({ listCode, onComplete }) => {
 
         <div className="flex flex-col" style={{ paddingLeft: 32, paddingRight: 32, paddingBottom: 'max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))' }}>
           <div key={`text-${currentCard}`} className="text-center" style={{ animation: 'onboardSlideIn 0.5s cubic-bezier(0.22,1,0.36,1)', minHeight: 128 }}>
-            <h2 style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.02em', color: theme.text, marginBottom: 10, lineHeight: 1.3 }}>{card.title}</h2>
-            <p style={{ fontSize: 14, lineHeight: 1.65, color: theme.textSecondary, margin: 0 }}>{card.description}</p>
+            <h2 style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.02em', color: t.text, marginBottom: 10, lineHeight: 1.3 }}>{card.title}</h2>
+            <p style={{ fontSize: 14, lineHeight: 1.65, color: t.textSecondary, margin: 0 }}>{card.description}</p>
             {card.showCode && (
               <div className="flex justify-center mt-4">
-                <div style={{ paddingLeft: 24, paddingRight: 24, paddingTop: 8, paddingBottom: 8, borderRadius: 9999, border: `2px solid ${INK}`, color: theme.text, fontFamily: MONO, fontWeight: 700, letterSpacing: '0.14em' }}>
+                <div style={{ paddingLeft: 24, paddingRight: 24, paddingTop: 8, paddingBottom: 8, borderRadius: 9999, border: `2px solid ${t.ink}`, color: t.text, fontFamily: MONO, fontWeight: 700, letterSpacing: '0.14em' }}>
                   {listCode || 'ABC123'}
                 </div>
               </div>
@@ -518,7 +526,7 @@ const OnboardingModal = ({ listCode, onComplete }) => {
           <div style={{ flex: 1 }} />
 
           <div className="text-center" style={{ marginBottom: 12, visibility: isLastCard ? 'hidden' : 'visible' }}>
-            <button onClick={skip} style={{ fontSize: 13, color: theme.textTertiary, background: 'none', border: 'none', cursor: isLastCard ? 'default' : 'pointer', padding: '4px 8px' }}>Skip</button>
+            <button onClick={skip} style={{ fontSize: 13, color: t.textTertiary, background: 'none', border: 'none', cursor: isLastCard ? 'default' : 'pointer', padding: '4px 8px' }}>Skip</button>
           </div>
 
           <div className="flex justify-center" style={{ gap: 8, marginBottom: 16 }}>
@@ -548,11 +556,11 @@ const OnboardingModal = ({ listCode, onComplete }) => {
 };
 
 // Toast Component
-const Toast = ({ message, visible }) => {
+const Toast = ({ message, visible, t }) => {
   if (!visible) return null;
   return (
     <div className="fixed top-6 left-4 right-4 flex justify-center z-50 fade-in">
-      <div className="px-5 py-3 rounded-full text-sm font-semibold" style={{ backgroundColor: INK, color: PAPER, boxShadow: '0 8px 28px rgba(0,0,0,0.25)' }}>
+      <div className="px-5 py-3 rounded-full text-sm font-semibold" style={{ backgroundColor: t.ink, color: t.bg, boxShadow: '0 8px 28px rgba(0,0,0,0.25)' }}>
         {message}
       </div>
     </div>
@@ -560,7 +568,7 @@ const Toast = ({ message, visible }) => {
 };
 
 // Bottom Navigation — full-width paper bar, a crumb above the active label
-const BottomNav = ({ activeTab, onTabChange }) => {
+const BottomNav = ({ activeTab, onTabChange, t }) => {
   const tabs = [
     { id: 'list', label: 'List' },
     { id: 'recipes', label: 'Recipes' },
@@ -569,7 +577,7 @@ const BottomNav = ({ activeTab, onTabChange }) => {
   return (
     <div
       className="fixed bottom-0 left-0 right-0 z-50"
-      style={{ backgroundColor: PAPER, borderTop: `1.5px solid ${theme.border}` }}
+      style={{ backgroundColor: t.bg, borderTop: `1.5px solid ${t.border}` }}
     >
       <div style={{ display: 'flex', paddingTop: 11, paddingBottom: 'max(26px, env(safe-area-inset-bottom, 0px))' }}>
         {tabs.map(tab => {
@@ -581,7 +589,7 @@ const BottomNav = ({ activeTab, onTabChange }) => {
               style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
             >
               <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: isActive ? YELLOW : 'transparent', transition: 'background-color 0.2s ease' }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? INK : theme.textTertiary, transition: 'color 0.2s ease' }}>{tab.label}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? t.ink : t.textTertiary, transition: 'color 0.2s ease' }}>{tab.label}</span>
             </button>
           );
         })}
@@ -591,8 +599,8 @@ const BottomNav = ({ activeTab, onTabChange }) => {
 };
 
 // Crumb-trail home — lights up when the trail is complete
-const TrailHome = ({ lit }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill={lit ? YELLOW : 'none'} stroke={lit ? INK : '#a8a29e'} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'stroke 0.3s ease, fill 0.3s ease' }}>
+const TrailHome = ({ lit, t }) => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill={lit ? YELLOW : 'none'} stroke={lit ? '#1c1917' : t.textTertiary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'stroke 0.3s ease, fill 0.3s ease' }}>
     <path d="M4 11l8-7 8 7" /><path d="M6 9.5V20h12V9.5" />
   </svg>
 );
@@ -619,7 +627,6 @@ export default function App() {
   const [checkingItems, setCheckingItems] = useState(new Set());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -654,6 +661,19 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('list');
   const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('breadcrumbs-hide-completed') === 'true');
 
+  // Theme — light / dark / system, persisted
+  const [themePref, setThemePref] = useState(() => {
+    const saved = localStorage.getItem('breadcrumbs-theme');
+    return ['light', 'dark', 'system'].includes(saved) ? saved : 'system';
+  });
+  const [systemDark, setSystemDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
+  const isDark = themePref === 'dark' || (themePref === 'system' && systemDark);
+  // Shadow the literal tokens so every in-screen usage follows the theme.
+  // On-yellow elements use literal '#1c1917' below — yellow stays light in both.
+  const theme = isDark ? THEMES.dark : THEMES.light;
+  const INK = theme.ink;
+  const PAPER = theme.bg;
+
   // Quick Add state — the only way to add items
   const [fabOpen, setFabOpen] = useState(false);
   const [fabInput, setFabInput] = useState('');
@@ -678,6 +698,27 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('breadcrumbs-hide-completed', hideCompleted ? 'true' : 'false');
   }, [hideCompleted]);
+
+  // Persist theme preference and follow the system setting
+  useEffect(() => {
+    localStorage.setItem('breadcrumbs-theme', themePref);
+  }, [themePref]);
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!mq) return;
+    const handler = (e) => setSystemDark(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // Keep the browser chrome and page background in step with the theme.
+  // Welcome stays black — that's the brand moment.
+  useEffect(() => {
+    const color = !listId ? '#1c1917' : theme.bg;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', color);
+    document.body.style.backgroundColor = color;
+  }, [listId, theme.bg]);
 
   // Focus fab input when opened
   useEffect(() => {
@@ -770,24 +811,18 @@ export default function App() {
 
   useEffect(() => {
     if (!listId) return;
-    setSyncing(true);
     const unsubscribe = onSnapshot(
       doc(db, 'lists', listId),
       (docSnap) => {
-        if (isSavingRef.current) {
-          setSyncing(false);
-          return;
-        }
+        if (isSavingRef.current) return;
         if (docSnap.exists()) {
           const data = docSnap.data();
           setItems(data.items || []);
           if (data.recipes) setRecipes(data.recipes);
         }
-        setSyncing(false);
       },
       (error) => {
         console.error('Error listening to list:', error);
-        setSyncing(false);
       }
     );
     return () => unsubscribe();
@@ -1339,7 +1374,6 @@ export default function App() {
     @keyframes bcPop { 0% { transform: scale(1); } 45% { transform: scale(1.18); } 100% { transform: scale(1); } }
     @keyframes bcCharPop { 0% { transform: scale(0.85); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
     @keyframes bcNumIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes bcSyncPulse { 0%, 100% { opacity: 0.25; } 30% { opacity: 1; } }
     @keyframes bcHintIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes bcBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
     @keyframes breathe {
@@ -1348,9 +1382,9 @@ export default function App() {
       100% { transform: translateY(0px) scale(1); }
     }
     @keyframes buttonPop {
-      0% { transform: scale(1); background-color: ${INK}; }
-      50% { transform: scale(1.02); background-color: ${YELLOW}; }
-      100% { transform: scale(1); background-color: ${YELLOW}; }
+      0% { transform: scale(1); background-color: #1c1917; }
+      50% { transform: scale(1.02); background-color: #FACC15; }
+      100% { transform: scale(1); background-color: #FACC15; }
     }
     @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
     @keyframes fabSlideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
@@ -1362,7 +1396,6 @@ export default function App() {
     .bc-pop { animation: bcPop 0.3s cubic-bezier(0.175,0.885,0.32,1.275); }
     .bc-charpop { animation: bcCharPop 0.18s ease-out; }
     .bc-num { display: inline-block; animation: bcNumIn 0.28s cubic-bezier(0.22,1,0.36,1); }
-    .bc-sync-dot { animation: bcSyncPulse 1.8s ease-in-out infinite; }
     .bc-hint { animation: bcHintIn 0.25s ease-out; }
     .bc-press { transition: transform 0.12s ease; }
     .bc-press:active { transform: scale(0.96); }
@@ -1372,6 +1405,9 @@ export default function App() {
     .btn-pop { animation: buttonPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     .sync-pulse { animation: pulse 1.5s ease-in-out infinite; }
     input { font-size: 16px !important; }
+    @media (hover: hover) and (pointer: fine) {
+      .bc-press:hover { opacity: 0.9; }
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
     }
@@ -1425,7 +1461,7 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 2 }}>
               <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>{category.name}</span>
               {uncheckedCount > 0 && (
-                <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: INK, borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{uncheckedCount}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{uncheckedCount}</span>
               )}
               <div style={{ flex: 1, height: 1.5, backgroundColor: theme.border }} />
             </div>
@@ -1469,7 +1505,7 @@ export default function App() {
                           transition: 'background-color 0.18s ease, border-color 0.18s ease',
                         }}
                       >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M4 12l6 6L20 6" style={{ strokeDasharray: 24, strokeDashoffset: item.checked ? 0 : 24, transition: item.checked ? 'stroke-dashoffset 0.25s ease 0.08s' : 'none' }} />
                         </svg>
                       </button>
@@ -1513,7 +1549,7 @@ export default function App() {
                           <button onClick={() => updateQuantity(item.id, -1)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14 }}>−</button>
                           <span style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, width: 24, textAlign: 'center', color: INK }}>{quantity}</span>
                           <button onClick={() => updateQuantity(item.id, 1)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14 }}>+</button>
-                          <button onClick={() => setEditingQuantityId(null)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: YELLOW, color: INK, border: 'none', cursor: 'pointer', fontSize: 12, marginLeft: 4 }}>✓</button>
+                          <button onClick={() => setEditingQuantityId(null)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: YELLOW, color: '#1c1917', border: 'none', cursor: 'pointer', fontSize: 12, marginLeft: 4 }}>✓</button>
                         </div>
                       )}
 
@@ -1543,10 +1579,11 @@ export default function App() {
       >
         <style>{styles}</style>
         {desktopSidebar}
-        <Toast message={toastMessage} visible={showToast} />
+        <Toast message={toastMessage} visible={showToast} t={theme} />
 
         {/* Paper header */}
         <div className="sticky top-0 z-40" style={{ backgroundColor: PAPER, borderBottom: `1.5px solid ${theme.border}`, padding: '12px 28px 18px' }}>
+          <div style={{ maxWidth: isDesktop ? 820 : 'none' }}>
           {showCreateRecipe ? (
             <div className="flex items-center justify-between">
               <button
@@ -1568,6 +1605,7 @@ export default function App() {
               <p style={{ fontSize: 14, color: theme.textSecondary, margin: '6px 0 0' }}>A whole meal, dropped on the list at once.</p>
             </>
           )}
+          </div>
         </div>
 
         <div style={{ padding: '6px 28px 0', paddingBottom: isDesktop ? 24 : 110, maxWidth: isDesktop ? 820 : 'none' }}>
@@ -1598,7 +1636,7 @@ export default function App() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: hasIngredients ? theme.textSecondary : theme.textTertiary, whiteSpace: 'nowrap', flexShrink: 0 }}>{category.name}</span>
                       {hasIngredients && (
-                        <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: INK, borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{categoryIngredients.length}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{categoryIngredients.length}</span>
                       )}
                       <div style={{ flex: 1, height: 1.5, backgroundColor: theme.borderLight }} />
                       <button
@@ -1627,7 +1665,7 @@ export default function App() {
                             onClick={addRecipeIngredient}
                             disabled={!newRecipeItemText.trim()}
                             className="bc-press"
-                            style={{ padding: '8px 18px', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: newRecipeItemText.trim() ? YELLOW : theme.bgTertiary, color: newRecipeItemText.trim() ? INK : theme.textTertiary, cursor: newRecipeItemText.trim() ? 'pointer' : 'default' }}
+                            style={{ padding: '8px 18px', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: newRecipeItemText.trim() ? YELLOW : theme.bgTertiary, color: newRecipeItemText.trim() ? '#1c1917' : theme.textTertiary, cursor: newRecipeItemText.trim() ? 'pointer' : 'default' }}
                           >
                             Add
                           </button>
@@ -1684,7 +1722,7 @@ export default function App() {
                         <button
                           onClick={() => addRecipeToList(recipe)}
                           className="bc-press"
-                          style={{ padding: '11px 0', width: 80, fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: isAdded ? INK : YELLOW, color: isAdded ? YELLOW : INK, cursor: 'pointer', flexShrink: 0, transition: 'background-color 0.22s ease, color 0.22s ease' }}
+                          style={{ padding: '11px 0', width: 80, fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: isAdded ? INK : YELLOW, color: isAdded ? theme.accentOnInk : '#1c1917', cursor: 'pointer', flexShrink: 0, transition: 'background-color 0.22s ease, color 0.22s ease' }}
                         >
                           {isAdded ? 'Added ✓' : 'Add'}
                         </button>
@@ -1726,7 +1764,7 @@ export default function App() {
                 style={{
                   fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none',
                   backgroundColor: (newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe) ? YELLOW : theme.border,
-                  color: INK, cursor: 'pointer',
+                  color: (newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe) ? '#1c1917' : theme.textTertiary, cursor: 'pointer',
                   opacity: (newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe) ? 1 : 0.5,
                 }}
               >
@@ -1738,8 +1776,8 @@ export default function App() {
 
         {/* Delete Recipe Confirmation */}
         {deletingRecipeId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(28,25,23,0.5)' }}>
-            <div className="w-full max-w-xs text-center" style={{ backgroundColor: '#fff', borderRadius: 24, padding: 28 }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
               <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Delete recipe?</h2>
               <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6, lineHeight: 1.5 }}>
                 This permanently deletes "{recipes.find(r => r.id === deletingRecipeId)?.name}".
@@ -1753,7 +1791,7 @@ export default function App() {
           </div>
         )}
 
-        {!isDesktop && !showCreateRecipe && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
+        {!isDesktop && !showCreateRecipe && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={theme} />}
       </div>
     );
   }
@@ -1765,10 +1803,11 @@ export default function App() {
       <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? 88 : 0 }}>
         <style>{styles}</style>
         {desktopSidebar}
-        <Toast message={toastMessage} visible={showToast} />
+        <Toast message={toastMessage} visible={showToast} t={theme} />
 
         {/* Paper header with the share code card */}
         <div style={{ padding: '12px 28px 0' }}>
+          <div style={{ maxWidth: isDesktop ? 560 : 'none' }}>
           {inSubSection ? (
             <div className="flex items-center" style={{ gap: 12 }}>
               <button
@@ -1786,7 +1825,7 @@ export default function App() {
           ) : (
             <>
               <h1 style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', margin: 0, color: INK }}>Settings</h1>
-              <div style={{ marginTop: 16, borderRadius: 18, border: `1.5px solid ${theme.border}`, background: '#fff', padding: '16px 18px', boxShadow: theme.cardShadow }}>
+              <div style={{ marginTop: 16, borderRadius: 18, border: `1.5px solid ${theme.border}`, background: theme.bgSecondary, padding: '16px 18px', boxShadow: theme.cardShadow }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: theme.textTertiary, textTransform: 'uppercase', margin: '0 0 6px' }}>Share code</p>
@@ -1795,7 +1834,7 @@ export default function App() {
                   <button
                     onClick={() => { navigator.clipboard?.writeText(listId); triggerHaptic('success'); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 1500); }}
                     className="bc-press"
-                    style={{ padding: '11px 0', width: 86, fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: codeCopied ? INK : YELLOW, color: codeCopied ? YELLOW : INK, cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
+                    style={{ padding: '11px 0', width: 86, fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: codeCopied ? INK : YELLOW, color: codeCopied ? theme.accentOnInk : '#1c1917', cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
                   >
                     {codeCopied ? 'Copied ✓' : 'Copy'}
                   </button>
@@ -1804,6 +1843,7 @@ export default function App() {
               </div>
             </>
           )}
+          </div>
         </div>
 
         <div style={{ padding: '10px 28px 0', paddingBottom: isDesktop ? 24 : 110, maxWidth: isDesktop ? 560 : 'none' }}>
@@ -1840,6 +1880,23 @@ export default function App() {
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
               ))}
+
+              {/* Theme — light / dark / system */}
+              <div style={{ padding: '16px 0', borderBottom: `1.5px solid ${theme.border}` }}>
+                <span style={{ fontSize: 15, fontWeight: 600, color: INK, display: 'block', marginBottom: 12 }}>Theme</span>
+                <div style={{ position: 'relative', display: 'flex', background: theme.bgTertiary, borderRadius: 9999, padding: 3 }}>
+                  <div style={{ position: 'absolute', top: 3, bottom: 3, left: 3, width: 'calc(33.333% - 2px)', borderRadius: 9999, background: INK, transform: `translateX(${['light', 'dark', 'system'].indexOf(themePref) * 100}%)`, transition: 'transform 0.28s cubic-bezier(0.22,1,0.36,1)' }} />
+                  {[['light', 'Light'], ['dark', 'Dark'], ['system', 'System']].map(([value, label]) => (
+                    <button
+                      key={value}
+                      onClick={() => { triggerHaptic('light'); setThemePref(value); }}
+                      style={{ flex: 1, padding: '11px 0', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', background: 'transparent', color: themePref === value ? theme.accentOnInk : theme.textSecondary, cursor: 'pointer', position: 'relative', zIndex: 1, transition: 'color 0.25s ease' }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <button
                 onClick={() => { localStorage.removeItem('breadcrumbs-has-seen-onboarding'); setShowOnboarding(true); }}
@@ -1896,7 +1953,7 @@ export default function App() {
                     <button onClick={() => switchStoreLayout(layout.id)} className="flex-1 flex items-center gap-3 text-left" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                       <div style={{ width: 24, height: 24, borderRadius: '50%', border: `2.5px solid ${isActive ? YELLOW : theme.border}`, backgroundColor: isActive ? YELLOW : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.18s ease' }}>
                         {isActive && (
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12l6 6L20 6"/></svg>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12l6 6L20 6"/></svg>
                         )}
                       </div>
                       <span style={{ fontSize: 15.5, fontWeight: isActive ? 700 : 600, color: INK }}>{layout.name}</span>
@@ -2009,7 +2066,7 @@ export default function App() {
 
         {/* Edit Store Layout Modal */}
         {editingStoreLayout && (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: 'rgba(28,25,23,0.5)' }}>
+          <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
             <div className="w-full max-h-[85vh] flex flex-col" style={{ backgroundColor: PAPER, borderRadius: '28px 28px 0 0', overflow: 'hidden' }}>
               <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1.5px solid ${theme.border}` }}>
                 <button
@@ -2092,22 +2149,22 @@ export default function App() {
 
         {/* Confirms shared with list view */}
         {showClearConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(28,25,23,0.5)' }}>
-            <div className="w-full max-w-xs text-center" style={{ backgroundColor: '#fff', borderRadius: 24, padding: 28 }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
               <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Clear ticked items?</h2>
               <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>This removes {checkedCount} ticked {checkedCount === 1 ? 'item' : 'items'}.</p>
               <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
               <div className="flex gap-3">
                 <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: INK, cursor: 'pointer' }}>Clear</button>
+                <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer' }}>Clear</button>
               </div>
             </div>
           </div>
         )}
 
         {showClearAllConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(28,25,23,0.5)' }}>
-            <div className="w-full max-w-xs text-center" style={{ backgroundColor: '#fff', borderRadius: 24, padding: 28 }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
               <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Clear all items?</h2>
               <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>This removes all {totalItems} {totalItems === 1 ? 'item' : 'items'} — ticked and unticked.</p>
               <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
@@ -2120,8 +2177,8 @@ export default function App() {
         )}
 
         {showLeaveConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(28,25,23,0.5)' }}>
-            <div className="w-full max-w-xs text-center" style={{ backgroundColor: '#fff', borderRadius: 24, padding: 28 }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
               <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Leave this list?</h2>
               <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>You'll be removed from this list on your device.</p>
               <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>Rejoin anytime with the code <span style={{ fontFamily: MONO, fontWeight: 700, color: INK }}>{listId}</span>.</p>
@@ -2133,8 +2190,8 @@ export default function App() {
           </div>
         )}
 
-        {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} />}
-        {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
+        {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} />}
+        {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={theme} />}
       </div>
     );
   }
@@ -2144,7 +2201,7 @@ export default function App() {
     const codeChars = (joinCode + '      ').slice(0, 6).split('');
     const codeValid = joinCode.length === 6;
     return (
-      <div className="min-h-screen flex flex-col" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: INK }}>
+      <div className="min-h-screen flex flex-col" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: '#1c1917' }}>
         <style>{styles}</style>
 
         {/* Top block — black */}
@@ -2154,7 +2211,7 @@ export default function App() {
             <div className="breathe-2" style={{ width: 29, height: 29, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
             <div className="breathe-3" style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
           </div>
-          <h1 className="bc-fu2" style={{ fontSize: 'clamp(40px, 12vw, 52px)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, margin: '28px 0 0', color: PAPER }}>
+          <h1 className="bc-fu2" style={{ fontSize: 'clamp(40px, 12vw, 52px)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, margin: '28px 0 0', color: '#fafaf9' }}>
             Breadcrumbs
           </h1>
           <p className="bc-fu3" style={{ fontSize: 15, color: 'rgba(250,250,249,0.55)', margin: '16px 0 0', lineHeight: 1.5, maxWidth: 280 }}>
@@ -2163,8 +2220,8 @@ export default function App() {
         </div>
 
         {/* Bottom sheet — paper */}
-        <div className="bc-fu4" style={{ backgroundColor: PAPER, borderRadius: '32px 32px 0 0', padding: '30px 28px calc(40px + env(safe-area-inset-bottom, 0px))', maxWidth: 560, width: '100%', margin: '0 auto' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: theme.textTertiary, textTransform: 'uppercase', margin: '0 0 14px' }}>Join with a code</p>
+        <div className="bc-fu4" style={{ backgroundColor: '#fafaf9', borderRadius: '32px 32px 0 0', padding: '30px 28px calc(40px + env(safe-area-inset-bottom, 0px))', maxWidth: 560, width: '100%', margin: '0 auto' }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: THEMES.light.textTertiary, textTransform: 'uppercase', margin: '0 0 14px' }}>Join with a code</p>
 
           <div style={{ position: 'relative', marginBottom: 18 }}>
             <div style={{ display: 'flex', gap: 7 }} onClick={() => codeInputRef.current && codeInputRef.current.focus()}>
@@ -2175,7 +2232,7 @@ export default function App() {
                   <div
                     key={filled ? `f${i}${ch}` : `e${i}`}
                     className={filled ? 'bc-charpop' : ''}
-                    style={{ flex: 1, height: 56, borderRadius: 14, backgroundColor: filled ? '#fff' : theme.bgTertiary, border: `2px solid ${filled ? INK : isCursor ? YELLOW : 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 23, fontWeight: 700, fontFamily: MONO, color: INK, transition: 'border-color 0.15s ease', position: 'relative', cursor: 'text' }}
+                    style={{ flex: 1, height: 56, borderRadius: 14, backgroundColor: filled ? '#fff' : THEMES.light.bgTertiary, border: `2px solid ${filled ? '#1c1917' : isCursor ? YELLOW : 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 23, fontWeight: 700, fontFamily: MONO, color: '#1c1917', transition: 'border-color 0.15s ease', position: 'relative', cursor: 'text' }}
                   >
                     {ch.trim() || ''}
                     {isCursor && <div style={{ position: 'absolute', bottom: 10, width: 16, height: 3, backgroundColor: YELLOW, borderRadius: 2, animation: 'bcBlink 1.05s steps(2) infinite' }} />}
@@ -2203,14 +2260,14 @@ export default function App() {
             onClick={joinList}
             disabled={!codeValid}
             className="bc-press"
-            style={{ width: '100%', padding: '18px 0', fontSize: 16, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: codeValid ? YELLOW : theme.border, color: codeValid ? INK : theme.textTertiary, cursor: codeValid ? 'pointer' : 'default', transition: 'background-color 0.25s ease, color 0.25s ease', marginBottom: 12 }}
+            style={{ width: '100%', padding: '18px 0', fontSize: 16, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: codeValid ? YELLOW : THEMES.light.border, color: codeValid ? '#1c1917' : THEMES.light.textTertiary, cursor: codeValid ? 'pointer' : 'default', transition: 'background-color 0.25s ease, color 0.25s ease', marginBottom: 12 }}
           >
             Join list
           </button>
           <button
             onClick={createNewList}
             className={`bc-press w-full ${createAnim ? 'btn-pop' : ''}`}
-            style={{ padding: '17px 0', fontSize: 15, fontWeight: 700, borderRadius: 9999, border: `2px solid ${INK}`, backgroundColor: 'transparent', color: INK, cursor: 'pointer' }}
+            style={{ padding: '17px 0', fontSize: 15, fontWeight: 700, borderRadius: 9999, border: `2px solid ${'#1c1917'}`, backgroundColor: 'transparent', color: '#1c1917', cursor: 'pointer' }}
           >
             Start a new one
           </button>
@@ -2235,26 +2292,22 @@ export default function App() {
     >
       <style>{styles}</style>
       {desktopSidebar}
-      <Toast message={toastMessage} visible={showToast} />
+      <Toast message={toastMessage} visible={showToast} t={theme} />
 
-      {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} />}
+      {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} />}
 
       {!isOnline && (
-        <div className="px-4 py-2 text-center" style={{ backgroundColor: YELLOW, color: INK, fontSize: 12.5, fontWeight: 700 }}>
+        <div className="px-4 py-2 text-center" style={{ backgroundColor: YELLOW, color: '#1c1917', fontSize: 12.5, fontWeight: 700 }}>
           You're offline. Changes will sync when you reconnect.
         </div>
       )}
 
       {/* ── Paper header with the crumb trail ── */}
       <div className="sticky top-0 z-40" style={{ backgroundColor: PAPER, borderBottom: `1.5px solid ${theme.border}`, padding: '12px 26px 14px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <h1 className="truncate" style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, margin: 0, color: INK, minWidth: 0 }}>
-            {listName || 'Breadcrumbs'}
-          </h1>
-          <div style={{ paddingBottom: 5, paddingLeft: 12, flexShrink: 0 }}>
-            <SyncTrail active={isOnline && !syncing} />
-          </div>
-        </div>
+        <div style={{ maxWidth: isDesktop ? 1100 : 'none' }}>
+        <h1 className="truncate" style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, margin: 0, color: INK }}>
+          {listName || 'Breadcrumbs'}
+        </h1>
 
         {/* The crumb trail — one crumb per item, picked up as you shop */}
         {totalItems > 0 && (
@@ -2274,7 +2327,7 @@ export default function App() {
                 );
               })
             )}
-            <TrailHome lit={remainingCount === 0 && totalItems > 0} />
+            <TrailHome lit={remainingCount === 0 && totalItems > 0} t={theme} />
           </div>
         )}
 
@@ -2286,23 +2339,35 @@ export default function App() {
               {remainingCount} to go <span style={{ fontWeight: 500, color: theme.textTertiary }}>· {checkedCount} picked up</span>
             </span>
           )}
-          <button
-            onClick={() => { triggerHaptic('light'); setHideCompleted(!hideCompleted); }}
-            className="bc-press flex items-center"
-            style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: `1.5px solid ${hideCompleted ? 'transparent' : theme.border}`, backgroundColor: hideCompleted ? INK : '#fff', color: hideCompleted ? YELLOW : theme.textSecondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease' }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              {hideCompleted
-                ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>
-                : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
-            </svg>
-            Hide done
-          </button>
+          {remainingCount === 0 && totalItems > 0 ? (
+            <button
+              onClick={() => { triggerHaptic('light'); setShowClearConfirm(true); }}
+              className="bc-press bc-hint flex items-center"
+              style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: `1.5px solid ${theme.border}`, backgroundColor: theme.bgSecondary, color: theme.textSecondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+              Clear
+            </button>
+          ) : (
+            <button
+              onClick={() => { triggerHaptic('light'); setHideCompleted(!hideCompleted); }}
+              className="bc-press flex items-center"
+              style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: `1.5px solid ${hideCompleted ? 'transparent' : theme.border}`, backgroundColor: hideCompleted ? INK : theme.bgSecondary, color: hideCompleted ? theme.accentOnInk : theme.textSecondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                {hideCompleted
+                  ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>
+                  : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
+              </svg>
+              Hide done
+            </button>
+          )}
+        </div>
         </div>
       </div>
 
       {/* ── Aisles ── */}
-      <div style={{ padding: '16px 28px 0', paddingBottom: isDesktop ? 24 : 110 }}>
+      <div style={{ padding: '16px 28px 0', paddingBottom: isDesktop ? 24 : 110, maxWidth: isDesktop ? 1100 : 'none' }}>
         {totalItems === 0 ? (
           <div className="text-center" style={{ paddingTop: 70 }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 24 }}>
@@ -2342,7 +2407,7 @@ export default function App() {
           onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
         </button>
       )}
 
@@ -2357,6 +2422,7 @@ export default function App() {
             zIndex: 55, animation: 'fabSlideUp 250ms cubic-bezier(0.22,1,0.36,1)',
           }}
         >
+          <div style={{ maxWidth: isDesktop ? 820 : 'none' }}>
           <div className="flex items-center gap-3">
             <input
               ref={fabInputRef}
@@ -2372,7 +2438,7 @@ export default function App() {
               onClick={handleFabAdd}
               disabled={!fabInput.trim()}
               className="bc-press"
-              style={{ padding: '11px 22px', fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: fabInput.trim() ? YELLOW : theme.bgTertiary, color: fabInput.trim() ? INK : theme.textTertiary, cursor: fabInput.trim() ? 'pointer' : 'default', transition: 'background-color 0.2s ease, color 0.2s ease' }}
+              style={{ padding: '11px 22px', fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: fabInput.trim() ? YELLOW : theme.bgTertiary, color: fabInput.trim() ? '#1c1917' : theme.textTertiary, cursor: fabInput.trim() ? 'pointer' : 'default', transition: 'background-color 0.2s ease, color 0.2s ease' }}
             >
               Add
             </button>
@@ -2392,7 +2458,7 @@ export default function App() {
                     key={cat.id}
                     onClick={() => handleChipSelect(cat.id)}
                     className="bc-press"
-                    style={{ display: 'inline-block', backgroundColor: '#fff', color: INK, fontSize: 12.5, fontWeight: 700, borderRadius: 9999, padding: '8px 16px', border: `2px solid ${INK}`, marginRight: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    style={{ display: 'inline-block', backgroundColor: theme.bgSecondary, color: INK, fontSize: 12.5, fontWeight: 700, borderRadius: 9999, padding: '8px 16px', border: `2px solid ${INK}`, marginRight: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >
                     {cat.name}
                   </button>
@@ -2400,12 +2466,13 @@ export default function App() {
               </div>
             </div>
           )}
+          </div>
         </div>
       )}
 
       {/* ── Long-press reassign sheet ── */}
       {longPressItem && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: 'rgba(28,25,23,0.5)' }} onClick={() => setLongPressItem(null)}>
+        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }} onClick={() => setLongPressItem(null)}>
           <div className="w-full max-h-[75vh] flex flex-col" style={{ backgroundColor: PAPER, borderRadius: '28px 28px 0 0', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-center" style={{ marginTop: 12, marginBottom: 4 }}>
               <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: theme.border }} />
@@ -2436,7 +2503,22 @@ export default function App() {
       )}
 
       {/* Bottom Navigation */}
-      {!isDesktop && !fabOpen && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
+      {!isDesktop && !fabOpen && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={theme} />}
+
+      {/* Clear ticked items confirmation */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+          <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
+            <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Clear ticked items?</h2>
+            <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>This removes {checkedCount} ticked {checkedCount === 1 ? 'item' : 'items'}.</p>
+            <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
+            <div className="flex gap-3">
+              <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer' }}>Clear</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
