@@ -2473,6 +2473,21 @@ export default function App() {
 
       {/* Bottom Navigation */}
       {!isDesktop && !fabOpen && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />}
+
+      {/* Clear ticked items confirmation */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(28,25,23,0.5)' }}>
+          <div className="w-full max-w-xs text-center" style={{ backgroundColor: '#fff', borderRadius: 24, padding: 28 }}>
+            <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Clear ticked items?</h2>
+            <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>This removes {checkedCount} ticked {checkedCount === 1 ? 'item' : 'items'}.</p>
+            <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
+            <div className="flex gap-3">
+              <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: INK, cursor: 'pointer' }}>Clear</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
