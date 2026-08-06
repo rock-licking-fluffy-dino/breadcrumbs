@@ -1049,10 +1049,17 @@ export default function App() {
           const catData = catSnap.data();
           if (catData.categories) setCategories(catData.categories);
           if (catData.storeLayouts) {
+            // Same merge the meta listener does: keep the built-in layouts'
+            // names/ids from code, but take the aisle order from the list so
+            // a customised built-in layout is not reset to the default order.
             const storedLayouts = catData.storeLayouts;
             const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
+            const mergedDefaultLayouts = DEFAULT_STORE_LAYOUTS.map(defaultLayout => {
+              const stored = storedLayouts.find(l => l.id === defaultLayout.id);
+              return stored ? { ...defaultLayout, categoryOrder: stored.categoryOrder } : defaultLayout;
+            });
             const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
-            setStoreLayouts([...DEFAULT_STORE_LAYOUTS, ...customLayouts]);
+            setStoreLayouts([...mergedDefaultLayouts, ...customLayouts]);
           }
           const activeId = catData.activeStoreLayoutId;
           if (activeId) setActiveStoreLayoutId(activeId);
