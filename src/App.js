@@ -866,19 +866,19 @@ export default function App() {
   }, [listId]);
 
   // Save items and/or recipes to the main list document.
-  // IMPORTANT: only include `recipes` in the write when the caller explicitly
-  // passes it, and use a merge write. Item-only saves (adding/checking/
-  // deleting groceries) must never clobber the recipes field with whatever
-  // stale local `recipes` state happens to be in memory (e.g. before the
-  // recipes onSnapshot listener has finished its first load) — this list
-  // document is shared, so an overwrite here wipes recipes for everyone.
+  // IMPORTANT: this is a merge write and each field is only included when the
+  // caller explicitly passes it. The list document is shared, so writing a
+  // field the caller did not actually change overwrites it with whatever
+  // stale local state happens to be in memory (e.g. before the onSnapshot
+  // listener has finished its first load) and wipes it for everyone:
+  //  - item-only saves (add/tick/delete groceries) must not touch `recipes`
+  //  - recipe-only saves (save/delete a recipe) must not touch `items`
   const saveList = useCallback(async (newItems, newRecipes) => {
     if (!listId) return;
+    if (newItems === undefined && newRecipes === undefined) return;
     try {
-      const payload = {
-        items: newItems,
-        updatedAt: new Date().toISOString()
-      };
+      const payload = { updatedAt: new Date().toISOString() };
+      if (newItems !== undefined) payload.items = newItems;
       if (newRecipes !== undefined) payload.recipes = newRecipes;
       await setDoc(doc(db, 'lists', listId), payload, { merge: true });
     } catch (error) {
@@ -888,6 +888,9 @@ export default function App() {
       setTimeout(() => setShowToast(false), 2500);
     }
   }, [listId]);
+
+  // Recipe-only write — leaves the shared `items` array untouched.
+  const saveRecipes = useCallback((newRecipes) => saveList(undefined, newRecipes), [saveList]);
 
   // Save categories and store layouts
   const saveCategories = async (newCategories, newStoreLayouts, newActiveStoreLayoutId) => {
@@ -1303,7 +1306,7 @@ export default function App() {
       newRecipes = [...recipes, { id: generateId(), name: newRecipeName.trim(), ingredients: newRecipeIngredients, createdAt: Date.now() }];
     }
     setRecipes(newRecipes);
-    await saveList(items, newRecipes);
+    await saveRecipes(newRecipes);
     setNewRecipeName('');
     setNewRecipeIngredients([]);
     setShowCreateRecipe(false);
@@ -1367,7 +1370,7 @@ export default function App() {
     triggerHaptic('success');
     const newRecipes = recipes.filter(r => r.id !== deletingRecipeId);
     setRecipes(newRecipes);
-    await saveList(items, newRecipes);
+    await saveRecipes(newRecipes);
     setDeletingRecipeId(null);
     showToastMessage('Recipe deleted');
   };
