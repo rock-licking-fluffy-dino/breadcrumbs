@@ -685,7 +685,6 @@ export default function App() {
 
   const recipeInputRef = useRef(null);
   const codeInputRef = useRef(null);
-  const isSavingRef = useRef(false);
 
   // Show toast helper
   const showToastMessage = (message) => {
@@ -813,8 +812,15 @@ export default function App() {
     if (!listId) return;
     const unsubscribe = onSnapshot(
       doc(db, 'lists', listId),
+      // Every snapshot is applied, including the ones echoing our own writes.
+      // Firestore keeps pending local writes applied on top of whatever the
+      // server sends, so an incoming snapshot always already contains our
+      // in-flight change — there is nothing to suppress. Skipping snapshots
+      // while a save is in flight would silently drop a collaborator's edit
+      // that landed in the same window (this listener has no
+      // includeMetadataChanges, so it is never re-delivered), and our next
+      // write would then push that stale array back over their change.
       (docSnap) => {
-        if (isSavingRef.current) return;
         if (docSnap.exists()) {
           const data = docSnap.data();
           setItems(data.items || []);
@@ -868,7 +874,6 @@ export default function App() {
   // document is shared, so an overwrite here wipes recipes for everyone.
   const saveList = useCallback(async (newItems, newRecipes) => {
     if (!listId) return;
-    isSavingRef.current = true;
     try {
       const payload = {
         items: newItems,
@@ -881,8 +886,6 @@ export default function App() {
       setToastMessage('Failed to save changes');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2500);
-    } finally {
-      setTimeout(() => { isSavingRef.current = false; }, 500);
     }
   }, [listId]);
 
