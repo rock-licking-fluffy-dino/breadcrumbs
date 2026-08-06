@@ -892,16 +892,22 @@ export default function App() {
   // Recipe-only write — leaves the shared `items` array untouched.
   const saveRecipes = useCallback((newRecipes) => saveList(undefined, newRecipes), [saveList]);
 
-  // Save categories and store layouts
-  const saveCategories = async (newCategories, newStoreLayouts, newActiveStoreLayoutId) => {
+  // Save categories / store layouts to the shared meta document.
+  // Same rule as saveList: merge write, and only the fields the caller
+  // actually changed go into the payload. Rewriting all three fields from
+  // local state clobbers a collaborator's concurrent change to a different
+  // field, and clobbers everything if local state has not been filled in by
+  // the meta listener yet (it would push DEFAULT_CATEGORIES /
+  // DEFAULT_STORE_LAYOUTS over the list's real ones).
+  const saveCategories = async (changes) => {
     if (!listId) return;
+    const keys = Object.keys(changes || {});
+    if (keys.length === 0) return;
     try {
       await setDoc(doc(db, 'lists', listId, 'meta', 'categories'), {
-        categories: newCategories,
-        storeLayouts: newStoreLayouts,
-        activeStoreLayoutId: newActiveStoreLayoutId,
+        ...changes,
         updatedAt: new Date().toISOString()
-      });
+      }, { merge: true });
     } catch (error) {
       console.error('Error saving categories:', error);
       setToastMessage('Failed to save category changes');
@@ -936,7 +942,7 @@ export default function App() {
     const newCategory = { id: `custom-${generateId()}`, name: newCategoryName.trim(), isDefault: false };
     const newCategories = [...categories, newCategory];
     setCategories(newCategories);
-    await saveCategories(newCategories, storeLayouts, activeStoreLayoutId);
+    await saveCategories({ categories: newCategories });
     setNewCategoryName('');
     setShowAddCategory(false);
   };
@@ -947,7 +953,7 @@ export default function App() {
     const newItems = items.filter(item => item.category !== categoryId);
     setCategories(newCategories);
     setItems(newItems);
-    await saveCategories(newCategories, storeLayouts, activeStoreLayoutId);
+    await saveCategories({ categories: newCategories });
     await saveList(newItems);
   };
 
@@ -955,7 +961,7 @@ export default function App() {
   const switchStoreLayout = async (layoutId) => {
     triggerHaptic('success');
     setActiveStoreLayoutId(layoutId);
-    await saveCategories(categories, storeLayouts, layoutId);
+    await saveCategories({ activeStoreLayoutId: layoutId });
     const layout = storeLayouts.find(s => s.id === layoutId);
     showToastMessage(`Switched to ${layout?.name || 'layout'}`);
   };
@@ -965,7 +971,7 @@ export default function App() {
       layout.id === layoutId ? { ...layout, categoryOrder: newCategoryOrder } : layout
     );
     setStoreLayouts(newLayouts);
-    await saveCategories(categories, newLayouts, activeStoreLayoutId);
+    await saveCategories({ storeLayouts: newLayouts });
   };
 
   const createCustomStoreLayout = async (name) => {
@@ -978,7 +984,7 @@ export default function App() {
     };
     const newLayouts = [...storeLayouts, newLayout];
     setStoreLayouts(newLayouts);
-    await saveCategories(categories, newLayouts, activeStoreLayoutId);
+    await saveCategories({ storeLayouts: newLayouts });
     return newLayout;
   };
 
@@ -988,7 +994,7 @@ export default function App() {
     const newActiveId = activeStoreLayoutId === layoutId ? 'default' : activeStoreLayoutId;
     setStoreLayouts(newLayouts);
     setActiveStoreLayoutId(newActiveId);
-    await saveCategories(categories, newLayouts, newActiveId);
+    await saveCategories({ storeLayouts: newLayouts, activeStoreLayoutId: newActiveId });
   };
 
   useEffect(() => {
