@@ -531,7 +531,7 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
 
           <div className="flex justify-center" style={{ gap: 8, marginBottom: 16 }}>
             {cards.map((_, i) => (
-              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: i === currentCard ? '#FACC15' : theme.border, transition: 'background-color 0.3s' }} />
+              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: i === currentCard ? '#FACC15' : t.border, transition: 'background-color 0.3s' }} />
             ))}
           </div>
 
