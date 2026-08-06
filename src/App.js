@@ -606,9 +606,19 @@ const TrailHome = ({ lit, t }) => (
 );
 
 export default function App() {
+  // Both of these read persisted JSON. If the value is corrupt (or
+  // localStorage itself throws, e.g. storage disabled) an exception here
+  // escapes the useState initialiser and takes the whole app down with a
+  // blank screen on every load, with no way for the user to recover — so
+  // fall back to the defaults instead.
   const [listId, setListId] = useState(() => {
-    const saved = localStorage.getItem('breadcrumbs-current-list');
-    return saved ? JSON.parse(saved).listId : null;
+    try {
+      const saved = localStorage.getItem('breadcrumbs-current-list');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return parsed && typeof parsed.listId === 'string' ? parsed.listId : null;
+    } catch (e) {
+      return null;
+    }
   });
   const [listName, setListName] = useState('');
   const [editingListName, setEditingListName] = useState('');
@@ -619,8 +629,13 @@ export default function App() {
   const [settingsTab, setSettingsTab] = useState('general');
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [hiddenCategories, setHiddenCategories] = useState(() => {
-    const saved = localStorage.getItem('breadcrumbs-hidden-categories');
-    if (saved) return JSON.parse(saved);
+    try {
+      const saved = localStorage.getItem('breadcrumbs-hidden-categories');
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (Array.isArray(parsed)) return parsed;
+    } catch (e) {
+      // fall through to the defaults
+    }
     return ['baby', 'alcohol'];
   });
   const [createAnim, setCreateAnim] = useState(false);
