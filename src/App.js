@@ -531,7 +531,7 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
 
           <div className="flex justify-center" style={{ gap: 8, marginBottom: 16 }}>
             {cards.map((_, i) => (
-              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: i === currentCard ? '#FACC15' : theme.border, transition: 'background-color 0.3s' }} />
+              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: i === currentCard ? '#FACC15' : t.border, transition: 'background-color 0.3s' }} />
             ))}
           </div>
 
@@ -606,9 +606,19 @@ const TrailHome = ({ lit, t }) => (
 );
 
 export default function App() {
+  // Both of these read persisted JSON. If the value is corrupt (or
+  // localStorage itself throws, e.g. storage disabled) an exception here
+  // escapes the useState initialiser and takes the whole app down with a
+  // blank screen on every load, with no way for the user to recover — so
+  // fall back to the defaults instead.
   const [listId, setListId] = useState(() => {
-    const saved = localStorage.getItem('breadcrumbs-current-list');
-    return saved ? JSON.parse(saved).listId : null;
+    try {
+      const saved = localStorage.getItem('breadcrumbs-current-list');
+      const parsed = saved ? JSON.parse(saved) : null;
+      return parsed && typeof parsed.listId === 'string' ? parsed.listId : null;
+    } catch (e) {
+      return null;
+    }
   });
   const [listName, setListName] = useState('');
   const [editingListName, setEditingListName] = useState('');
@@ -619,8 +629,13 @@ export default function App() {
   const [settingsTab, setSettingsTab] = useState('general');
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [hiddenCategories, setHiddenCategories] = useState(() => {
-    const saved = localStorage.getItem('breadcrumbs-hidden-categories');
-    if (saved) return JSON.parse(saved);
+    try {
+      const saved = localStorage.getItem('breadcrumbs-hidden-categories');
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (Array.isArray(parsed)) return parsed;
+    } catch (e) {
+      // fall through to the defaults
+    }
     return ['baby', 'alcohol'];
   });
   const [createAnim, setCreateAnim] = useState(false);
@@ -685,7 +700,6 @@ export default function App() {
 
   const recipeInputRef = useRef(null);
   const codeInputRef = useRef(null);
-  const isSavingRef = useRef(false);
 
   // Show toast helper
   const showToastMessage = (message) => {
@@ -813,8 +827,15 @@ export default function App() {
     if (!listId) return;
     const unsubscribe = onSnapshot(
       doc(db, 'lists', listId),
+      // Every snapshot is applied, including the ones echoing our own writes.
+      // Firestore keeps pending local writes applied on top of whatever the
+      // server sends, so an incoming snapshot always already contains our
+      // in-flight change — there is nothing to suppress. Skipping snapshots
+      // while a save is in flight would silently drop a collaborator's edit
+      // that landed in the same window (this listener has no
+      // includeMetadataChanges, so it is never re-delivered), and our next
+      // write would then push that stale array back over their change.
       (docSnap) => {
-        if (isSavingRef.current) return;
         if (docSnap.exists()) {
           const data = docSnap.data();
           setItems(data.items || []);
@@ -860,20 +881,19 @@ export default function App() {
   }, [listId]);
 
   // Save items and/or recipes to the main list document.
-  // IMPORTANT: only include `recipes` in the write when the caller explicitly
-  // passes it, and use a merge write. Item-only saves (adding/checking/
-  // deleting groceries) must never clobber the recipes field with whatever
-  // stale local `recipes` state happens to be in memory (e.g. before the
-  // recipes onSnapshot listener has finished its first load) — this list
-  // document is shared, so an overwrite here wipes recipes for everyone.
+  // IMPORTANT: this is a merge write and each field is only included when the
+  // caller explicitly passes it. The list document is shared, so writing a
+  // field the caller did not actually change overwrites it with whatever
+  // stale local state happens to be in memory (e.g. before the onSnapshot
+  // listener has finished its first load) and wipes it for everyone:
+  //  - item-only saves (add/tick/delete groceries) must not touch `recipes`
+  //  - recipe-only saves (save/delete a recipe) must not touch `items`
   const saveList = useCallback(async (newItems, newRecipes) => {
     if (!listId) return;
-    isSavingRef.current = true;
+    if (newItems === undefined && newRecipes === undefined) return;
     try {
-      const payload = {
-        items: newItems,
-        updatedAt: new Date().toISOString()
-      };
+      const payload = { updatedAt: new Date().toISOString() };
+      if (newItems !== undefined) payload.items = newItems;
       if (newRecipes !== undefined) payload.recipes = newRecipes;
       await setDoc(doc(db, 'lists', listId), payload, { merge: true });
     } catch (error) {
@@ -881,21 +901,28 @@ export default function App() {
       setToastMessage('Failed to save changes');
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2500);
-    } finally {
-      setTimeout(() => { isSavingRef.current = false; }, 500);
     }
   }, [listId]);
 
-  // Save categories and store layouts
-  const saveCategories = async (newCategories, newStoreLayouts, newActiveStoreLayoutId) => {
+  // Recipe-only write — leaves the shared `items` array untouched.
+  const saveRecipes = useCallback((newRecipes) => saveList(undefined, newRecipes), [saveList]);
+
+  // Save categories / store layouts to the shared meta document.
+  // Same rule as saveList: merge write, and only the fields the caller
+  // actually changed go into the payload. Rewriting all three fields from
+  // local state clobbers a collaborator's concurrent change to a different
+  // field, and clobbers everything if local state has not been filled in by
+  // the meta listener yet (it would push DEFAULT_CATEGORIES /
+  // DEFAULT_STORE_LAYOUTS over the list's real ones).
+  const saveCategories = async (changes) => {
     if (!listId) return;
+    const keys = Object.keys(changes || {});
+    if (keys.length === 0) return;
     try {
       await setDoc(doc(db, 'lists', listId, 'meta', 'categories'), {
-        categories: newCategories,
-        storeLayouts: newStoreLayouts,
-        activeStoreLayoutId: newActiveStoreLayoutId,
+        ...changes,
         updatedAt: new Date().toISOString()
-      });
+      }, { merge: true });
     } catch (error) {
       console.error('Error saving categories:', error);
       setToastMessage('Failed to save category changes');
@@ -930,7 +957,7 @@ export default function App() {
     const newCategory = { id: `custom-${generateId()}`, name: newCategoryName.trim(), isDefault: false };
     const newCategories = [...categories, newCategory];
     setCategories(newCategories);
-    await saveCategories(newCategories, storeLayouts, activeStoreLayoutId);
+    await saveCategories({ categories: newCategories });
     setNewCategoryName('');
     setShowAddCategory(false);
   };
@@ -941,7 +968,7 @@ export default function App() {
     const newItems = items.filter(item => item.category !== categoryId);
     setCategories(newCategories);
     setItems(newItems);
-    await saveCategories(newCategories, storeLayouts, activeStoreLayoutId);
+    await saveCategories({ categories: newCategories });
     await saveList(newItems);
   };
 
@@ -949,7 +976,7 @@ export default function App() {
   const switchStoreLayout = async (layoutId) => {
     triggerHaptic('success');
     setActiveStoreLayoutId(layoutId);
-    await saveCategories(categories, storeLayouts, layoutId);
+    await saveCategories({ activeStoreLayoutId: layoutId });
     const layout = storeLayouts.find(s => s.id === layoutId);
     showToastMessage(`Switched to ${layout?.name || 'layout'}`);
   };
@@ -959,7 +986,7 @@ export default function App() {
       layout.id === layoutId ? { ...layout, categoryOrder: newCategoryOrder } : layout
     );
     setStoreLayouts(newLayouts);
-    await saveCategories(categories, newLayouts, activeStoreLayoutId);
+    await saveCategories({ storeLayouts: newLayouts });
   };
 
   const createCustomStoreLayout = async (name) => {
@@ -972,7 +999,7 @@ export default function App() {
     };
     const newLayouts = [...storeLayouts, newLayout];
     setStoreLayouts(newLayouts);
-    await saveCategories(categories, newLayouts, activeStoreLayoutId);
+    await saveCategories({ storeLayouts: newLayouts });
     return newLayout;
   };
 
@@ -982,17 +1009,17 @@ export default function App() {
     const newActiveId = activeStoreLayoutId === layoutId ? 'default' : activeStoreLayoutId;
     setStoreLayouts(newLayouts);
     setActiveStoreLayoutId(newActiveId);
-    await saveCategories(categories, newLayouts, newActiveId);
+    await saveCategories({ storeLayouts: newLayouts, activeStoreLayoutId: newActiveId });
   };
 
   useEffect(() => {
     if (recipeAddingTo && recipeInputRef.current) recipeInputRef.current.focus();
   }, [recipeAddingTo]);
 
-  const createNewList = async () => {
+  const createNewList = () => {
     setCreateAnim(true);
     triggerHaptic('success');
-    setTimeout(async () => {
+    setTimeout(() => {
       const code = generateListCode();
       setListId(code);
       setItems([]);
@@ -1003,19 +1030,30 @@ export default function App() {
       setListName('');
       setEditingListName('');
       checkOnboarding();
-      await setDoc(doc(db, 'lists', code), {
+
+      // Remember the code and finish the button animation before the network
+      // writes. Offline, setDoc's promise stays pending until the device
+      // reconnects, so awaiting it here meant the new list was never written
+      // to localStorage (lost on the next launch) and the create button was
+      // left stuck mid-animation. Firestore replays both writes on reconnect.
+      try {
+        localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
+      } catch (e) {
+        // Storage unavailable — the list still works for this session
+      }
+      setCreateAnim(false);
+
+      setDoc(doc(db, 'lists', code), {
         items: [],
         recipes: [],
         updatedAt: new Date().toISOString()
-      });
-      await setDoc(doc(db, 'lists', code, 'meta', 'categories'), {
+      }).catch(error => console.error('Error creating list:', error));
+      setDoc(doc(db, 'lists', code, 'meta', 'categories'), {
         categories: DEFAULT_CATEGORIES,
         storeLayouts: DEFAULT_STORE_LAYOUTS,
         activeStoreLayoutId: 'default',
         updatedAt: new Date().toISOString()
-      });
-      localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
-      setCreateAnim(false);
+      }).catch(error => console.error('Error creating list categories:', error));
     }, 400);
   };
 
@@ -1037,10 +1075,17 @@ export default function App() {
           const catData = catSnap.data();
           if (catData.categories) setCategories(catData.categories);
           if (catData.storeLayouts) {
+            // Same merge the meta listener does: keep the built-in layouts'
+            // names/ids from code, but take the aisle order from the list so
+            // a customised built-in layout is not reset to the default order.
             const storedLayouts = catData.storeLayouts;
             const defaultLayoutIds = DEFAULT_STORE_LAYOUTS.map(l => l.id);
+            const mergedDefaultLayouts = DEFAULT_STORE_LAYOUTS.map(defaultLayout => {
+              const stored = storedLayouts.find(l => l.id === defaultLayout.id);
+              return stored ? { ...defaultLayout, categoryOrder: stored.categoryOrder } : defaultLayout;
+            });
             const customLayouts = storedLayouts.filter(l => !defaultLayoutIds.includes(l.id) && l.isDefault === false);
-            setStoreLayouts([...DEFAULT_STORE_LAYOUTS, ...customLayouts]);
+            setStoreLayouts([...mergedDefaultLayouts, ...customLayouts]);
           }
           const activeId = catData.activeStoreLayoutId;
           if (activeId) setActiveStoreLayoutId(activeId);
@@ -1300,7 +1345,7 @@ export default function App() {
       newRecipes = [...recipes, { id: generateId(), name: newRecipeName.trim(), ingredients: newRecipeIngredients, createdAt: Date.now() }];
     }
     setRecipes(newRecipes);
-    await saveList(items, newRecipes);
+    await saveRecipes(newRecipes);
     setNewRecipeName('');
     setNewRecipeIngredients([]);
     setShowCreateRecipe(false);
@@ -1364,7 +1409,7 @@ export default function App() {
     triggerHaptic('success');
     const newRecipes = recipes.filter(r => r.id !== deletingRecipeId);
     setRecipes(newRecipes);
-    await saveList(items, newRecipes);
+    await saveRecipes(newRecipes);
     setDeletingRecipeId(null);
     showToastMessage('Recipe deleted');
   };
@@ -1878,7 +1923,7 @@ export default function App() {
                   key={id}
                   onClick={() => { setSettingsTab(id); triggerHaptic('light'); }}
                   className="w-full flex items-center justify-between bc-press"
-                  style={{ padding: '16px 0', borderBottom: `1.5px solid ${theme.border}`, background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer', textAlign: 'left' }}
+                  style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer', textAlign: 'left' }}
                 >
                   <div>
                     <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: INK }}>{label}</span>
@@ -1908,7 +1953,7 @@ export default function App() {
               <button
                 onClick={() => { localStorage.removeItem('breadcrumbs-has-seen-onboarding'); setShowOnboarding(true); }}
                 className="w-full flex items-center justify-between bc-press"
-                style={{ padding: '16px 0', borderBottom: `1.5px solid ${theme.border}`, background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
+                style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
               >
                 <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Replay app intro</span>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
