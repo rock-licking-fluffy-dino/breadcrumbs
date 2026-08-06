@@ -859,16 +859,23 @@ export default function App() {
     return () => unsubscribe();
   }, [listId]);
 
-  // Save items and recipes to the main list document
-  const saveList = useCallback(async (newItems, newRecipes = recipes) => {
+  // Save items and/or recipes to the main list document.
+  // IMPORTANT: only include `recipes` in the write when the caller explicitly
+  // passes it, and use a merge write. Item-only saves (adding/checking/
+  // deleting groceries) must never clobber the recipes field with whatever
+  // stale local `recipes` state happens to be in memory (e.g. before the
+  // recipes onSnapshot listener has finished its first load) — this list
+  // document is shared, so an overwrite here wipes recipes for everyone.
+  const saveList = useCallback(async (newItems, newRecipes) => {
     if (!listId) return;
     isSavingRef.current = true;
     try {
-      await setDoc(doc(db, 'lists', listId), {
+      const payload = {
         items: newItems,
-        recipes: newRecipes,
         updatedAt: new Date().toISOString()
-      });
+      };
+      if (newRecipes !== undefined) payload.recipes = newRecipes;
+      await setDoc(doc(db, 'lists', listId), payload, { merge: true });
     } catch (error) {
       console.error('Error saving list:', error);
       setToastMessage('Failed to save changes');
@@ -877,7 +884,7 @@ export default function App() {
     } finally {
       setTimeout(() => { isSavingRef.current = false; }, 500);
     }
-  }, [listId, recipes]);
+  }, [listId]);
 
   // Save categories and store layouts
   const saveCategories = async (newCategories, newStoreLayouts, newActiveStoreLayoutId) => {
