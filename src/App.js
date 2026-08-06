@@ -1897,7 +1897,7 @@ export default function App() {
                   key={id}
                   onClick={() => { setSettingsTab(id); triggerHaptic('light'); }}
                   className="w-full flex items-center justify-between bc-press"
-                  style={{ padding: '16px 0', borderBottom: `1.5px solid ${theme.border}`, background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer', textAlign: 'left' }}
+                  style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer', textAlign: 'left' }}
                 >
                   <div>
                     <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: INK }}>{label}</span>
@@ -1927,7 +1927,7 @@ export default function App() {
               <button
                 onClick={() => { localStorage.removeItem('breadcrumbs-has-seen-onboarding'); setShowOnboarding(true); }}
                 className="w-full flex items-center justify-between bc-press"
-                style={{ padding: '16px 0', borderBottom: `1.5px solid ${theme.border}`, background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
+                style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
               >
                 <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Replay app intro</span>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
