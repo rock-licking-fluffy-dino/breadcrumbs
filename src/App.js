@@ -436,7 +436,19 @@ const THEMES = {
 };
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
-const generateListCode = () => Math.random().toString(36).substr(2, 6).toUpperCase();
+// Math.random().toString(36).substr(2, 6) can return fewer than 6 characters
+// (some fractions have a short base-36 representation), silently shrinking
+// the keyspace and producing shorter, inconsistent-looking codes. Sample
+// exactly 6 characters from a fixed alphabet instead so every code is full
+// length and every character is uniformly likely.
+const LIST_CODE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+const generateListCode = () => {
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += LIST_CODE_CHARS[Math.floor(Math.random() * LIST_CODE_CHARS.length)];
+  }
+  return code;
+};
 
 const triggerHaptic = (style = 'light') => {
   if (navigator.vibrate) {
@@ -628,16 +640,14 @@ export default function App() {
   const [editText, setEditText] = useState('');
   const [settingsTab, setSettingsTab] = useState('general');
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
-  const [hiddenCategories, setHiddenCategories] = useState(() => {
-    try {
-      const saved = localStorage.getItem('breadcrumbs-hidden-categories');
-      const parsed = saved ? JSON.parse(saved) : null;
-      if (Array.isArray(parsed)) return parsed;
-    } catch (e) {
-      // fall through to the defaults
-    }
-    return ['baby', 'alcohol'];
-  });
+  // Hidden aisles are a per-list preference (see the loader effect below,
+  // which fills this in once `listId` is known) — default here is only
+  // what's on screen for the brief moment before that effect runs.
+  const [hiddenCategories, setHiddenCategories] = useState(['baby', 'alcohol']);
+  // Aisle the user just tried to hide that still has items in it — hiding
+  // deletes those items for everyone on the list, so we confirm first
+  // rather than doing it silently on tap.
+  const [pendingHideCategoryId, setPendingHideCategoryId] = useState(null);
   const [createAnim, setCreateAnim] = useState(false);
   const [checkingItems, setCheckingItems] = useState(new Set());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -756,6 +766,29 @@ export default function App() {
       const savedName = localStorage.getItem(`breadcrumbs-list-name-${listId}`);
       setListName(savedName || '');
       setEditingListName(savedName || '');
+    }
+  }, [listId]);
+
+  // Load hidden aisles from localStorage when listId changes. This is a
+  // per-list preference — hiding an aisle on one list shouldn't hide it on
+  // every other list sharing this device. Falls back to the old
+  // device-wide key so a list opened for the first time under this scheme
+  // still gets the hidden aisles the user already had, instead of jumping
+  // back to the ['baby', 'alcohol'] defaults.
+  useEffect(() => {
+    if (!listId) return;
+    try {
+      const saved = localStorage.getItem(`breadcrumbs-hidden-categories-${listId}`);
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (Array.isArray(parsed)) {
+        setHiddenCategories(parsed);
+        return;
+      }
+      const legacy = localStorage.getItem('breadcrumbs-hidden-categories');
+      const parsedLegacy = legacy ? JSON.parse(legacy) : null;
+      setHiddenCategories(Array.isArray(parsedLegacy) ? parsedLegacy : ['baby', 'alcohol']);
+    } catch (e) {
+      setHiddenCategories(['baby', 'alcohol']);
     }
   }, [listId]);
 
@@ -932,23 +965,54 @@ export default function App() {
   };
 
   const saveHiddenCategories = (hidden) => {
-    localStorage.setItem('breadcrumbs-hidden-categories', JSON.stringify(hidden));
+    if (listId) {
+      try {
+        localStorage.setItem(`breadcrumbs-hidden-categories-${listId}`, JSON.stringify(hidden));
+      } catch (e) {
+        // Storage unavailable — the preference still applies for this session
+      }
+    }
     setHiddenCategories(hidden);
   };
 
-  const toggleCategoryVisibility = async (categoryId) => {
+  // If a category the user is about to hide still has items in it, hiding
+  // it deletes those items from the shared list for every collaborator —
+  // so route through a confirmation instead of doing that silently.
+  const toggleCategoryVisibility = (categoryId) => {
     triggerHaptic('light');
     const isCurrentlyHidden = hiddenCategories.includes(categoryId);
     if (isCurrentlyHidden) {
       saveHiddenCategories(hiddenCategories.filter(id => id !== categoryId));
-    } else {
-      saveHiddenCategories([...hiddenCategories, categoryId]);
-      const newItems = items.filter(item => item.category !== categoryId);
-      if (newItems.length !== items.length) {
-        setItems(newItems);
-        await saveList(newItems);
-      }
+      return;
     }
+    const hasItems = items.some(item => item.category === categoryId);
+    if (hasItems) {
+      setPendingHideCategoryId(categoryId);
+      return;
+    }
+    saveHiddenCategories([...hiddenCategories, categoryId]);
+  };
+
+  const confirmHideCategory = async () => {
+    if (!pendingHideCategoryId) return;
+    triggerHaptic('success');
+    const categoryId = pendingHideCategoryId;
+    setPendingHideCategoryId(null);
+    saveHiddenCategories([...hiddenCategories, categoryId]);
+    const newItems = items.filter(item => item.category !== categoryId);
+    setItems(newItems);
+    await saveList(newItems);
+  };
+
+  // Aisles an item was just placed into that the user had hidden — e.g. an
+  // auto-categorised "beer" landing in a hidden Alcohol aisle. The item
+  // would otherwise be saved and counted, but never rendered and
+  // impossible to tick off or delete from the UI. Unhiding beats losing
+  // the item from view.
+  const unhideCategoriesIfNeeded = (categoryIds) => {
+    const toUnhide = categoryIds.filter(id => hiddenCategories.includes(id));
+    if (toUnhide.length === 0) return;
+    saveHiddenCategories(hiddenCategories.filter(id => !toUnhide.includes(id)));
   };
 
   const addCustomCategory = async () => {
@@ -1016,11 +1080,30 @@ export default function App() {
     if (recipeAddingTo && recipeInputRef.current) recipeInputRef.current.focus();
   }, [recipeAddingTo]);
 
-  const createNewList = () => {
+  const createNewList = async () => {
     setCreateAnim(true);
     triggerHaptic('success');
+
+    // Pick a code nobody's already using. A collision is very unlikely
+    // (36^6 ≈ 2.18 billion codes) but would otherwise silently overwrite
+    // someone else's existing shared list. Best-effort only — skipped
+    // entirely offline, since list creation needs to keep working with no
+    // network (see the note below on why the writes aren't awaited).
+    let code = generateListCode();
+    if (isOnline) {
+      try {
+        for (let attempt = 0; attempt < 5; attempt++) {
+          const existing = await getDoc(doc(db, 'lists', code));
+          if (!existing.exists()) break;
+          code = generateListCode();
+        }
+      } catch (e) {
+        // Couldn't check (e.g. connection dropped mid-check) — proceed
+        // with the code we have rather than blocking list creation.
+      }
+    }
+
     setTimeout(() => {
-      const code = generateListCode();
       setListId(code);
       setItems([]);
       setCategories(DEFAULT_CATEGORIES);
@@ -1160,6 +1243,7 @@ export default function App() {
       setItems(newItems);
       setFabInput('');
       setFabNoMatchMode(false);
+      unhideCategoriesIfNeeded([result.categoryId]);
       await saveList(newItems);
 
       setShowingCategoryTag(prev => new Set([...prev, newItemId]));
@@ -1202,6 +1286,7 @@ export default function App() {
     saveCategoryCorrection(itemName, categoryId);
     setFabInput('');
     setFabNoMatchMode(false);
+    unhideCategoriesIfNeeded([categoryId]);
     await saveList(newItems);
 
     setShowingCategoryTag(prev => new Set([...prev, newItemId]));
@@ -1224,6 +1309,7 @@ export default function App() {
     setItems(newItems);
     saveCategoryCorrection(item.name, newCategoryId);
     setLongPressItem(null);
+    unhideCategoriesIfNeeded([newCategoryId]);
     await saveList(newItems);
   };
 
@@ -1397,6 +1483,7 @@ export default function App() {
       }
     }
     setItems(newItems);
+    unhideCategoriesIfNeeded(recipe.ingredients.map(i => i.category));
     await saveList(newItems);
     showToastMessage(`Added ${recipe.ingredients.length} items to your list`);
     setTimeout(() => {
@@ -2241,6 +2328,24 @@ export default function App() {
             </div>
           </div>
         )}
+
+        {pendingHideCategoryId && (() => {
+          const pendingCategory = categories.find(c => c.id === pendingHideCategoryId);
+          const pendingItemCount = items.filter(i => i.category === pendingHideCategoryId).length;
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
+              <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
+                <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Hide {pendingCategory ? pendingCategory.name : 'this aisle'}?</h2>
+                <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>This deletes {pendingItemCount} {pendingItemCount === 1 ? 'item' : 'items'} in this aisle from the list.</p>
+                <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
+                <div className="flex gap-3">
+                  <button onClick={() => { triggerHaptic('light'); setPendingHideCategoryId(null); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={confirmHideCategory} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: INK, color: PAPER, cursor: 'pointer' }}>Hide & delete</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} />}
         {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={theme} />}
