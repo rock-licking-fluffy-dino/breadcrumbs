@@ -1016,10 +1016,10 @@ export default function App() {
     if (recipeAddingTo && recipeInputRef.current) recipeInputRef.current.focus();
   }, [recipeAddingTo]);
 
-  const createNewList = async () => {
+  const createNewList = () => {
     setCreateAnim(true);
     triggerHaptic('success');
-    setTimeout(async () => {
+    setTimeout(() => {
       const code = generateListCode();
       setListId(code);
       setItems([]);
@@ -1030,19 +1030,30 @@ export default function App() {
       setListName('');
       setEditingListName('');
       checkOnboarding();
-      await setDoc(doc(db, 'lists', code), {
+
+      // Remember the code and finish the button animation before the network
+      // writes. Offline, setDoc's promise stays pending until the device
+      // reconnects, so awaiting it here meant the new list was never written
+      // to localStorage (lost on the next launch) and the create button was
+      // left stuck mid-animation. Firestore replays both writes on reconnect.
+      try {
+        localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
+      } catch (e) {
+        // Storage unavailable — the list still works for this session
+      }
+      setCreateAnim(false);
+
+      setDoc(doc(db, 'lists', code), {
         items: [],
         recipes: [],
         updatedAt: new Date().toISOString()
-      });
-      await setDoc(doc(db, 'lists', code, 'meta', 'categories'), {
+      }).catch(error => console.error('Error creating list:', error));
+      setDoc(doc(db, 'lists', code, 'meta', 'categories'), {
         categories: DEFAULT_CATEGORIES,
         storeLayouts: DEFAULT_STORE_LAYOUTS,
         activeStoreLayoutId: 'default',
         updatedAt: new Date().toISOString()
-      });
-      localStorage.setItem('breadcrumbs-current-list', JSON.stringify({ listId: code }));
-      setCreateAnim(false);
+      }).catch(error => console.error('Error creating list categories:', error));
     }, 400);
   };
 
