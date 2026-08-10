@@ -52,6 +52,33 @@ const DEFAULT_CATEGORIES = [
 
 const YELLOW = '#FACC15';
 
+// Recipe bookmark accents. Desktop turns recipes into a card grid, and each
+// card carries a bookmark ribbon so a wall of cards still reads as distinct
+// objects. These are opacity steps of the one signal colour rather than new
+// hues — the palette stays exactly as wide as it was.
+const RECIPE_ACCENT_COLORS = [
+  'rgba(250,204,21,1)',
+  'rgba(250,204,21,0.82)',
+  'rgba(250,204,21,0.64)',
+  'rgba(250,204,21,0.46)',
+];
+
+// Stable per-recipe accent — same recipe keeps the same ribbon across
+// reloads and across devices, since it is derived from the id alone.
+const recipeAccent = (id = '') => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return RECIPE_ACCENT_COLORS[hash % RECIPE_ACCENT_COLORS.length];
+};
+
+// ── Responsive breakpoints ──
+// Desktop is a real canvas (sidebar + multi-column grids); anything narrower
+// keeps the phone layout untouched. Detected with matchMedia, same as the
+// system dark-mode preference above it.
+const DESKTOP_QUERY = '(min-width: 1024px)';
+const WIDE_QUERY = '(min-width: 1440px)';
+const SIDEBAR_WIDTH = 264;
+
 // Default store layouts with typical UK supermarket category orders
 const DEFAULT_STORE_LAYOUTS = [
   {
@@ -456,8 +483,23 @@ const triggerHaptic = (style = 'light') => {
   }
 };
 
+// Viewport predicate as a subscription rather than a resize listener, so a
+// breakpoint crossing re-renders once instead of on every resize frame.
+const useMediaQuery = (query) => {
+  const [matches, setMatches] = useState(() => window.matchMedia?.(query).matches ?? false);
+  useEffect(() => {
+    const mq = window.matchMedia?.(query);
+    if (!mq) return;
+    const handler = (e) => setMatches(e.matches);
+    setMatches(mq.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [query]);
+  return matches;
+};
+
 // Onboarding Modal Component
-const OnboardingModal = ({ listCode, onComplete, t }) => {
+const OnboardingModal = ({ listCode, onComplete, t, isDesktop }) => {
   const [currentCard, setCurrentCard] = useState(0);
   const touchStartX = useRef(null);
   const touchStartY = useRef(null);
@@ -493,15 +535,20 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end select-none"
+      className={`fixed inset-0 z-[100] flex select-none ${isDesktop ? 'items-center justify-center p-6' : 'items-end'}`}
       style={{ backgroundColor: t.overlay, fontFamily: 'Inter, sans-serif' }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="w-full flex flex-col" style={{ backgroundColor: t.bg, borderRadius: '28px 28px 0 0', maxHeight: '92vh', overflowY: 'auto' }}>
+      <div
+        className="w-full flex flex-col"
+        style={isDesktop
+          ? { backgroundColor: t.bg, borderRadius: 28, maxWidth: 460, maxHeight: '88vh', overflowY: 'auto', border: `1.5px solid ${t.border}`, boxShadow: '0 24px 64px rgba(0,0,0,0.35)' }
+          : { backgroundColor: t.bg, borderRadius: '28px 28px 0 0', maxHeight: '92vh', overflowY: 'auto' }}
+      >
         <div
           className="flex justify-center"
-          style={{ marginTop: 12, marginBottom: 12 }}
+          style={{ marginTop: 12, marginBottom: 12, visibility: isDesktop ? 'hidden' : 'visible', height: isDesktop ? 4 : undefined }}
           onTouchStart={(e) => { touchStartY.current = e.touches[0].clientY; }}
           onTouchEnd={(e) => { if (touchStartY.current !== null && e.changedTouches[0].clientY - touchStartY.current > 60) skip(); touchStartY.current = null; }}
         >
@@ -522,7 +569,7 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
           )}
         </div>
 
-        <div className="flex flex-col" style={{ paddingLeft: 32, paddingRight: 32, paddingBottom: 'max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))' }}>
+        <div className="flex flex-col" style={{ paddingLeft: 32, paddingRight: 32, paddingBottom: isDesktop ? 32 : 'max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))' }}>
           <div key={`text-${currentCard}`} className="text-center" style={{ animation: 'onboardSlideIn 0.5s cubic-bezier(0.22,1,0.36,1)', minHeight: 128 }}>
             <h2 style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.02em', color: t.text, marginBottom: 10, lineHeight: 1.3 }}>{card.title}</h2>
             <p style={{ fontSize: 14, lineHeight: 1.65, color: t.textSecondary, margin: 0 }}>{card.description}</p>
@@ -549,7 +596,7 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
 
           <button
             onClick={goNext}
-            className="w-full transition-all active:scale-[0.97]"
+            className="w-full transition-all active:scale-[0.97] bc-cta"
             style={{ height: 54, borderRadius: 9999, backgroundColor: '#FACC15', color: INK, fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer' }}
           >
             {ctaLabel}
@@ -610,6 +657,184 @@ const BottomNav = ({ activeTab, onTabChange, t }) => {
   );
 };
 
+// Nav glyphs — desktop only. The bottom bar keeps its crumb-and-label
+// treatment untouched; a 264px rail has room for icons, the phone bar doesn't.
+const NAV_ICON_PATHS = {
+  list: <><path d="M9 6h11M9 12h11M9 18h11" /><path d="M3.5 6l1.4 1.4L7.5 4.8" /><path d="M3.5 12l1.4 1.4 2.6-2.6" /><path d="M3.5 18l1.4 1.4 2.6-2.6" /></>,
+  recipes: <><path d="M4 4.5A1.5 1.5 0 015.5 3H20v15.5H5.5A1.5 1.5 0 004 20V4.5z" /><path d="M4 17.5h16" /><path d="M9 7.5h6" /></>,
+  settings: <><path d="M4 21v-6M4 11V3M12 21v-9M12 8V3M20 21v-4M20 13V3" /><path d="M1.5 15h5M9.5 8h5M17.5 17h5" /></>,
+};
+
+const NavIcon = ({ id, size = 18, color }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'stroke 0.2s ease' }}>
+    {NAV_ICON_PATHS[id]}
+  </svg>
+);
+
+// Sync status — this is where the loose yellow dot from the old header ends
+// up: a live indicator sitting next to the word it explains.
+const SyncPill = ({ isOnline, t }) => (
+  <div
+    className="bc-sync-pill"
+    style={{
+      display: 'inline-flex', alignItems: 'center', gap: 8,
+      padding: '7px 12px', borderRadius: 9999,
+      border: `1.5px solid ${t.border}`, backgroundColor: t.bgSecondary,
+    }}
+  >
+    <span
+      className={isOnline ? 'sync-pulse' : ''}
+      style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: isOnline ? YELLOW : t.textTertiary, flexShrink: 0 }}
+    />
+    <span style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.04em', color: isOnline ? t.text : t.textSecondary }}>
+      {isOnline ? 'Live' : 'Offline'}
+    </span>
+  </div>
+);
+
+// ── Desktop sidebar ──
+// Everything you need to orient yourself without a trip into Settings:
+// what list you're on, its share code, where you are, and which store
+// layout is sorting the aisles.
+const DesktopSidebar = ({
+  activeTab, onTabChange, t, ink, paper,
+  listId, listName, remainingCount, recipeCount, isOnline,
+  storeLayouts, activeStoreLayoutId, onSwitchStore, onCopyCode, codeCopied,
+}) => {
+  const [storesOpen, setStoresOpen] = useState(false);
+  const activeStore = storeLayouts.find(s => s.id === activeStoreLayoutId) || storeLayouts[0];
+  const tabs = [
+    { id: 'list', label: 'List', badge: remainingCount || null },
+    { id: 'recipes', label: 'Recipes', badge: recipeCount || null },
+    { id: 'settings', label: 'Settings', badge: null },
+  ];
+
+  return (
+    <aside
+      style={{
+        position: 'fixed', left: 0, top: 0, bottom: 0, width: SIDEBAR_WIDTH,
+        backgroundColor: paper, borderRight: `1.5px solid ${t.border}`,
+        display: 'flex', flexDirection: 'column', zIndex: 50, overflowY: 'auto',
+      }}
+    >
+      {/* Wordmark — the three crumbs finally have something to label */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '24px 20px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div className="breathe-1" style={{ width: 11, height: 11, borderRadius: '50%', backgroundColor: YELLOW }} />
+          <div className="breathe-2" style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
+          <div className="breathe-3" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
+        </div>
+        <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.025em', color: ink }}>Breadcrumbs</span>
+      </div>
+
+      {/* The list you're on, and the code that shares it */}
+      <div style={{ padding: '0 16px 16px' }}>
+        <div style={{ borderRadius: 16, border: `1.5px solid ${t.border}`, backgroundColor: t.bgSecondary, padding: '13px 14px', boxShadow: t.cardShadow }}>
+          <p style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.textTertiary, margin: '0 0 5px' }}>Current list</p>
+          <p className="truncate" style={{ fontSize: 14.5, fontWeight: 700, letterSpacing: '-0.015em', color: ink, margin: '0 0 11px' }}>
+            {listName || 'Breadcrumbs'}
+          </p>
+          <button
+            onClick={onCopyCode}
+            className="bc-hover-row"
+            title="Copy share code"
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+              padding: '7px 10px', borderRadius: 10, border: `1.5px solid ${t.borderLight}`,
+              backgroundColor: t.bgTertiary, cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            <span style={{ fontSize: 13.5, fontWeight: 700, fontFamily: MONO, letterSpacing: '0.13em', color: ink }}>{listId}</span>
+            <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: codeCopied ? ink : t.textTertiary, flexShrink: 0 }}>
+              {codeCopied ? 'Copied' : 'Copy'}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav style={{ padding: '0 12px', display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {tabs.map(tab => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => { triggerHaptic('light'); onTabChange(tab.id); }}
+              className="bc-nav-item"
+              aria-current={isActive ? 'page' : undefined}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 11, width: '100%',
+                padding: '11px 12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', textAlign: 'left',
+                backgroundColor: isActive ? t.bgTertiary : 'transparent',
+                transition: 'background-color 0.18s ease',
+              }}
+            >
+              <span style={{ width: 5, height: 5, borderRadius: '50%', flexShrink: 0, backgroundColor: isActive ? YELLOW : 'transparent', transition: 'background-color 0.2s ease' }} />
+              <NavIcon id={tab.id} color={isActive ? ink : t.textTertiary} />
+              <span style={{ flex: 1, fontSize: 14, fontWeight: isActive ? 700 : 600, color: isActive ? ink : t.textSecondary, transition: 'color 0.2s ease' }}>{tab.label}</span>
+              {tab.badge != null && (
+                <span style={{ fontSize: 11, fontWeight: 700, fontFamily: MONO, color: isActive ? ink : t.textTertiary, backgroundColor: isActive ? YELLOW : t.bgTertiary, borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>
+                  {tab.badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Store layout — switchable without a trip through Settings */}
+      <div style={{ padding: '20px 16px 0' }}>
+        <p style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.textTertiary, margin: '0 0 8px', paddingLeft: 4 }}>Store layout</p>
+        <button
+          onClick={() => setStoresOpen(o => !o)}
+          className="bc-hover-row"
+          aria-expanded={storesOpen}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
+            padding: '10px 12px', borderRadius: 12, border: `1.5px solid ${t.border}`,
+            backgroundColor: 'transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
+          }}
+        >
+          <span className="truncate" style={{ fontSize: 13.5, fontWeight: 700, color: ink }}>{activeStore?.name || 'Default'}</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: storesOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s ease' }}>
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+        {storesOpen && (
+          <div className="fade-in" style={{ marginTop: 6, maxHeight: 208, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {storeLayouts.map(layout => {
+              const isActive = layout.id === activeStoreLayoutId;
+              return (
+                <button
+                  key={layout.id}
+                  onClick={() => { onSwitchStore(layout.id); setStoresOpen(false); }}
+                  className="bc-hover-row"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 9, width: '100%',
+                    padding: '8px 12px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                    fontFamily: 'inherit', textAlign: 'left',
+                    backgroundColor: isActive ? t.bgTertiary : 'transparent',
+                  }}
+                >
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, backgroundColor: isActive ? YELLOW : t.border }} />
+                  <span className="truncate" style={{ fontSize: 13, fontWeight: isActive ? 700 : 600, color: isActive ? ink : t.textSecondary }}>{layout.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ flex: 1, minHeight: 24 }} />
+
+      <div style={{ padding: '16px 20px 22px', borderTop: `1.5px solid ${t.borderLight}` }}>
+        <SyncPill isOnline={isOnline} t={t} />
+      </div>
+    </aside>
+  );
+};
+
 // Crumb-trail home — lights up when the trail is complete
 const TrailHome = ({ lit, t }) => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill={lit ? YELLOW : 'none'} stroke={lit ? '#1c1917' : t.textTertiary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'stroke 0.3s ease, fill 0.3s ease' }}>
@@ -658,8 +883,8 @@ export default function App() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [editingQuantityId, setEditingQuantityId] = useState(null);
-  const [isDesktop, setIsDesktop] = useState(() => window.innerWidth >= 768);
-  const [isWide, setIsWide] = useState(() => window.innerWidth >= 1200);
+  const isDesktop = useMediaQuery(DESKTOP_QUERY);
+  const isWide = useMediaQuery(WIDE_QUERY);
 
   // Recipe state
   const [recipes, setRecipes] = useState([]);
@@ -842,18 +1067,6 @@ export default function App() {
       window.removeEventListener('offline', updateOnlineStatus);
       clearInterval(interval);
     };
-  }, []);
-
-  useEffect(() => {
-    const handler = () => setIsDesktop(window.innerWidth >= 768);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
-  }, []);
-
-  useEffect(() => {
-    const handler = () => setIsWide(window.innerWidth >= 1200);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
   }, []);
 
   useEffect(() => {
@@ -1065,6 +1278,15 @@ export default function App() {
     setStoreLayouts(newLayouts);
     await saveCategories({ storeLayouts: newLayouts });
     return newLayout;
+  };
+
+  const createLayoutFromPrompt = async () => {
+    const name = prompt('Enter a name for your custom layout:');
+    if (name && name.trim()) {
+      const newLayout = await createCustomStoreLayout(name);
+      setEditingStoreLayout(newLayout.id);
+      setEditingStoreLayoutData(newLayout);
+    }
   };
 
   const deleteStoreLayout = async (layoutId) => {
@@ -1504,6 +1726,8 @@ export default function App() {
   const totalItems = items.length;
   const checkedCount = items.filter(i => i.checked).length;
   const remainingCount = totalItems - checkedCount;
+  // Aisles that actually render a card — drives the desktop sparse state.
+  const activeCategoryCount = visibleCategories.filter(cat => items.some(i => i.category === cat.id)).length;
 
   // ── Bold Crumb motion vocabulary ──
   const styles = `
@@ -1544,43 +1768,84 @@ export default function App() {
     .btn-pop { animation: buttonPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     .sync-pulse { animation: pulse 1.5s ease-in-out infinite; }
     input { font-size: 16px !important; }
+
+    /* Every clickable thing looks clickable, and can be reached by keyboard. */
+    button, [role="button"] { cursor: pointer; }
+    button:disabled { cursor: default; }
+    /* Scoped to the controls that had no focus indicator at all. Inputs are
+       left alone: they already opt out via focus:outline-none and style their
+       own underline, and a blanket rule here would restyle them on phones. */
+    button:focus-visible,
+    [role="button"]:focus-visible,
+    [role="tab"]:focus-visible,
+    a:focus-visible { outline: 2px solid ${YELLOW}; outline-offset: 2px; }
+    /* Desktop keyboard users still get a ring on text fields; the extra
+       :focus outranks the utility class that switches the outline off. */
+    @media (min-width: 1024px) {
+      input:focus-visible:focus { outline: 2px solid ${YELLOW}; outline-offset: 2px; }
+    }
+    .bc-card { transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+    .bc-item-row { transition: background-color 0.15s ease; }
+    .bc-row-actions { transition: opacity 0.16s ease; }
+    .bc-icon-btn { transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease; }
+
+    /* Pointer affordances only where there is a pointer — touch keeps every
+       control visible at rest, exactly as it is today. */
     @media (hover: hover) and (pointer: fine) {
       .bc-press:hover { opacity: 0.9; }
+      .bc-card:hover { transform: translateY(-2px); box-shadow: ${theme.cardShadow}, 0 10px 28px rgba(0,0,0,${isDark ? '0.32' : '0.07'}); border-color: ${theme.textTertiary}; }
+      .bc-item-row:hover { background-color: ${theme.bgTertiary}; }
+      .bc-row-actions { opacity: 0; }
+      .bc-item-row:hover .bc-row-actions,
+      .bc-item-row:focus-within .bc-row-actions,
+      .bc-recipe-card:hover .bc-row-actions,
+      .bc-recipe-card:focus-within .bc-row-actions,
+      .bc-store-card:hover .bc-row-actions,
+      .bc-store-card:focus-within .bc-row-actions { opacity: 1; }
+      .bc-hover-row:hover { background-color: ${theme.bgTertiary}; }
+      .bc-nav-item:hover { background-color: ${theme.bgTertiary}; }
+      .bc-icon-btn:hover { background-color: ${theme.bgTertiary}; color: ${theme.text}; border-color: ${theme.textTertiary}; }
+      .bc-cta:hover { filter: brightness(0.94); }
+      .bc-dashed:hover { border-color: ${theme.text}; background-color: ${theme.bgTertiary}; }
+      .bc-fab:hover { transform: scale(1.05); box-shadow: 0 14px 36px rgba(250,204,21,0.5); }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
     }
   `;
 
-  // Desktop sidebar — paper, with the dots up top and a crumb beside the active tab
+  const copyShareCode = () => {
+    navigator.clipboard?.writeText(listId);
+    triggerHaptic('success');
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 1500);
+  };
+
+  // Desktop sidebar — wordmark, current list, nav, store switcher, sync status
   const desktopSidebar = isDesktop && (
-    <div
-      style={{
-        position: 'fixed', left: 0, top: 0, bottom: 0, width: 88,
-        backgroundColor: PAPER, borderRight: `1.5px solid ${theme.border}`,
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between',
-        paddingTop: 24, paddingBottom: 28, zIndex: 50,
-      }}
-    >
-      <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW }} />
-        <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
-        <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28 }}>
-        {[{ id: 'list', label: 'List' }, { id: 'recipes', label: 'Recipes' }, { id: 'settings', label: 'Settings' }].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => { triggerHaptic('light'); setActiveTab(tab.id); }}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
-          >
-            <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: activeTab === tab.id ? YELLOW : 'transparent', transition: 'background-color 0.2s ease' }} />
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: activeTab === tab.id ? INK : theme.textTertiary, transition: 'color 0.2s ease' }}>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
+    <DesktopSidebar
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      t={theme}
+      ink={INK}
+      paper={PAPER}
+      listId={listId}
+      listName={listName}
+      remainingCount={remainingCount}
+      recipeCount={recipes.length}
+      isOnline={isOnline}
+      storeLayouts={storeLayouts}
+      activeStoreLayoutId={activeStoreLayoutId}
+      onSwitchStore={switchStoreLayout}
+      onCopyCode={copyShareCode}
+      codeCopied={codeCopied}
+    />
   );
+
+  // Shell metrics — the main column gets a real padding/max-width system
+  // instead of stopping at an arbitrary point next to the rail.
+  const shellPadX = isWide ? 44 : 32;
+  const contentMax = { list: isWide ? 1560 : 1240, recipes: isWide ? 1420 : 1160, settings: isWide ? 1180 : 1020 };
 
   // ── Aisle renderer — Bold Crumb. Only aisles with items appear. ──
   const renderCategory = (category) => {
@@ -1592,17 +1857,22 @@ export default function App() {
     return (
       <div
         key={category.id}
-        style={{ display: 'grid', gridTemplateRows: allHidden ? '0fr' : '1fr', opacity: allHidden ? 0 : 1, transition: 'grid-template-rows 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease' }}
+        style={{ display: 'grid', gridTemplateRows: allHidden ? '0fr' : '1fr', opacity: allHidden ? 0 : 1, transition: 'grid-template-rows 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease', breakInside: 'avoid' }}
       >
-        <div style={{ overflow: 'hidden' }}>
-          <div style={{ marginBottom: 14 }}>
+        <div style={{ overflow: 'hidden', padding: isDesktop ? '6px 8px 16px' : 0 }}>
+          <div
+            className={isDesktop ? 'bc-card' : ''}
+            style={isDesktop
+              ? { backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 18, padding: '15px 16px 12px', boxShadow: theme.cardShadow }
+              : { marginBottom: 14 }}
+          >
             {/* Aisle label */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: isDesktop ? 6 : 2 }}>
               <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>{category.name}</span>
               {uncheckedCount > 0 && (
                 <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{uncheckedCount}</span>
               )}
-              <div style={{ flex: 1, height: 1.5, backgroundColor: theme.border }} />
+              <div style={{ flex: 1, height: 1.5, backgroundColor: isDesktop ? theme.borderLight : theme.border }} />
             </div>
 
             {/* Items */}
@@ -1619,8 +1889,10 @@ export default function App() {
                 >
                   <div style={{ overflow: 'hidden' }}>
                     <div
-                      className="flex items-center gap-3"
-                      style={{ padding: '10px 0' }}
+                      className={`flex items-center gap-3${isDesktop ? ' bc-item-row' : ''}`}
+                      style={isDesktop
+                        ? { padding: '8px 9px', margin: '0 -9px', borderRadius: 10 }
+                        : { padding: '10px 0' }}
                       onTouchStart={() => {
                         if (!item.checked) {
                           longPressTimerRef.current = setTimeout(() => {
@@ -1673,28 +1945,44 @@ export default function App() {
                         </span>
                       )}
 
-                      {!item.checked && !isEditingQty && (
-                        <button
-                          onClick={() => setEditingQuantityId(item.id)}
-                          className="bc-press"
-                          style={{ fontSize: 12, fontWeight: 700, fontFamily: MONO, color: INK, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: '4px 6px' }}
-                        >
-                          ×{quantity}
-                        </button>
-                      )}
-
-                      {isEditingQty && (
+                      {isEditingQty ? (
                         <div className="flex items-center gap-1 fade-in quantity-editor">
                           <button onClick={() => updateQuantity(item.id, -1)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14 }}>−</button>
                           <span style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, width: 24, textAlign: 'center', color: INK }}>{quantity}</span>
                           <button onClick={() => updateQuantity(item.id, 1)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14 }}>+</button>
                           <button onClick={() => setEditingQuantityId(null)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: YELLOW, color: '#1c1917', border: 'none', cursor: 'pointer', fontSize: 12, marginLeft: 4 }}>✓</button>
                         </div>
-                      )}
-
-                      {!isEditingQty && (
-                        <button onClick={() => deleteItem(item.id)} style={{ width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, fontWeight: 300, flexShrink: 0, padding: 0 }}>×</button>
-                      )}
+                      ) : (() => {
+                        // Quantity and delete. On a pointer device these fade in
+                        // on row hover (see .bc-row-actions) so a full aisle
+                        // card reads as names, not controls; on touch they stay
+                        // exactly where they have always been.
+                        const quantityButton = !item.checked && (
+                          <button
+                            onClick={() => setEditingQuantityId(item.id)}
+                            className="bc-press"
+                            aria-label={`Change quantity of ${item.name}`}
+                            style={{ fontSize: 12, fontWeight: 700, fontFamily: MONO, color: INK, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: '4px 6px' }}
+                          >
+                            ×{quantity}
+                          </button>
+                        );
+                        const deleteButton = (
+                          <button onClick={() => deleteItem(item.id)} aria-label={`Delete ${item.name}`} style={{ width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, fontWeight: 300, flexShrink: 0, padding: 0 }}>×</button>
+                        );
+                        if (!isDesktop) return <>{quantityButton}{deleteButton}</>;
+                        // A quantity above one is information, not just an
+                        // affordance, so it stays legible at rest; ×1 and the
+                        // delete cross fade in with the pointer.
+                        return (
+                          <div className="flex items-center gap-3" style={{ flexShrink: 0 }}>
+                            {quantity > 1
+                              ? quantityButton
+                              : <span className="bc-row-actions" style={{ display: 'flex' }}>{quantityButton}</span>}
+                            <span className="bc-row-actions" style={{ display: 'flex' }}>{deleteButton}</span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -1706,12 +1994,121 @@ export default function App() {
     );
   };
 
+  // ── Recipe editor: one aisle's worth of ingredients ──
+  // Shared by both layouts. Phone keeps the original underlined-row treatment;
+  // desktop gets a card, and `compact` is the collapsed form used for the
+  // aisles that have nothing in them yet.
+  const renderRecipeCategoryBlock = (category, compact) => {
+    const categoryIngredients = newRecipeIngredients.filter(i => i.category === category.id);
+    const hasIngredients = categoryIngredients.length > 0;
+    const isAdding = recipeAddingTo === category.id;
+
+    const addButton = (
+      <button
+        onClick={() => isAdding ? cancelRecipeAdding() : startRecipeAdding(category.id)}
+        className="bc-press recipe-input-area"
+        aria-label={isAdding ? `Stop adding to ${category.name}` : `Add an ingredient to ${category.name}`}
+        style={{ width: 28, height: 28, borderRadius: '50%', border: isAdding ? 'none' : `1.5px solid ${theme.border}`, backgroundColor: isAdding ? INK : 'transparent', color: isAdding ? PAPER : theme.textTertiary, cursor: 'pointer', fontSize: 15, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}
+      >
+        <span style={{ transform: isAdding ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', fontWeight: 300 }}>+</span>
+      </button>
+    );
+
+    const addInput = isAdding && (
+      <div className="mt-2 fade-in recipe-input-area">
+        <div className="flex items-center gap-3">
+          <input
+            ref={recipeInputRef}
+            type="text"
+            value={newRecipeItemText}
+            onChange={(e) => setNewRecipeItemText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') addRecipeIngredient(); if (e.key === 'Escape') cancelRecipeAdding(); }}
+            placeholder={`Add to ${category.name}…`}
+            className="flex-1 py-2 focus:outline-none bg-transparent"
+            style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 15, minWidth: 0 }}
+          />
+          <button
+            onClick={addRecipeIngredient}
+            disabled={!newRecipeItemText.trim()}
+            className="bc-press bc-cta"
+            style={{ padding: '8px 18px', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: newRecipeItemText.trim() ? YELLOW : theme.bgTertiary, color: newRecipeItemText.trim() ? '#1c1917' : theme.textTertiary, cursor: newRecipeItemText.trim() ? 'pointer' : 'default', flexShrink: 0 }}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+    );
+
+    const ingredientRows = hasIngredients && categoryIngredients.map(ingredient => (
+      <div
+        key={ingredient.id}
+        className={`flex items-center gap-3 fade-in${isDesktop ? ' bc-item-row' : ''}`}
+        style={isDesktop ? { padding: '7px 8px', margin: '0 -8px', borderRadius: 10 } : { padding: '9px 0' }}
+      >
+        <span className="flex-1 truncate" style={{ fontSize: isDesktop ? 14.5 : 15.5, fontWeight: 600, color: INK }}>{ingredient.name}</span>
+        <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, -1)} className="bc-press" aria-label={`One fewer ${ingredient.name}`} style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>−</button>
+        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: INK, width: 30, textAlign: 'center', flexShrink: 0 }}>×{ingredient.quantity || 1}</span>
+        <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, 1)} className="bc-press" aria-label={`One more ${ingredient.name}`} style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>+</button>
+        <button onClick={() => removeRecipeIngredient(ingredient.id)} aria-label={`Remove ${ingredient.name}`} style={{ width: 28, height: 28, color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, fontWeight: 300, padding: 0, flexShrink: 0 }}>×</button>
+      </div>
+    ));
+
+    if (!isDesktop) {
+      return (
+        <div key={category.id} style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: hasIngredients ? theme.textSecondary : theme.textTertiary, whiteSpace: 'nowrap', flexShrink: 0 }}>{category.name}</span>
+            {hasIngredients && (
+              <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{categoryIngredients.length}</span>
+            )}
+            <div style={{ flex: 1, height: 1.5, backgroundColor: theme.borderLight }} />
+            {addButton}
+          </div>
+          {addInput}
+          {ingredientRows}
+        </div>
+      );
+    }
+
+    return (
+      <div
+        key={category.id}
+        className="bc-card"
+        title={compact ? category.name : undefined}
+        style={{
+          backgroundColor: compact && !isAdding ? 'transparent' : theme.bgSecondary,
+          border: `1.5px solid ${compact && !isAdding ? theme.borderLight : theme.border}`,
+          borderRadius: compact && !isAdding ? 14 : 18,
+          padding: compact && !isAdding ? '9px 10px 9px 14px' : '14px 16px',
+          boxShadow: compact && !isAdding ? 'none' : theme.cardShadow,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span className="truncate" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: hasIngredients ? theme.textSecondary : theme.textTertiary }}>{category.name}</span>
+          {hasIngredients && (
+            <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{categoryIngredients.length}</span>
+          )}
+          <div style={{ flex: 1, height: 1.5, backgroundColor: theme.borderLight, minWidth: 8 }} />
+          {addButton}
+        </div>
+        {addInput}
+        {ingredientRows && <div style={{ marginTop: 6 }}>{ingredientRows}</div>}
+      </div>
+    );
+  };
+
+  const recipeIngredientCategoryCount = new Set(newRecipeIngredients.map(i => i.category)).size;
+  const recipeSaveReady = !!newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe;
+  // Aisles already carrying ingredients float to the top of the desktop picker.
+  const recipeCategoriesWithIngredients = visibleCategories.filter(c => newRecipeIngredients.some(i => i.category === c.id));
+  const recipeCategoriesEmpty = visibleCategories.filter(c => !newRecipeIngredients.some(i => i.category === c.id));
+
   // ════════════════ Recipes Screen ════════════════
   if (activeTab === 'recipes' && listId) {
     return (
       <div
         className="min-h-screen"
-        style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? 88 : 0 }}
+        style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? SIDEBAR_WIDTH : 0 }}
         onClick={(e) => {
           if (recipeAddingTo && !e.target.closest('.recipe-input-area')) cancelRecipeAdding();
         }}
@@ -1720,10 +2117,29 @@ export default function App() {
         {desktopSidebar}
         <Toast message={toastMessage} visible={showToast} t={theme} />
 
-        {/* Paper header */}
-        <div className="sticky top-0 z-40" style={{ backgroundColor: PAPER, borderBottom: `1.5px solid ${theme.border}`, padding: '12px 28px 18px' }}>
-          <div style={{ maxWidth: isDesktop ? 820 : 'none' }}>
+        {/* Paper header. In the desktop editor it scrolls away — the sticky
+            left panel carries the name, the count and Save/Cancel from there. */}
+        <div
+          className={isDesktop && showCreateRecipe ? '' : 'sticky top-0 z-40'}
+          style={{ backgroundColor: PAPER, borderBottom: `1.5px solid ${theme.border}`, padding: isDesktop ? `20px ${shellPadX}px 18px` : '12px 28px 18px' }}
+        >
+          <div style={{ maxWidth: isDesktop ? contentMax.recipes : 'none', margin: isDesktop ? '0 auto' : undefined }}>
           {showCreateRecipe ? (
+            isDesktop ? (
+              <div className="flex items-center" style={{ gap: 14 }}>
+                <button
+                  onClick={cancelCreateRecipe}
+                  className="bc-press bc-icon-btn"
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13.5, fontWeight: 700, color: theme.textSecondary, background: 'none', border: `1.5px solid ${theme.border}`, borderRadius: 9999, cursor: 'pointer', padding: '7px 14px 7px 11px' }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+                  Recipes
+                </button>
+                <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', color: INK, margin: 0 }}>
+                  {editingRecipeId ? 'Edit recipe' : 'New recipe'}
+                </h1>
+              </div>
+            ) : (
             <div className="flex items-center justify-between">
               <button
                 onClick={() => { setShowCreateRecipe(false); setEditingRecipeId(null); setNewRecipeName(''); setNewRecipeIngredients([]); }}
@@ -1738,6 +2154,26 @@ export default function App() {
               </h1>
               <div style={{ width: 56 }} />
             </div>
+            )
+          ) : isDesktop ? (
+            <div className="flex items-end justify-between" style={{ gap: 24 }}>
+              <div>
+                <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', margin: 0, color: INK }}>Recipes</h1>
+                <p style={{ fontSize: 13.5, color: theme.textSecondary, margin: '7px 0 0' }}>
+                  {recipes.length === 0
+                    ? 'A whole meal, dropped on the list at once.'
+                    : `${recipes.length} saved · a whole meal, dropped on the list at once.`}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCreateRecipe(true)}
+                className="bc-press bc-cta"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 20px', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer', flexShrink: 0 }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                New recipe
+              </button>
+            </div>
           ) : (
             <>
               <h1 style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', margin: 0, color: INK }}>Recipes</h1>
@@ -1747,8 +2183,89 @@ export default function App() {
           </div>
         </div>
 
-        <div style={{ padding: '6px 28px 0', paddingBottom: isDesktop ? 24 : 110, maxWidth: isDesktop ? 820 : 'none' }}>
+        <div style={{ padding: isDesktop ? `0 ${shellPadX}px` : '6px 28px 0', paddingBottom: isDesktop ? 40 : 110, maxWidth: isDesktop ? contentMax.recipes : 'none', margin: isDesktop ? '0 auto' : undefined }}>
           {showCreateRecipe ? (
+            isDesktop ? (
+              /* Desktop editor: a sticky panel holds the recipe's identity and
+                 its Save/Cancel, while the aisle picker spreads across a wide
+                 right column — filled aisles as cards, the rest as a compact
+                 "add to another aisle" row so all 20 stay reachable. */
+              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: isWide ? '340px 1fr' : '300px 1fr', gap: 28, alignItems: 'start', paddingTop: 22 }}>
+                <div style={{ position: 'sticky', top: 24 }}>
+                  <div style={{ backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 20, padding: 20, boxShadow: theme.cardShadow }}>
+                    <label htmlFor="bc-recipe-name" style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textTertiary, display: 'block', marginBottom: 7 }}>Recipe name</label>
+                    <input
+                      id="bc-recipe-name"
+                      type="text"
+                      value={newRecipeName}
+                      onChange={(e) => setNewRecipeName(e.target.value)}
+                      placeholder="e.g. Sunday Roast…"
+                      className="w-full py-2 focus:outline-none bg-transparent"
+                      style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 16, fontWeight: 700, marginBottom: 20 }}
+                      autoFocus
+                    />
+
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+                      <span className="bc-num" key={newRecipeIngredients.length} style={{ fontSize: 34, fontWeight: 800, fontFamily: MONO, letterSpacing: '-0.03em', color: newRecipeIngredients.length ? INK : theme.textTertiary, lineHeight: 1 }}>
+                        {newRecipeIngredients.length}
+                      </span>
+                      <span style={{ fontSize: 12.5, fontWeight: 600, color: theme.textSecondary }}>
+                        {newRecipeIngredients.length === 1 ? 'ingredient' : 'ingredients'}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 12, color: theme.textTertiary, margin: '0 0 18px', lineHeight: 1.5 }}>
+                      {recipeIngredientCategoryCount === 0
+                        ? 'Pick an aisle on the right to start adding.'
+                        : `across ${recipeIngredientCategoryCount} ${recipeIngredientCategoryCount === 1 ? 'aisle' : 'aisles'}`}
+                    </p>
+
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button
+                        onClick={cancelCreateRecipe}
+                        disabled={savingRecipe}
+                        className="bc-press bc-icon-btn"
+                        style={{ flex: 1, padding: '12px 0', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer', opacity: savingRecipe ? 0.5 : 1 }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={saveRecipe}
+                        disabled={!recipeSaveReady}
+                        className="bc-press bc-cta"
+                        style={{
+                          flex: 1.4, padding: '12px 0', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: 'none',
+                          backgroundColor: recipeSaveReady ? YELLOW : theme.border,
+                          color: recipeSaveReady ? '#1c1917' : theme.textTertiary,
+                          cursor: recipeSaveReady ? 'pointer' : 'default',
+                          opacity: recipeSaveReady ? 1 : 0.5,
+                        }}
+                      >
+                        {savingRecipe ? 'Saving…' : (editingRecipeId ? 'Update' : 'Save recipe')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  {recipeCategoriesWithIngredients.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, alignItems: 'start', marginBottom: 26 }}>
+                      {recipeCategoriesWithIngredients.map(category => renderRecipeCategoryBlock(category, false))}
+                    </div>
+                  )}
+
+                  {recipeCategoriesEmpty.length > 0 && (
+                    <>
+                      <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textTertiary, margin: '0 0 12px' }}>
+                        {recipeCategoriesWithIngredients.length > 0 ? 'Add to another aisle' : 'Pick an aisle'}
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(216px, 1fr))', gap: 10, alignItems: 'start', paddingBottom: 40 }}>
+                        {recipeCategoriesEmpty.map(category => renderRecipeCategoryBlock(category, true))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
             <div className="fade-in" style={{ paddingBottom: 90 }}>
               {/* Recipe name */}
               <div style={{ marginBottom: 22 }}>
@@ -1765,66 +2282,9 @@ export default function App() {
               </div>
 
               {/* Category-based ingredient adding */}
-              {visibleCategories.map(category => {
-                const categoryIngredients = newRecipeIngredients.filter(i => i.category === category.id);
-                const hasIngredients = categoryIngredients.length > 0;
-                const isAdding = recipeAddingTo === category.id;
-
-                return (
-                  <div key={category.id} style={{ marginBottom: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: hasIngredients ? theme.textSecondary : theme.textTertiary, whiteSpace: 'nowrap', flexShrink: 0 }}>{category.name}</span>
-                      {hasIngredients && (
-                        <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{categoryIngredients.length}</span>
-                      )}
-                      <div style={{ flex: 1, height: 1.5, backgroundColor: theme.borderLight }} />
-                      <button
-                        onClick={() => isAdding ? cancelRecipeAdding() : startRecipeAdding(category.id)}
-                        className="bc-press recipe-input-area"
-                        style={{ width: 28, height: 28, borderRadius: '50%', border: isAdding ? 'none' : `1.5px solid ${theme.border}`, backgroundColor: isAdding ? INK : 'transparent', color: isAdding ? PAPER : theme.textTertiary, cursor: 'pointer', fontSize: 15, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}
-                      >
-                        <span style={{ transform: isAdding ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', fontWeight: 300 }}>+</span>
-                      </button>
-                    </div>
-
-                    {isAdding && (
-                      <div className="mt-2 fade-in recipe-input-area">
-                        <div className="flex items-center gap-3">
-                          <input
-                            ref={recipeInputRef}
-                            type="text"
-                            value={newRecipeItemText}
-                            onChange={(e) => setNewRecipeItemText(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') addRecipeIngredient(); if (e.key === 'Escape') cancelRecipeAdding(); }}
-                            placeholder={`Add to ${category.name}…`}
-                            className="flex-1 py-2 focus:outline-none bg-transparent"
-                            style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 15 }}
-                          />
-                          <button
-                            onClick={addRecipeIngredient}
-                            disabled={!newRecipeItemText.trim()}
-                            className="bc-press"
-                            style={{ padding: '8px 18px', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: newRecipeItemText.trim() ? YELLOW : theme.bgTertiary, color: newRecipeItemText.trim() ? '#1c1917' : theme.textTertiary, cursor: newRecipeItemText.trim() ? 'pointer' : 'default' }}
-                          >
-                            Add
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {hasIngredients && categoryIngredients.map(ingredient => (
-                      <div key={ingredient.id} className="flex items-center gap-3 fade-in" style={{ padding: '9px 0' }}>
-                        <span className="flex-1" style={{ fontSize: 15.5, fontWeight: 600, color: INK }}>{ingredient.name}</span>
-                        <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, -1)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14 }}>−</button>
-                        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: INK, width: 30, textAlign: 'center' }}>×{ingredient.quantity || 1}</span>
-                        <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, 1)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14 }}>+</button>
-                        <button onClick={() => removeRecipeIngredient(ingredient.id)} style={{ width: 28, height: 28, color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, fontWeight: 300, padding: 0 }}>×</button>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
+              {visibleCategories.map(category => renderRecipeCategoryBlock(category, false))}
             </div>
+            )
           ) : (
             <>
               {recipes.length === 0 ? (
@@ -1839,8 +2299,98 @@ export default function App() {
                     Save your favourite meals and add every ingredient to your list in one tap.
                   </p>
                 </div>
+              ) : isDesktop ? (
+                /* Card grid. The bookmark ribbon carries the recipe's accent,
+                   ingredients read as chips, and Edit/Delete stay out of the
+                   way until the pointer is on the card. */
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(288px, 1fr))', gap: 18, alignItems: 'start', paddingTop: 22, paddingBottom: 12 }}>
+                  {recipes.map((recipe) => {
+                    const isAdded = addingRecipeId === recipe.id;
+                    const shownIngredients = recipe.ingredients.slice(0, 5);
+                    const overflowCount = recipe.ingredients.length - shownIngredients.length;
+                    return (
+                      <div
+                        key={recipe.id}
+                        className="bc-card bc-recipe-card"
+                        style={{ position: 'relative', display: 'flex', flexDirection: 'column', backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 20, boxShadow: theme.cardShadow, overflow: 'hidden', minHeight: 196 }}
+                      >
+                        {/* Bookmark ribbon */}
+                        <span aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 8, backgroundColor: recipeAccent(recipe.id) }} />
+
+                        <div style={{ padding: '17px 16px 0 22px', flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                            <h3 className="flex-1" style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.015em', margin: 0, color: INK, lineHeight: 1.25, minWidth: 0 }}>{recipe.name}</h3>
+                            <div className="bc-row-actions" style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                              <button
+                                onClick={() => startEditRecipe(recipe)}
+                                className="bc-icon-btn"
+                                aria-label={`Edit ${recipe.name}`}
+                                title="Edit"
+                                style={{ width: 30, height: 30, borderRadius: '50%', border: `1.5px solid ${theme.borderLight}`, background: 'none', color: theme.textTertiary, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+                              </button>
+                              <button
+                                onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }}
+                                className="bc-icon-btn"
+                                aria-label={`Delete ${recipe.name}`}
+                                title="Delete"
+                                style={{ width: 30, height: 30, borderRadius: '50%', border: `1.5px solid ${theme.borderLight}`, background: 'none', color: theme.textTertiary, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
+                              </button>
+                            </div>
+                          </div>
+
+                          <p style={{ fontSize: 11, fontWeight: 700, fontFamily: MONO, letterSpacing: '0.06em', color: theme.textTertiary, margin: '7px 0 12px' }}>
+                            {recipe.ingredients.length} {recipe.ingredients.length === 1 ? 'INGREDIENT' : 'INGREDIENTS'}
+                          </p>
+
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {shownIngredients.map(ing => (
+                              <span key={ing.id} style={{ fontSize: 11.5, fontWeight: 600, color: theme.textSecondary, backgroundColor: theme.bgTertiary, border: `1px solid ${theme.borderLight}`, borderRadius: 9999, padding: '4px 10px', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {ing.name}
+                              </span>
+                            ))}
+                            {overflowCount > 0 && (
+                              <span style={{ fontSize: 11.5, fontWeight: 700, color: theme.textTertiary, padding: '4px 4px' }}>+{overflowCount} more</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ padding: '14px 16px 16px 22px' }}>
+                          <button
+                            onClick={() => addRecipeToList(recipe)}
+                            className="bc-press bc-cta"
+                            style={{ width: '100%', padding: '11px 0', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: isAdded ? INK : YELLOW, color: isAdded ? theme.accentOnInk : '#1c1917', cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
+                          >
+                            {isAdded ? 'Added ✓' : 'Add to list'}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Keeps the grid from trailing off into blank canvas, and
+                      puts the primary action at the end of the reading order. */}
+                  <button
+                    onClick={() => setShowCreateRecipe(true)}
+                    className="bc-dashed bc-card"
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 196, borderRadius: 20, border: `2px dashed ${theme.border}`, background: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 20 }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 11, height: 11, borderRadius: '50%', backgroundColor: YELLOW }} />
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: INK }}>New recipe</span>
+                    <span style={{ fontSize: 12, color: theme.textTertiary, textAlign: 'center', lineHeight: 1.5, maxWidth: 200 }}>
+                      Save a meal once, add every ingredient in one click.
+                    </span>
+                  </button>
+                </div>
               ) : (
-                <div style={isDesktop ? { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0 32px' } : {}}>
+                <div>
                   {recipes.map((recipe) => {
                     const ingredientNames = recipe.ingredients.map(i => i.name);
                     const preview = ingredientNames.slice(0, 4).join(', ') + (ingredientNames.length > 4 ? '…' : '');
@@ -1871,22 +2421,25 @@ export default function App() {
                 </div>
               )}
 
-              {/* New recipe */}
-              <button
-                onClick={() => setShowCreateRecipe(true)}
-                className="bc-press"
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0', background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14"/></svg>
-                <span style={{ fontSize: 16, fontWeight: 600, color: theme.textSecondary }}>New recipe</span>
-              </button>
+              {/* New recipe — desktop puts this CTA in the header instead */}
+              {!isDesktop && (
+                <button
+                  onClick={() => setShowCreateRecipe(true)}
+                  className="bc-press"
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0', background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14"/></svg>
+                  <span style={{ fontSize: 16, fontWeight: 600, color: theme.textSecondary }}>New recipe</span>
+                </button>
+              )}
             </>
           )}
         </div>
 
-        {/* Sticky Save/Cancel footer for recipe creation */}
-        {showCreateRecipe && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 z-40" style={{ backgroundColor: PAPER, borderTop: `1.5px solid ${theme.border}`, paddingLeft: isDesktop ? 104 : 16 }}>
+        {/* Sticky Save/Cancel footer — phone only; desktop keeps these in the
+            editor's left panel where the recipe name and count already live. */}
+        {showCreateRecipe && !isDesktop && (
+          <div className="fixed bottom-0 left-0 right-0 p-4 z-40" style={{ backgroundColor: PAPER, borderTop: `1.5px solid ${theme.border}` }}>
             <div className="flex gap-3 max-w-lg mx-auto">
               <button
                 onClick={cancelCreateRecipe}
@@ -1938,16 +2491,51 @@ export default function App() {
   // ════════════════ Settings Screen ════════════════
   if (activeTab === 'settings' && listId) {
     const inSubSection = settingsTab !== 'general';
+    // Desktop settings are grouped into titled cards rather than one long
+    // stack of divider rows; these keep the three parts consistent.
+    const settingsCardStyle = { backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 20, padding: '18px 20px 20px', boxShadow: theme.cardShadow };
+    const settingsCardHeader = { display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 };
+    const settingsCardTitle = { fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, margin: 0 };
     return (
-      <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? 88 : 0 }}>
+      <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? SIDEBAR_WIDTH : 0 }}>
         <style>{styles}</style>
         {desktopSidebar}
         <Toast message={toastMessage} visible={showToast} t={theme} />
 
         {/* Paper header with the share code card */}
-        <div style={{ padding: '12px 28px 0' }}>
-          <div style={{ maxWidth: isDesktop ? 560 : 'none' }}>
-          {inSubSection ? (
+        <div style={{ padding: isDesktop ? `20px ${shellPadX}px 0` : '12px 28px 0' }}>
+          <div style={{ maxWidth: isDesktop ? contentMax.settings : 'none', margin: isDesktop ? '0 auto' : undefined }}>
+          {isDesktop ? (
+            /* No drill-down on desktop — there is room for all three sections
+               as tabs, and the share code already lives in the sidebar. */
+            <>
+              <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', margin: 0, color: INK }}>Settings</h1>
+              <div role="tablist" style={{ display: 'flex', gap: 4, marginTop: 18, borderBottom: `1.5px solid ${theme.border}` }}>
+                {[['general', 'General'], ['stores', 'Stores'], ['categories', 'Categories']].map(([id, label]) => {
+                  const isActive = settingsTab === id;
+                  return (
+                    <button
+                      key={id}
+                      role="tab"
+                      aria-selected={isActive}
+                      onClick={() => { setSettingsTab(id); triggerHaptic('light'); }}
+                      className="bc-hover-row"
+                      style={{
+                        padding: '11px 16px', fontSize: 13.5, fontWeight: 700, fontFamily: 'inherit',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: isActive ? INK : theme.textTertiary,
+                        borderTopLeftRadius: 10, borderTopRightRadius: 10,
+                        boxShadow: isActive ? `inset 0 -2.5px 0 ${YELLOW}` : 'none',
+                        transition: 'color 0.18s ease, background-color 0.18s ease',
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : inSubSection ? (
             <div className="flex items-center" style={{ gap: 12 }}>
               <button
                 onClick={() => { setSettingsTab('general'); triggerHaptic('light'); }}
@@ -1985,10 +2573,156 @@ export default function App() {
           </div>
         </div>
 
-        <div style={{ padding: '10px 28px 0', paddingBottom: isDesktop ? 24 : 110, maxWidth: isDesktop ? 560 : 'none' }}>
+        <div style={{ padding: isDesktop ? `22px ${shellPadX}px 0` : '10px 28px 0', paddingBottom: isDesktop ? 48 : 110, maxWidth: isDesktop ? contentMax.settings : 'none', margin: isDesktop ? '0 auto' : undefined }}>
+
+          {/* ── General — desktop splits the stack into two columns ── */}
+          {settingsTab === 'general' && isDesktop && (
+            <div style={{ display: 'grid', gridTemplateColumns: isWide ? '1fr 1fr' : 'minmax(0,1fr) minmax(0,1fr)', gap: 22, alignItems: 'start' }}>
+
+              {/* Left: identity and destructive actions */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+                <section style={settingsCardStyle}>
+                  <div style={settingsCardHeader}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a1 1 0 001 1h14a1 1 0 001-1v-8" /><path d="M2 7h20v5H2z" /><path d="M12 21V7" /><path d="M12 7S9.5 3 7.5 3a2.5 2.5 0 000 5" /><path d="M12 7s2.5-4 4.5-4a2.5 2.5 0 010 5" /></svg>
+                    <h2 style={settingsCardTitle}>Share code</h2>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                    <span style={{ fontSize: 28, fontWeight: 700, fontFamily: MONO, letterSpacing: '0.14em', color: INK }}>{listId}</span>
+                    <button
+                      onClick={copyShareCode}
+                      className="bc-press bc-cta"
+                      style={{ padding: '11px 0', width: 92, fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: codeCopied ? INK : YELLOW, color: codeCopied ? theme.accentOnInk : '#1c1917', cursor: 'pointer', flexShrink: 0, transition: 'background-color 0.22s ease, color 0.22s ease' }}
+                    >
+                      {codeCopied ? 'Copied ✓' : 'Copy'}
+                    </button>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: theme.textTertiary, margin: '12px 0 0', lineHeight: 1.45 }}>Anyone with this code follows the same trail.</p>
+                </section>
+
+                <section style={settingsCardStyle}>
+                  <div style={settingsCardHeader}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+                    <h2 style={settingsCardTitle}>List name</h2>
+                  </div>
+                  <input
+                    type="text"
+                    value={editingListName}
+                    onChange={(e) => setEditingListName(e.target.value)}
+                    onBlur={() => saveListName(editingListName)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                    placeholder="Name your list…"
+                    aria-label="List name"
+                    className="w-full focus:outline-none bg-transparent"
+                    style={{ color: INK, fontSize: 16, fontWeight: 600, border: 'none', borderBottom: `1.5px solid ${theme.border}`, padding: '4px 0 8px' }}
+                  />
+                  <p style={{ fontSize: 12.5, color: theme.textTertiary, margin: '12px 0 0', lineHeight: 1.45 }}>Saved on this device only — it isn't shared with the list.</p>
+                </section>
+
+                <section style={settingsCardStyle}>
+                  <div style={settingsCardHeader}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" /><path d="M12 9v4M12 17h.01" /></svg>
+                    <h2 style={settingsCardTitle}>Danger zone</h2>
+                  </div>
+                  {checkedCount > 0 && (
+                    <button
+                      onClick={() => { triggerHaptic('light'); setShowClearConfirm(true); }}
+                      className="w-full flex items-center justify-between bc-press bc-hover-row"
+                      style={{ padding: '13px 10px', margin: '0 -10px', width: 'calc(100% + 20px)', borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer' }}
+                    >
+                      <span style={{ fontSize: 14.5, fontWeight: 600, color: INK }}>Clear ticked items</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: theme.textSecondary }}>{checkedCount}</span>
+                    </button>
+                  )}
+                  {totalItems > 0 && (
+                    <button
+                      onClick={() => { triggerHaptic('light'); setShowClearAllConfirm(true); }}
+                      className="w-full flex items-center justify-between bc-press bc-hover-row"
+                      style={{ padding: '13px 10px', margin: '0 -10px', width: 'calc(100% + 20px)', borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer' }}
+                    >
+                      <span style={{ fontSize: 14.5, fontWeight: 600, color: INK }}>Clear all items</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: theme.textSecondary }}>{totalItems}</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => { triggerHaptic('light'); setShowLeaveConfirm(true); }}
+                    className="w-full flex items-center justify-between bc-press bc-hover-row"
+                    style={{ padding: '13px 10px', margin: '0 -10px', width: 'calc(100% + 20px)', borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    <span style={{ fontSize: 14.5, fontWeight: 600, color: theme.textTertiary }}>Leave this list</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+                  </button>
+                  {checkedCount === 0 && totalItems === 0 && (
+                    <p style={{ fontSize: 12.5, color: theme.textTertiary, margin: '10px 0 0', lineHeight: 1.45 }}>Nothing on the list to clear right now.</p>
+                  )}
+                </section>
+              </div>
+
+              {/* Right: appearance and how the list behaves */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+                <section style={settingsCardStyle}>
+                  <div style={settingsCardHeader}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+                    <h2 style={settingsCardTitle}>Appearance</h2>
+                  </div>
+                  <div style={{ position: 'relative', display: 'flex', background: theme.bgTertiary, borderRadius: 9999, padding: 3 }}>
+                    <div style={{ position: 'absolute', top: 3, bottom: 3, left: 3, width: 'calc(33.333% - 2px)', borderRadius: 9999, background: INK, transform: `translateX(${['light', 'dark', 'system'].indexOf(themePref) * 100}%)`, transition: 'transform 0.28s cubic-bezier(0.22,1,0.36,1)' }} />
+                    {[['light', 'Light'], ['dark', 'Dark'], ['system', 'System']].map(([value, label]) => (
+                      <button
+                        key={value}
+                        onClick={() => { triggerHaptic('light'); setThemePref(value); }}
+                        aria-pressed={themePref === value}
+                        style={{ flex: 1, padding: '11px 0', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', background: 'transparent', color: themePref === value ? theme.accentOnInk : theme.textSecondary, cursor: 'pointer', position: 'relative', zIndex: 1, transition: 'color 0.25s ease' }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section style={settingsCardStyle}>
+                  <div style={settingsCardHeader}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>
+                    <h2 style={settingsCardTitle}>Ticked items</h2>
+                  </div>
+                  <button
+                    onClick={() => { triggerHaptic('light'); setHideCompleted(!hideCompleted); }}
+                    className="w-full flex items-center justify-between bc-press bc-hover-row"
+                    aria-pressed={hideCompleted}
+                    style={{ padding: '11px 10px', margin: '0 -10px', width: 'calc(100% + 20px)', borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                  >
+                    <span style={{ minWidth: 0, paddingRight: 14 }}>
+                      <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: INK }}>Hide ticked items</span>
+                      <span style={{ display: 'block', fontSize: 12.5, color: theme.textTertiary, marginTop: 2 }}>Picked-up items drop out of the aisles</span>
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      style={{ width: 46, height: 27, borderRadius: 9999, flexShrink: 0, backgroundColor: hideCompleted ? YELLOW : theme.bgTertiary, border: `1.5px solid ${hideCompleted ? YELLOW : theme.border}`, display: 'flex', alignItems: 'center', padding: 2, transition: 'background-color 0.2s ease, border-color 0.2s ease' }}
+                    >
+                      <span style={{ width: 21, height: 21, borderRadius: '50%', backgroundColor: hideCompleted ? '#1c1917' : theme.textTertiary, transform: `translateX(${hideCompleted ? 19 : 0}px)`, transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1), background-color 0.2s ease' }} />
+                    </span>
+                  </button>
+                </section>
+
+                <section style={settingsCardStyle}>
+                  <div style={settingsCardHeader}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9.5" /><path d="M12 8v4l2.5 2.5" /></svg>
+                    <h2 style={settingsCardTitle}>Getting started</h2>
+                  </div>
+                  <button
+                    onClick={() => { localStorage.removeItem('breadcrumbs-has-seen-onboarding'); setShowOnboarding(true); }}
+                    className="w-full flex items-center justify-between bc-press bc-hover-row"
+                    style={{ padding: '13px 10px', margin: '0 -10px', width: 'calc(100% + 20px)', borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    <span style={{ fontSize: 14.5, fontWeight: 600, color: INK }}>Replay app intro</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                  </button>
+                </section>
+              </div>
+            </div>
+          )}
 
           {/* ── General (main settings page) ── */}
-          {settingsTab === 'general' && (
+          {settingsTab === 'general' && !isDesktop && (
             <>
               <div style={{ padding: '15px 0', borderBottom: `1.5px solid ${theme.border}` }}>
                 <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, display: 'block', marginBottom: 6 }}>List name</label>
@@ -2079,8 +2813,92 @@ export default function App() {
             </>
           )}
 
+          {/* ── Stores — desktop lays the layouts out as selectable cards ── */}
+          {settingsTab === 'stores' && isDesktop && (
+            <>
+              <div className="flex items-end justify-between" style={{ gap: 24, marginBottom: 20 }}>
+                <p style={{ fontSize: 13.5, color: theme.textSecondary, margin: 0, lineHeight: 1.55, maxWidth: 560 }}>
+                  Pick a store and your aisles reorder to match how it's laid out. Your items stay the same.
+                </p>
+                <button
+                  onClick={createLayoutFromPrompt}
+                  className="bc-press bc-icon-btn"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: `2px dashed ${theme.textTertiary}`, background: 'none', color: INK, cursor: 'pointer', flexShrink: 0 }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                  Create custom layout
+                </button>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(248px, 1fr))', gap: 14, alignItems: 'start' }}>
+                {storeLayouts.map((layout) => {
+                  const isActive = layout.id === activeStoreLayoutId;
+                  return (
+                    <div
+                      key={layout.id}
+                      className="bc-card bc-store-card"
+                      style={{
+                        position: 'relative',
+                        backgroundColor: isActive ? theme.bgSecondary : 'transparent',
+                        border: `2px solid ${isActive ? YELLOW : theme.border}`,
+                        borderRadius: 18, padding: '15px 16px 13px',
+                        boxShadow: isActive ? theme.yellowGlow : 'none',
+                      }}
+                    >
+                      <button
+                        onClick={() => switchStoreLayout(layout.id)}
+                        aria-pressed={isActive}
+                        style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+                          <div style={{ width: 24, height: 24, borderRadius: '50%', border: `2.5px solid ${isActive ? YELLOW : theme.border}`, backgroundColor: isActive ? YELLOW : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.18s ease' }}>
+                            {isActive && (
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12l6 6L20 6" /></svg>
+                            )}
+                          </div>
+                          {isActive ? (
+                            <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '3px 9px', flexShrink: 0 }}>Active</span>
+                          ) : !layout.isDefault && (
+                            <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.textSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 9999, padding: '2px 8px', flexShrink: 0 }}>Custom</span>
+                          )}
+                        </div>
+                        <span className="truncate" style={{ display: 'block', fontSize: 16, fontWeight: isActive ? 800 : 700, letterSpacing: '-0.015em', color: INK }}>{layout.name}</span>
+                        <span style={{ display: 'block', fontSize: 11.5, color: theme.textTertiary, marginTop: 3 }}>
+                          {layout.categoryOrder.length} aisles in order
+                        </span>
+                      </button>
+
+                      {/* Reordering aisles is the point of a layout card, so
+                          this one stays put rather than waiting for a hover. */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12 }}>
+                        <button
+                          onClick={() => { setEditingStoreLayout(layout.id); setEditingStoreLayoutData(storeLayouts.find(s => s.id === layout.id)); }}
+                          className="bc-icon-btn"
+                          style={{ flex: 1, padding: '7px 0', fontSize: 12, fontWeight: 700, borderRadius: 9999, border: `1.5px solid ${theme.border}`, background: 'none', color: theme.textSecondary, cursor: 'pointer' }}
+                        >
+                          Edit order
+                        </button>
+                        {!layout.isDefault && (
+                          <button
+                            onClick={() => deleteStoreLayout(layout.id)}
+                            className="bc-icon-btn"
+                            aria-label={`Delete ${layout.name}`}
+                            title="Delete layout"
+                            style={{ width: 30, height: 30, borderRadius: '50%', border: `1.5px solid ${theme.border}`, color: theme.textTertiary, background: 'none', cursor: 'pointer', fontSize: 16, fontWeight: 300, padding: 0, flexShrink: 0 }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
           {/* ── Stores ── */}
-          {settingsTab === 'stores' && (
+          {settingsTab === 'stores' && !isDesktop && (
             <>
               <p style={{ fontSize: 13.5, color: theme.textSecondary, marginBottom: 18, lineHeight: 1.55 }}>
                 Pick a store and your aisles reorder to match how it's laid out. Your items stay the same.
@@ -2114,14 +2932,7 @@ export default function App() {
                 );
               })}
               <button
-                onClick={async () => {
-                  const name = prompt('Enter a name for your custom layout:');
-                  if (name && name.trim()) {
-                    const newLayout = await createCustomStoreLayout(name);
-                    setEditingStoreLayout(newLayout.id);
-                    setEditingStoreLayoutData(newLayout);
-                  }
-                }}
+                onClick={createLayoutFromPrompt}
                 className="w-full bc-press"
                 style={{ marginTop: 18, padding: '15px 0', fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px dashed ${theme.textTertiary}`, background: 'none', color: INK, cursor: 'pointer' }}
               >
@@ -2133,28 +2944,49 @@ export default function App() {
           {/* ── Categories ── */}
           {settingsTab === 'categories' && (
             <>
-              <p style={{ fontSize: 13.5, color: theme.textSecondary, marginBottom: 18, lineHeight: 1.55 }}>
-                Toggle aisles on or off. Hidden aisles won't appear in your list. Reorder them in the Stores tab.
-              </p>
+              {isDesktop ? (
+                /* Blurb and the add affordance share the top row, so the full
+                   aisle list starts higher up the page. */
+                <div className="flex items-start justify-between" style={{ gap: 24, marginBottom: 20 }}>
+                  <p style={{ fontSize: 13.5, color: theme.textSecondary, margin: '4px 0 0', lineHeight: 1.55, maxWidth: 520 }}>
+                    Toggle aisles on or off. Hidden aisles won't appear in your list. Reorder them in the Stores tab.
+                  </p>
+                  {!showAddCategory && (
+                    <button
+                      onClick={() => setShowAddCategory(true)}
+                      className="bc-press bc-icon-btn"
+                      style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: `2px dashed ${theme.textTertiary}`, background: 'none', color: INK, cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                      Add custom category
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <p style={{ fontSize: 13.5, color: theme.textSecondary, marginBottom: 18, lineHeight: 1.55 }}>
+                  Toggle aisles on or off. Hidden aisles won't appear in your list. Reorder them in the Stores tab.
+                </p>
+              )}
 
               {showAddCategory ? (
-                <div className="fade-in" style={{ marginBottom: 18 }}>
+                <div className="fade-in" style={{ marginBottom: 18, maxWidth: isDesktop ? 460 : 'none' }}>
                   <input
                     type="text"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') addCustomCategory(); if (e.key === 'Escape') { setShowAddCategory(false); setNewCategoryName(''); } }}
                     placeholder="Category name…"
+                    aria-label="New category name"
                     className="w-full py-2 focus:outline-none bg-transparent"
                     style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 16, fontWeight: 600, marginBottom: 12 }}
                     autoFocus
                   />
                   <div className="flex gap-2">
-                    <button onClick={() => { setShowAddCategory(false); setNewCategoryName(''); }} className="flex-1 py-2.5 bc-press" style={{ fontSize: 13, fontWeight: 700, borderRadius: 9999, border: `1.5px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
-                    <button onClick={addCustomCategory} disabled={!newCategoryName.trim()} className="flex-1 py-2.5 bc-press" style={{ fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: newCategoryName.trim() ? INK : theme.border, color: newCategoryName.trim() ? PAPER : theme.textTertiary, cursor: newCategoryName.trim() ? 'pointer' : 'default', transition: 'background-color 0.18s ease' }}>Create</button>
+                    <button onClick={() => { setShowAddCategory(false); setNewCategoryName(''); }} className="flex-1 py-2.5 bc-press bc-icon-btn" style={{ fontSize: 13, fontWeight: 700, borderRadius: 9999, border: `1.5px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
+                    <button onClick={addCustomCategory} disabled={!newCategoryName.trim()} className="flex-1 py-2.5 bc-press bc-cta" style={{ fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: newCategoryName.trim() ? INK : theme.border, color: newCategoryName.trim() ? PAPER : theme.textTertiary, cursor: newCategoryName.trim() ? 'pointer' : 'default', transition: 'background-color 0.18s ease' }}>Create</button>
                   </div>
                 </div>
-              ) : (
+              ) : !isDesktop && (
                 <button
                   onClick={() => setShowAddCategory(true)}
                   className="w-full bc-press"
@@ -2164,12 +2996,19 @@ export default function App() {
                 </button>
               )}
 
+              <div style={isDesktop ? { display: 'grid', gridTemplateColumns: isWide ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: 10, alignItems: 'start' } : undefined}>
               {categories.map((cat) => {
                 const isHidden = hiddenCategories.includes(cat.id);
                 const itemCount = items.filter(i => i.category === cat.id).length;
                 const isCustom = cat.isDefault === false;
                 return (
-                  <div key={cat.id} className="flex items-center gap-3" style={{ padding: '12px 0', borderBottom: `1.5px solid ${theme.borderLight}` }}>
+                  <div
+                    key={cat.id}
+                    className={`flex items-center gap-3${isDesktop ? ' bc-hover-row' : ''}`}
+                    style={isDesktop
+                      ? { padding: '10px 12px', borderRadius: 14, border: `1.5px solid ${theme.borderLight}`, backgroundColor: isHidden ? 'transparent' : theme.bgSecondary, transition: 'background-color 0.16s ease, border-color 0.16s ease' }
+                      : { padding: '12px 0', borderBottom: `1.5px solid ${theme.borderLight}` }}
+                  >
                     <div className="flex-1 min-w-0" style={{ opacity: isHidden ? 0.4 : 1, transition: 'opacity 0.2s ease' }}>
                       <div className="flex items-center gap-2">
                         <span className="truncate" style={{ fontSize: 15, fontWeight: 600, color: INK }}>{cat.name}</span>
@@ -2186,9 +3025,11 @@ export default function App() {
                     )}
                     <button
                       onClick={() => toggleCategoryVisibility(cat.id)}
-                      className="bc-press"
+                      className={`bc-press${isDesktop ? ' bc-icon-btn' : ''}`}
                       title={isHidden ? 'Show aisle' : 'Hide aisle'}
-                      style={{ width: 36, height: 36, borderRadius: '50%', border: `1.5px solid ${isHidden ? theme.border : theme.border}`, backgroundColor: isHidden ? 'transparent' : theme.bgTertiary, color: isHidden ? theme.textTertiary : theme.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', transition: 'background-color 0.18s ease, color 0.18s ease', padding: 0 }}
+                      aria-label={`${isHidden ? 'Show' : 'Hide'} ${cat.name}`}
+                      aria-pressed={!isHidden}
+                      style={{ width: 36, height: 36, borderRadius: '50%', border: `1.5px solid ${theme.border}`, backgroundColor: isHidden ? 'transparent' : theme.bgTertiary, color: isHidden ? theme.textTertiary : theme.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', transition: 'background-color 0.18s ease, color 0.18s ease', padding: 0 }}
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         {isHidden
@@ -2199,14 +3040,23 @@ export default function App() {
                   </div>
                 );
               })}
+              </div>
             </>
           )}
         </div>
 
         {/* Edit Store Layout Modal */}
         {editingStoreLayout && (
-          <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }}>
-            <div className="w-full max-h-[85vh] flex flex-col" style={{ backgroundColor: PAPER, borderRadius: '28px 28px 0 0', overflow: 'hidden' }}>
+          <div
+            className={`fixed inset-0 z-[60] flex justify-center ${isDesktop ? 'items-center p-6' : 'items-end'}`}
+            style={{ backgroundColor: theme.overlay }}
+          >
+            <div
+              className="w-full flex flex-col"
+              style={isDesktop
+                ? { maxWidth: 560, maxHeight: '82vh', backgroundColor: PAPER, borderRadius: 24, overflow: 'hidden', border: `1.5px solid ${theme.border}`, boxShadow: '0 24px 64px rgba(0,0,0,0.35)' }
+                : { maxHeight: '85vh', backgroundColor: PAPER, borderRadius: '28px 28px 0 0', overflow: 'hidden' }}
+            >
               <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1.5px solid ${theme.border}` }}>
                 <button
                   onClick={async () => {
@@ -2238,7 +3088,7 @@ export default function App() {
               <p className="px-6 py-3" style={{ fontSize: 13.5, color: theme.textSecondary, margin: 0 }}>
                 Move aisles to match your store's layout.
               </p>
-              <div className="flex-1 overflow-y-auto px-6" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
+              <div className="flex-1 overflow-y-auto px-6" style={{ paddingBottom: isDesktop ? 24 : 'calc(2rem + env(safe-area-inset-bottom))' }}>
                 {(() => {
                   const layout = editingStoreLayoutData;
                   const allCategories = [...DEFAULT_CATEGORIES, ...categories.filter(c => !DEFAULT_CATEGORIES.find(d => d.id === c.id))];
@@ -2259,11 +3109,12 @@ export default function App() {
                       setEditingStoreLayoutData({ ...editingStoreLayoutData, categoryOrder: newOrder });
                     };
                     return (
-                      <div key={cat.id} className="flex items-center gap-3" style={{ padding: '10px 0', borderBottom: `1.5px solid ${theme.borderLight}`, opacity: isHidden ? 0.4 : 1 }}>
+                      <div key={cat.id} className={`flex items-center gap-3${isDesktop ? ' bc-item-row' : ''}`} style={{ padding: isDesktop ? '8px 10px' : '10px 0', margin: isDesktop ? '0 -10px' : undefined, borderRadius: isDesktop ? 10 : undefined, borderBottom: `1.5px solid ${theme.borderLight}`, opacity: isHidden ? 0.4 : 1 }}>
                         <button
                           onClick={() => !isFirst && move(-1)}
                           disabled={isFirst}
-                          className="bc-press"
+                          aria-label={`Move ${cat.name} earlier`}
+                          className={`bc-press${isFirst ? '' : ' bc-icon-btn'}`}
                           style={{ width: 32, height: 32, borderRadius: '50%', border: `2px solid ${isFirst ? theme.borderLight : INK}`, color: isFirst ? theme.border : INK, background: 'none', cursor: isFirst ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
                         >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
@@ -2272,7 +3123,8 @@ export default function App() {
                         <button
                           onClick={() => !isLast && move(1)}
                           disabled={isLast}
-                          className="bc-press"
+                          aria-label={`Move ${cat.name} later`}
+                          className={`bc-press${isLast ? '' : ' bc-icon-btn'}`}
                           style={{ width: 32, height: 32, borderRadius: '50%', border: `2px solid ${isLast ? theme.borderLight : INK}`, color: isLast ? theme.border : INK, background: 'none', cursor: isLast ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
                         >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
@@ -2347,7 +3199,7 @@ export default function App() {
           );
         })()}
 
-        {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} />}
+        {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} isDesktop={isDesktop} />}
         {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={theme} />}
       </div>
     );
@@ -2437,13 +3289,15 @@ export default function App() {
   return (
     <div
       className="min-h-screen"
-      style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? 88 : 0 }}
+      style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? SIDEBAR_WIDTH : 0 }}
       onClick={(e) => {
         if (editingQuantityId && !e.target.closest('.quantity-editor')) setEditingQuantityId(null);
-        if (fabOpen && !e.target.closest('.fab-area')) {
-          setFabOpen(false);
-          setFabInput('');
-          setFabNoMatchMode(false);
+        if (!e.target.closest('.fab-area')) {
+          if (fabOpen) {
+            setFabOpen(false);
+            setFabInput('');
+          }
+          if (fabOpen || fabNoMatchMode) setFabNoMatchMode(false);
         }
       }}
     >
@@ -2451,21 +3305,154 @@ export default function App() {
       {desktopSidebar}
       <Toast message={toastMessage} visible={showToast} t={theme} />
 
-      {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} />}
+      {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} isDesktop={isDesktop} />}
 
-      {!isOnline && (
+      {/* Offline is already spelled out by the sidebar's sync pill on desktop. */}
+      {!isOnline && !isDesktop && (
         <div className="px-4 py-2 text-center" style={{ backgroundColor: YELLOW, color: '#1c1917', fontSize: 12.5, fontWeight: 700 }}>
           You're offline. Changes will sync when you reconnect.
         </div>
       )}
 
       {/* ── Paper header with the crumb trail ── */}
-      <div className="sticky top-0 z-40" style={{ backgroundColor: PAPER, borderBottom: `1.5px solid ${theme.border}`, padding: '12px 26px 14px' }}>
-        <div style={{ maxWidth: isDesktop ? 1100 : 'none' }}>
-        <h1 className="truncate" style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, margin: 0, color: INK }}>
-          {listName || 'Breadcrumbs'}
-        </h1>
+      <div className="sticky top-0 z-40" style={{ backgroundColor: PAPER, borderBottom: `1.5px solid ${theme.border}`, padding: isDesktop ? `20px ${shellPadX}px 0` : '12px 26px 14px' }}>
+        <div style={{ maxWidth: isDesktop ? contentMax.list : 'none', margin: isDesktop ? '0 auto' : undefined }}>
 
+        {isDesktop ? (
+          /* Title and quick add share one row; the toolbar sits right under
+             it, so content starts immediately instead of after a gap. */
+          <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 32 }}>
+            <div style={{ minWidth: 0 }}>
+              <h1 className="truncate" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.05, margin: 0, color: INK }}>
+                {listName || 'Breadcrumbs'}
+              </h1>
+              <p style={{ fontSize: 13, color: theme.textSecondary, margin: '7px 0 0' }}>
+                {totalItems === 0
+                  ? 'Nothing on the list yet.'
+                  : `${totalItems} ${totalItems === 1 ? 'item' : 'items'} across ${activeCategoryCount} ${activeCategoryCount === 1 ? 'aisle' : 'aisles'}`}
+              </p>
+            </div>
+
+            {/* Inline quick add — the desktop replacement for the thumb-reach FAB */}
+            <div className="fab-area" style={{ position: 'relative', width: isWide ? 460 : 400, flexShrink: 0, paddingBottom: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 5px 5px 16px', borderRadius: 9999, border: `1.5px solid ${theme.border}`, backgroundColor: theme.bgSecondary }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14" /></svg>
+                <input
+                  ref={fabInputRef}
+                  type="text"
+                  value={fabInput}
+                  onChange={(e) => { setFabInput(e.target.value); setFabNoMatchMode(false); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleFabAdd(); if (e.key === 'Escape') { setFabInput(''); setFabNoMatchMode(false); e.currentTarget.blur(); } }}
+                  placeholder={isWide ? 'Quick add — what do you need?' : 'Quick add an item…'}
+                  aria-label="Quick add an item"
+                  className="flex-1 focus:outline-none bg-transparent"
+                  style={{ color: INK, fontSize: 15, fontWeight: 600, border: 'none', minWidth: 0, padding: '6px 0' }}
+                />
+                <button
+                  onClick={handleFabAdd}
+                  disabled={!fabInput.trim()}
+                  className="bc-press bc-cta"
+                  style={{ padding: '9px 20px', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: fabInput.trim() ? YELLOW : theme.bgTertiary, color: fabInput.trim() ? '#1c1917' : theme.textTertiary, cursor: fabInput.trim() ? 'pointer' : 'default', flexShrink: 0, transition: 'background-color 0.2s ease, color 0.2s ease' }}
+                >
+                  Add
+                </button>
+              </div>
+
+              {fabNoMatchMode && (
+                <div
+                  className="fade-in"
+                  style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 60, backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 18, boxShadow: theme.cardShadow, padding: 14, maxHeight: 300, overflowY: 'auto' }}
+                >
+                  <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textTertiary, margin: '0 0 10px' }}>Which aisle?</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                    {visibleCategories.map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => handleChipSelect(cat.id)}
+                        className="bc-press bc-cta"
+                        style={{ backgroundColor: 'transparent', color: INK, fontSize: 12.5, fontWeight: 700, borderRadius: 9999, padding: '7px 14px', border: `2px solid ${INK}`, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      >
+                        {cat.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <h1 className="truncate" style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, margin: 0, color: INK }}>
+            {listName || 'Breadcrumbs'}
+          </h1>
+        )}
+
+        {isDesktop ? (
+          /* Toolbar: progress, the crumb-trail home it belongs to, and the
+             hide/clear control — one row, directly under the header. */
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 16, padding: '11px 0 13px', borderTop: `1.5px solid ${theme.borderLight}` }}>
+            {/* Crumbs run left to right and the house closes the trail, so
+                the icon reads as its destination rather than as decoration
+                stranded in the corner. */}
+            {totalItems > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, minWidth: 80, overflow: 'hidden' }}>
+                {totalItems > 40 ? (
+                  <div style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: theme.border, overflow: 'hidden' }}>
+                    <div style={{ width: `${(remainingCount / totalItems) * 100}%`, height: '100%', borderRadius: 2, backgroundColor: YELLOW, transition: 'width 0.35s cubic-bezier(0.22,1,0.36,1)' }} />
+                  </div>
+                ) : (
+                  visibleCategories.flatMap(cat => items.filter(item => item.category === cat.id)).map(item => {
+                    const crumbSize = totalItems <= 16 ? 10 : totalItems <= 28 ? 8 : 6;
+                    return (
+                      <span
+                        key={item.id}
+                        style={{ width: crumbSize, height: crumbSize, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0, backgroundColor: item.checked ? 'transparent' : YELLOW, border: `1.5px solid ${item.checked ? theme.border : 'transparent'}`, transition: 'background-color 0.25s ease, border-color 0.25s ease' }}
+                      />
+                    );
+                  })
+                )}
+                <span style={{ display: 'flex', marginLeft: 6 }}>
+                  <TrailHome lit={remainingCount === 0 && totalItems > 0} t={theme} />
+                </span>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0, marginLeft: 'auto' }}>
+              {remainingCount === 0 && totalItems > 0 ? (
+                <span className="bc-hint" style={{ fontSize: 12, fontFamily: MONO, fontWeight: 700, color: INK, whiteSpace: 'nowrap' }}>Trail complete — you’re home</span>
+              ) : (
+                <span style={{ fontSize: 12, fontFamily: MONO, fontWeight: 700, color: INK, fontFeatureSettings: '"tnum"', whiteSpace: 'nowrap' }}>
+                  {remainingCount} to go <span style={{ fontWeight: 500, color: theme.textTertiary }}>· {checkedCount} picked up</span>
+                </span>
+              )}
+            </div>
+
+            {remainingCount === 0 && totalItems > 0 ? (
+              <button
+                onClick={() => { triggerHaptic('light'); setShowClearConfirm(true); }}
+                className="bc-press bc-hint bc-icon-btn flex items-center"
+                style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: `1.5px solid ${theme.border}`, backgroundColor: theme.bgSecondary, color: theme.textSecondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
+                Clear ticked
+              </button>
+            ) : (
+              <button
+                onClick={() => { triggerHaptic('light'); setHideCompleted(!hideCompleted); }}
+                className={`bc-press flex items-center${hideCompleted ? '' : ' bc-icon-btn'}`}
+                aria-pressed={hideCompleted}
+                style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: `1.5px solid ${hideCompleted ? 'transparent' : theme.border}`, backgroundColor: hideCompleted ? INK : theme.bgSecondary, color: hideCompleted ? theme.accentOnInk : theme.textSecondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  {hideCompleted
+                    ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></>
+                    : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>}
+                </svg>
+                Hide done
+              </button>
+            )}
+          </div>
+        ) : (
+        <>
         {/* The crumb trail — one crumb per item, picked up as you shop */}
         {totalItems > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18 }}>
@@ -2520,39 +3507,72 @@ export default function App() {
             </button>
           )}
         </div>
+        </>
+        )}
         </div>
       </div>
 
       {/* ── Aisles ── */}
-      <div style={{ padding: '16px 28px 0', paddingBottom: isDesktop ? 24 : 110, maxWidth: isDesktop ? 1100 : 'none' }}>
+      <div style={{ padding: isDesktop ? `18px ${shellPadX}px 0` : '16px 28px 0', paddingBottom: isDesktop ? 40 : 110, maxWidth: isDesktop ? contentMax.list : 'none', margin: isDesktop ? '0 auto' : undefined }}>
         {totalItems === 0 ? (
-          <div className="text-center" style={{ paddingTop: 70 }}>
+          <div className="text-center" style={{ paddingTop: isDesktop ? 96 : 70 }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 24 }}>
-              <div style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: YELLOW }} />
-              <div style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
-              <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
+              <div className={isDesktop ? 'breathe-1' : ''} style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: YELLOW }} />
+              <div className={isDesktop ? 'breathe-2' : ''} style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
+              <div className={isDesktop ? 'breathe-3' : ''} style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
             </div>
-            <h3 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.015em', color: INK, marginBottom: 8 }}>Nothing on the list</h3>
-            <p style={{ fontSize: 14, color: theme.textSecondary, maxWidth: 240, margin: '0 auto', lineHeight: 1.55 }}>
-              Tap the yellow button and type anything — it lands in the right aisle automatically.
+            <h3 style={{ fontSize: isDesktop ? 22 : 18, fontWeight: 700, letterSpacing: '-0.015em', color: INK, marginBottom: 8 }}>Nothing on the list</h3>
+            <p style={{ fontSize: 14, color: theme.textSecondary, maxWidth: isDesktop ? 340 : 240, margin: '0 auto', lineHeight: 1.55 }}>
+              {isDesktop
+                ? 'Type anything into the quick-add box above — it lands in the right aisle automatically.'
+                : 'Tap the yellow button and type anything — it lands in the right aisle automatically.'}
             </p>
           </div>
         ) : isDesktop ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 40px' }}>
-            <div>{visibleCategories.filter((_, i) => i % 2 === 0).map(renderCategory)}</div>
-            <div>{visibleCategories.filter((_, i) => i % 2 === 1).map(renderCategory)}</div>
+          /* Column packing rather than a row-aligned grid. Same responsive
+             behaviour — the browser fits as many ~320px columns as the window
+             allows, two at 1024 and four when it's wide — but aisle cards of
+             different heights pack tight instead of leaving a row's worth of
+             blank space under every short one. Aisles still read in store
+             order, down each column. */
+          <div style={{ columnWidth: 320, columnGap: 12 }}>
+            {visibleCategories.map(renderCategory)}
+            {activeCategoryCount > 0 && activeCategoryCount < 3 && (
+              /* A list this short would otherwise leave the grid mostly
+                 blank — say something useful in the space instead. */
+              <div style={{ padding: '6px 8px 16px', breakInside: 'avoid' }}>
+                <div
+                  className="bc-dashed bc-card"
+                  style={{ borderRadius: 18, border: `2px dashed ${theme.border}`, padding: '26px 22px', textAlign: 'center', backgroundColor: 'transparent' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+                    <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: YELLOW }} />
+                    <div style={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
+                    <div style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
+                  </div>
+                  <h4 style={{ fontSize: 14.5, fontWeight: 700, letterSpacing: '-0.01em', color: INK, margin: '0 0 6px' }}>
+                    {activeCategoryCount === 1 ? 'One aisle so far' : 'Two aisles so far'}
+                  </h4>
+                  <p style={{ fontSize: 12.5, color: theme.textSecondary, lineHeight: 1.55, margin: 0 }}>
+                    Add from the quick-add box and new aisles appear here as cards, in the order you'll walk them.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           visibleCategories.map(renderCategory)
         )}
       </div>
 
-      {/* ── Quick Add FAB ── */}
-      {activeTab === 'list' && !fabOpen && (
+      {/* ── Quick Add FAB — phone only; desktop adds inline from the header ── */}
+      {activeTab === 'list' && !fabOpen && !isDesktop && (
         <button
           onClick={() => { triggerHaptic('light'); setFabOpen(true); }}
+          className="bc-fab"
+          aria-label="Quick add an item"
           style={{
-            position: 'fixed', bottom: isDesktop ? 28 : 'calc(66px + max(26px, env(safe-area-inset-bottom, 0px)))', right: 24,
+            position: 'fixed', bottom: 'calc(66px + max(26px, env(safe-area-inset-bottom, 0px)))', right: 24,
             width: 62, height: 62, borderRadius: '50%',
             backgroundColor: YELLOW, border: 'none',
             boxShadow: '0 10px 30px rgba(250,204,21,0.45)',
@@ -2569,17 +3589,17 @@ export default function App() {
       )}
 
       {/* ── Quick Add Input Bar ── */}
-      {fabOpen && (
+      {fabOpen && !isDesktop && (
         <div
           className="fab-area"
           style={{
-            position: 'fixed', bottom: 0, left: isDesktop ? 88 : 0, right: 0,
+            position: 'fixed', bottom: 0, left: 0, right: 0,
             backgroundColor: PAPER, borderTop: `1.5px solid ${theme.border}`,
             padding: '12px 20px calc(16px + env(safe-area-inset-bottom, 0px))',
             zIndex: 55, animation: 'fabSlideUp 250ms cubic-bezier(0.22,1,0.36,1)',
           }}
         >
-          <div style={{ maxWidth: isDesktop ? 820 : 'none' }}>
+          <div>
           <div className="flex items-center gap-3">
             <input
               ref={fabInputRef}
