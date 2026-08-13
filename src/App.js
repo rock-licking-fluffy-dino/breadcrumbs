@@ -619,7 +619,7 @@ const BottomNav = ({ activeTab, onTabChange, t }) => {
       className="fixed bottom-0 left-0 right-0 z-50"
       style={{ backgroundColor: t.bg, borderTop: `1.5px solid ${t.border}` }}
     >
-      <div style={{ display: 'flex', paddingTop: 11, paddingBottom: 'max(26px, env(safe-area-inset-bottom, 0px))' }}>
+      <div style={{ display: 'flex', paddingTop: 11, paddingBottom: 'max(34px, calc(env(safe-area-inset-bottom, 0px) + 8px))' }}>
         {tabs.map(tab => {
           const isActive = activeTab === tab.id;
           return (
@@ -3588,7 +3588,7 @@ export default function App() {
           className="bc-fab"
           aria-label="Quick add an item"
           style={{
-            position: 'fixed', bottom: 'calc(66px + max(26px, env(safe-area-inset-bottom, 0px)))', right: 24,
+            position: 'fixed', bottom: 'calc(66px + max(34px, calc(env(safe-area-inset-bottom, 0px) + 8px)))', right: 24,
             width: 62, height: 62, borderRadius: '50%',
             backgroundColor: YELLOW, border: 'none',
             boxShadow: '0 10px 30px rgba(250,204,21,0.45)',
