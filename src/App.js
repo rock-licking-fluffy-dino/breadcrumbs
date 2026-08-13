@@ -890,6 +890,7 @@ export default function App() {
   const [recipes, setRecipes] = useState([]);
   const [showCreateRecipe, setShowCreateRecipe] = useState(false);
   const [newRecipeName, setNewRecipeName] = useState('');
+  const [newRecipeNotes, setNewRecipeNotes] = useState('');
   const [newRecipeIngredients, setNewRecipeIngredients] = useState([]);
   const [recipeAddingTo, setRecipeAddingTo] = useState(null);
   const [newRecipeItemText, setNewRecipeItemText] = useState('');
@@ -1646,15 +1647,16 @@ export default function App() {
     if (editingRecipeId) {
       newRecipes = recipes.map(r =>
         r.id === editingRecipeId
-          ? { ...r, name: newRecipeName.trim(), ingredients: newRecipeIngredients }
+          ? { ...r, name: newRecipeName.trim(), ingredients: newRecipeIngredients, notes: newRecipeNotes.trim() }
           : r
       );
     } else {
-      newRecipes = [...recipes, { id: generateId(), name: newRecipeName.trim(), ingredients: newRecipeIngredients, createdAt: Date.now() }];
+      newRecipes = [...recipes, { id: generateId(), name: newRecipeName.trim(), ingredients: newRecipeIngredients, createdAt: Date.now(), notes: newRecipeNotes.trim() }];
     }
     setRecipes(newRecipes);
     await saveRecipes(newRecipes);
     setNewRecipeName('');
+    setNewRecipeNotes('');
     setNewRecipeIngredients([]);
     setShowCreateRecipe(false);
     setEditingRecipeId(null);
@@ -1665,6 +1667,7 @@ export default function App() {
   const cancelCreateRecipe = () => {
     triggerHaptic('light');
     setNewRecipeName('');
+    setNewRecipeNotes('');
     setNewRecipeIngredients([]);
     setRecipeAddingTo(null);
     setShowCreateRecipe(false);
@@ -1675,6 +1678,7 @@ export default function App() {
     triggerHaptic('light');
     setEditingRecipeId(recipe.id);
     setNewRecipeName(recipe.name);
+    setNewRecipeNotes(recipe.notes || '');
     setNewRecipeIngredients([...recipe.ingredients]);
     setShowCreateRecipe(true);
   };
@@ -2142,7 +2146,7 @@ export default function App() {
             ) : (
             <div className="flex items-center justify-between">
               <button
-                onClick={() => { setShowCreateRecipe(false); setEditingRecipeId(null); setNewRecipeName(''); setNewRecipeIngredients([]); }}
+                onClick={() => { setShowCreateRecipe(false); setEditingRecipeId(null); setNewRecipeName(''); setNewRecipeNotes(''); setNewRecipeIngredients([]); }}
                 className="bc-press"
                 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, color: theme.textSecondary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               >
@@ -2203,6 +2207,17 @@ export default function App() {
                       className="w-full py-2 focus:outline-none bg-transparent"
                       style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 16, fontWeight: 700, marginBottom: 20 }}
                       autoFocus
+                    />
+
+                    <label htmlFor="bc-recipe-notes" style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textTertiary, display: 'block', marginBottom: 7 }}>Source (optional)</label>
+                    <input
+                      id="bc-recipe-notes"
+                      type="text"
+                      value={newRecipeNotes}
+                      onChange={(e) => setNewRecipeNotes(e.target.value)}
+                      placeholder="e.g. pg 74, yellow cookbook"
+                      className="w-full py-2 focus:outline-none bg-transparent"
+                      style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 14, fontWeight: 500, marginBottom: 20 }}
                     />
 
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
@@ -2281,6 +2296,19 @@ export default function App() {
                 />
               </div>
 
+              {/* Recipe source */}
+              <div style={{ marginBottom: 22 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, display: 'block', marginBottom: 6 }}>Source (optional)</label>
+                <input
+                  type="text"
+                  value={newRecipeNotes}
+                  onChange={(e) => setNewRecipeNotes(e.target.value)}
+                  placeholder="e.g. pg 74, yellow cookbook"
+                  className="w-full py-2 focus:outline-none bg-transparent"
+                  style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 16, fontWeight: 500 }}
+                />
+              </div>
+
               {/* Category-based ingredient adding */}
               {visibleCategories.map(category => renderRecipeCategoryBlock(category, false))}
             </div>
@@ -2356,6 +2384,12 @@ export default function App() {
                               <span style={{ fontSize: 11.5, fontWeight: 700, color: theme.textTertiary, padding: '4px 4px' }}>+{overflowCount} more</span>
                             )}
                           </div>
+
+                          {recipe.notes && (
+                            <p style={{ fontSize: 12, fontStyle: 'italic', color: theme.textTertiary, margin: '10px 0 0', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {recipe.notes}
+                            </p>
+                          )}
                         </div>
 
                         <div style={{ padding: '14px 16px 16px 22px' }}>
@@ -2403,6 +2437,11 @@ export default function App() {
                             <span style={{ fontFamily: MONO, fontWeight: 700, color: INK, flexShrink: 0 }}>{recipe.ingredients.length}</span>
                             {preview && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>· {preview}</span>}
                           </div>
+                          {recipe.notes && (
+                            <p style={{ fontSize: 12.5, fontStyle: 'italic', color: theme.textTertiary, margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {recipe.notes}
+                            </p>
+                          )}
                           <div style={{ display: 'flex', gap: 14, marginTop: 6 }}>
                             <button onClick={() => startEditRecipe(recipe)} style={{ fontSize: 13, fontWeight: 600, color: theme.textSecondary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Edit</button>
                             <button onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }} style={{ fontSize: 13, fontWeight: 600, color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete</button>
