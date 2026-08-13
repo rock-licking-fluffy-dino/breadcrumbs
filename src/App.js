@@ -52,25 +52,6 @@ const DEFAULT_CATEGORIES = [
 
 const YELLOW = '#FACC15';
 
-// Recipe bookmark accents. Desktop turns recipes into a card grid, and each
-// card carries a bookmark ribbon so a wall of cards still reads as distinct
-// objects. These are opacity steps of the one signal colour rather than new
-// hues — the palette stays exactly as wide as it was.
-const RECIPE_ACCENT_COLORS = [
-  'rgba(250,204,21,1)',
-  'rgba(250,204,21,0.82)',
-  'rgba(250,204,21,0.64)',
-  'rgba(250,204,21,0.46)',
-];
-
-// Stable per-recipe accent — same recipe keeps the same ribbon across
-// reloads and across devices, since it is derived from the id alone.
-const recipeAccent = (id = '') => {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  return RECIPE_ACCENT_COLORS[hash % RECIPE_ACCENT_COLORS.length];
-};
-
 // ── Responsive breakpoints ──
 // Desktop is a real canvas (sidebar + multi-column grids); anything narrower
 // keeps the phone layout untouched. Detected with matchMedia, same as the
@@ -2328,9 +2309,8 @@ export default function App() {
                   </p>
                 </div>
               ) : isDesktop ? (
-                /* Card grid. The bookmark ribbon carries the recipe's accent,
-                   ingredients read as chips, and Edit/Delete stay out of the
-                   way until the pointer is on the card. */
+                /* Card grid. Ingredients read as chips, and Edit/Delete stay
+                   out of the way until the pointer is on the card. */
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(288px, 1fr))', gap: 18, alignItems: 'start', paddingTop: 22, paddingBottom: 12 }}>
                   {recipes.map((recipe) => {
                     const isAdded = addingRecipeId === recipe.id;
@@ -2342,10 +2322,7 @@ export default function App() {
                         className="bc-card bc-recipe-card"
                         style={{ position: 'relative', display: 'flex', flexDirection: 'column', backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 20, boxShadow: theme.cardShadow, overflow: 'hidden', minHeight: 196 }}
                       >
-                        {/* Bookmark ribbon */}
-                        <span aria-hidden="true" style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 8, backgroundColor: recipeAccent(recipe.id) }} />
-
-                        <div style={{ padding: '17px 16px 0 22px', flex: 1 }}>
+                        <div style={{ padding: '17px 16px 0 16px', flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                             <h3 className="flex-1" style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.015em', margin: 0, color: INK, lineHeight: 1.25, minWidth: 0 }}>{recipe.name}</h3>
                             <div className="bc-row-actions" style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
@@ -2392,13 +2369,13 @@ export default function App() {
                           )}
                         </div>
 
-                        <div style={{ padding: '14px 16px 16px 22px' }}>
+                        <div style={{ padding: '14px 16px 16px 16px', display: 'flex', justifyContent: 'flex-end' }}>
                           <button
                             onClick={() => addRecipeToList(recipe)}
                             className="bc-press bc-cta"
-                            style={{ width: '100%', padding: '11px 0', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: isAdded ? INK : YELLOW, color: isAdded ? theme.accentOnInk : '#1c1917', cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
+                            style={{ width: 84, padding: '10px 0', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: isAdded ? INK : YELLOW, color: isAdded ? theme.accentOnInk : '#1c1917', cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
                           >
-                            {isAdded ? 'Added ✓' : 'Add to list'}
+                            {isAdded ? 'Added ✓' : 'Add'}
                           </button>
                         </div>
                       </div>
