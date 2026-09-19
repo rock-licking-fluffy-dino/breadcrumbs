@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 // Firebase configuration
@@ -458,6 +458,80 @@ const generateListCode = () => {
   return code;
 };
 
+// ── Completed shops (trips) ───────────────────────────────────────────────
+// Every finished shop is written once to lists/{listId}/trips/{tripId}.
+// Trips are append-only: the rules allow create and deny update/delete, so a
+// record can never be clobbered by a later write from another phone.
+
+// 32-bit FNV-1a. Deterministic across devices — two phones finishing the
+// same shop must derive the same trip ID, so the second create is denied
+// rather than producing a duplicate record of one shop.
+const fnv1a32 = (str) => {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    // hash * 16777619, kept in 32-bit unsigned range
+    hash = (hash + ((hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24))) >>> 0;
+  }
+  return hash >>> 0;
+};
+
+// trip_<YYYYMMDDHHmm>_<base36 hash of the ticked item ids>
+// The timestamp is truncated to the minute (not rounded) so two devices a
+// few seconds apart still agree.
+const buildTripId = (finishedAtIso, tickedItems) => {
+  const minute = finishedAtIso.slice(0, 16).replace(/[-:T]/g, '');
+  const fingerprint = tickedItems.map((i) => String(i.id)).sort().join('|');
+  return `trip_${minute}_${fnv1a32(fingerprint).toString(36)}`;
+};
+
+// Counts are validated as `int` by the rules, which is a different type from
+// `float` in Firestore — anything non-integer or non-finite is coerced here
+// rather than being rejected at write time.
+const asInt = (value, fallback = 0) => {
+  const n = Math.trunc(Number(value));
+  return Number.isFinite(n) ? n : fallback;
+};
+
+// Build the trip document from the items that are ticked right now.
+// `categoryName` is snapshotted on purpose: renaming or deleting an aisle
+// later must not rewrite the history of shops already done.
+const buildTrip = (tickedItems, categories, finishedAtIso, durationMinutes, storeLayout) => {
+  const categoryNames = new Map((categories || []).map((c) => [c.id, c.name]));
+  const lines = tickedItems.map((item) => {
+    const categoryId = String(item.category || '');
+    return {
+      name: String(item.name || ''),
+      categoryId,
+      categoryName: String(categoryNames.get(categoryId) || categoryId || 'Other'),
+      quantity: Math.max(1, asInt(item.quantity, 1))
+    };
+  });
+
+  const trip = {
+    finishedAt: finishedAtIso,
+    itemCount: Math.min(5000, lines.reduce((sum, line) => sum + line.quantity, 0)),
+    lineCount: lines.length,
+    aisleCount: Math.min(50, new Set(lines.map((l) => l.categoryId)).size),
+    lines
+  };
+
+  // Optional fields are omitted rather than written as null/undefined —
+  // the rules only type-check them when present.
+  if (Number.isFinite(durationMinutes)) trip.durationMinutes = Math.max(0, asInt(durationMinutes));
+  if (storeLayout?.id) trip.storeLayoutId = String(storeLayout.id);
+  if (storeLayout?.name) trip.storeName = String(storeLayout.name);
+
+  return trip;
+};
+
+// How long we give the server to confirm the trip write before falling back
+// to Firestore's local acknowledgement. Offline (a supermarket basement is
+// the normal case, not an edge case) the promise stays pending until the
+// device reconnects, and blocking the list clear behind it would wedge the
+// UI mid-shop.
+const TRIP_SERVER_ACK_MS = 4000;
+
 const triggerHaptic = (style = 'light') => {
   if (navigator.vibrate) {
     navigator.vibrate(style === 'success' ? [10, 50, 20] : style === 'light' ? 10 : 5);
@@ -891,7 +965,17 @@ export default function App() {
 
   // Navigation and UI state
   const [activeTab, setActiveTab] = useState('list');
-  const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('breadcrumbs-hide-completed') === 'true');
+  // `hideCompleted` lives on the list document so both phones agree. It
+  // starts false and is filled in by the list listener; the old per-device
+  // localStorage value is migrated up once per list (see the listener below)
+  // and never read again.
+  const [hideCompleted, setHideCompleted] = useState(false);
+  const hideCompletedMigratedRef = useRef(null);
+  // First tick of the current shop, used for `durationMinutes`. Deliberately
+  // React state only — never written to Firestore. If the app reloads
+  // mid-shop the value is lost and the trip simply omits the duration.
+  const firstTickAtRef = useRef(null);
+  const finishingShopRef = useRef(false);
 
   // Theme — light / dark / system, persisted
   const [themePref, setThemePref] = useState(() => {
@@ -918,17 +1002,13 @@ export default function App() {
   const recipeInputRef = useRef(null);
   const codeInputRef = useRef(null);
 
-  // Show toast helper
-  const showToastMessage = (message) => {
+  // Show toast helper. Stable identity so the callbacks below (which report
+  // failures through it) don't have to be rebuilt on every render.
+  const showToastMessage = useCallback((message) => {
     setToastMessage(message);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2500);
-  };
-
-  // Persist hide-completed preference
-  useEffect(() => {
-    localStorage.setItem('breadcrumbs-hide-completed', hideCompleted ? 'true' : 'false');
-  }, [hideCompleted]);
+  }, []);
 
   // Persist theme preference and follow the system setting
   useEffect(() => {
@@ -1068,6 +1148,35 @@ export default function App() {
           const data = docSnap.data();
           setItems(data.items || []);
           if (data.recipes) setRecipes(data.recipes);
+
+          // Hide-done is shared: whoever toggled last wins, and the field is
+          // absent on lists that predate it (default false).
+          setHideCompleted(data.hideCompleted === true);
+
+          // One-off migration of the old per-device preference. Only runs
+          // when the document has no `hideCompleted` field at all, and only
+          // once per list per session — after this localStorage is never
+          // read for it again (the key is left in place, harmlessly stale).
+          if (!('hideCompleted' in data) && hideCompletedMigratedRef.current !== listId) {
+            hideCompletedMigratedRef.current = listId;
+            let local = null;
+            try {
+              local = localStorage.getItem('breadcrumbs-hide-completed');
+            } catch (e) {
+              // Storage unavailable — nothing to migrate
+            }
+            if (local === 'true' || local === 'false') {
+              const value = local === 'true';
+              setHideCompleted(value);
+              // RECIPES MUST BE PRESERVED. Single-field update: `recipes`
+              // and `items` are not part of this write, so they cannot be
+              // clobbered by stale local state.
+              updateDoc(doc(db, 'lists', listId), {
+                hideCompleted: value,
+                updatedAt: new Date().toISOString()
+              }).catch((error) => console.error('Error migrating hide-completed:', error));
+            }
+          }
         }
       },
       (error) => {
@@ -1119,6 +1228,16 @@ export default function App() {
   const saveList = useCallback(async (newItems, newRecipes) => {
     if (!listId) return;
     if (newItems === undefined && newRecipes === undefined) return;
+    // RECIPES MUST BE PRESERVED. Because this is a merge write, a field left
+    // out of the payload is untouched on the document — so an item-only save
+    // cannot lose recipes. When `recipes` IS in the payload it must be a
+    // real array: writing undefined/null/[] here would wipe every recipe on
+    // the list for everyone, and nothing would complain.
+    if (newRecipes !== undefined && !Array.isArray(newRecipes)) {
+      console.error('Refusing to write list: recipes is not an array', newRecipes);
+      showToastMessage('Failed to save changes');
+      return;
+    }
     try {
       const payload = { updatedAt: new Date().toISOString() };
       if (newItems !== undefined) payload.items = newItems;
@@ -1130,10 +1249,135 @@ export default function App() {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 2500);
     }
-  }, [listId]);
+  }, [listId, showToastMessage]);
 
   // Recipe-only write — leaves the shared `items` array untouched.
   const saveRecipes = useCallback((newRecipes) => saveList(undefined, newRecipes), [saveList]);
+
+  // Toggle the shared hide-done preference. This is a write to the list
+  // document, so it goes through updateDoc: exactly one field changes and
+  // `recipes` / `items` are never part of the payload and cannot be lost.
+  const toggleHideCompleted = useCallback(async () => {
+    triggerHaptic('light');
+    const next = !hideCompleted;
+    setHideCompleted(next);
+    if (!listId) return;
+    hideCompletedMigratedRef.current = listId;
+    try {
+      await updateDoc(doc(db, 'lists', listId), {
+        hideCompleted: next,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error saving hide-completed:', error);
+    }
+  }, [hideCompleted, listId]);
+
+  // Write the trip document, and report how far the write got.
+  // Returns 'server' (confirmed), 'duplicate' (the other phone already
+  // logged this shop) or 'local' (queued and applied locally — Firestore
+  // will replay it on reconnect). Throws only on a real failure.
+  const commitTrip = useCallback(async (tripRef, trip) => {
+    // A create that loses the race with another device is rejected with
+    // permission-denied, because the rules deny updates to an existing trip.
+    // That is the duplicate case, and it is success: the shop is recorded.
+    const write = setDoc(tripRef, trip).then(
+      () => 'server',
+      async (error) => {
+        if (error?.code === 'permission-denied') {
+          const existing = await getDoc(tripRef).catch(() => null);
+          if (existing?.exists()) return 'duplicate';
+        }
+        throw error;
+      }
+    );
+
+    // The mutation is in Firestore's local queue the moment setDoc is
+    // called, so it is already acknowledged locally here. Give the server a
+    // short grace period anyway, so a genuine failure is caught before the
+    // list is cleared; past that, proceed on the local acknowledgement
+    // rather than leaving the user staring at a stuck screen underground.
+    let timer;
+    const localAck = new Promise((resolve) => {
+      timer = setTimeout(() => resolve('local'), navigator.onLine ? TRIP_SERVER_ACK_MS : 0);
+    });
+
+    try {
+      const outcome = await Promise.race([write, localAck]);
+      if (outcome === 'local') {
+        // Still in flight. Never let the queued promise surface as an
+        // unhandled rejection — offline it stays pending for as long as the
+        // device is off the network.
+        write.catch((error) => {
+          console.error('Trip write failed after the list was cleared:', error);
+          showToastMessage("Shop wasn't recorded");
+        });
+      }
+      return outcome;
+    } finally {
+      clearTimeout(timer);
+    }
+  }, [showToastMessage]);
+
+  // Finish a shop: record the ticked items as a trip, then take them off the
+  // list. Called when the last unticked item is ticked, and by the finish
+  // control. `sourceItems` lets a caller pass the array it has just built,
+  // rather than the state value this render closed over.
+  const finishShop = useCallback(async (sourceItems) => {
+    if (!listId) return 'noop';
+    if (finishingShopRef.current) return 'busy';
+
+    const baseItems = Array.isArray(sourceItems) ? sourceItems : items;
+    const ticked = baseItems.filter((i) => i.checked);
+    // Nothing ticked — no trip, no write, nothing at all.
+    if (ticked.length === 0) return 'noop';
+
+    // The list document is only ever written below through saveList, which
+    // is a merge write naming `items` alone. `recipes` is not in the payload
+    // and cannot be lost. Guard on it anyway: if local recipe state is not
+    // an array something is badly wrong and we would rather not touch the
+    // shared document at all.
+    if (!Array.isArray(recipes)) {
+      console.error('Refusing to finish shop: recipes is not an array', recipes);
+      showToastMessage("Couldn't finish this shop");
+      return 'error';
+    }
+
+    finishingShopRef.current = true;
+    try {
+      const finishedAt = new Date().toISOString();
+      const firstTickAt = firstTickAtRef.current;
+      const durationMinutes = typeof firstTickAt === 'number'
+        ? Math.max(0, Math.round((Date.now() - firstTickAt) / 60000))
+        : undefined;
+      const storeLayout = storeLayouts.find((l) => l.id === activeStoreLayoutId);
+      const trip = buildTrip(ticked, categories, finishedAt, durationMinutes, storeLayout);
+      const tripRef = doc(db, 'lists', listId, 'trips', buildTripId(finishedAt, ticked));
+
+      await commitTrip(tripRef, trip);
+
+      // Only now do the ticked items come off the list. If the trip write
+      // had failed we would have thrown above and left the list untouched:
+      // an unrecorded shop is annoying, a cleared and unrecorded shop is
+      // data loss.
+      const remaining = baseItems.filter((i) => !i.checked);
+      setItems(remaining);
+      firstTickAtRef.current = null;
+      // RECIPES MUST BE PRESERVED. saveList is a merge write carrying only
+      // `items` and `updatedAt`, so `recipes` and `hideCompleted` on the
+      // document are left exactly as they are. Do not turn this into a
+      // whole-document write. Not awaited: offline the promise stays
+      // pending until the device reconnects, and Firestore replays it then.
+      saveList(remaining);
+      return 'finished';
+    } catch (error) {
+      console.error('Error finishing shop:', error);
+      showToastMessage("Couldn't record this shop — nothing was cleared");
+      return 'error';
+    } finally {
+      finishingShopRef.current = false;
+    }
+  }, [listId, items, recipes, categories, storeLayouts, activeStoreLayoutId, commitTrip, saveList, showToastMessage]);
 
   // Save categories / store layouts to the shared meta document.
   // Same rule as saveList: merge write, and only the fields the caller
@@ -1316,6 +1560,9 @@ export default function App() {
       setActiveStoreLayoutId('default');
       setListName('');
       setEditingListName('');
+      setHideCompleted(false);
+      hideCompletedMigratedRef.current = code;
+      firstTickAtRef.current = null;
       checkOnboarding();
 
       // Remember the code and finish the button animation before the network
@@ -1330,6 +1577,10 @@ export default function App() {
       }
       setCreateAnim(false);
 
+      // RECIPES MUST BE PRESERVED. This is the only non-merge write to a
+      // list document, and it is safe only because the code is brand new and
+      // the document does not exist yet — `recipes: []` is the initial value,
+      // not an overwrite. Never point this at an existing list.
       setDoc(doc(db, 'lists', code), {
         items: [],
         recipes: [],
@@ -1355,6 +1606,8 @@ export default function App() {
         setListId(code);
         setItems(data.items || []);
         setRecipes(data.recipes || []);
+        setHideCompleted(data.hideCompleted === true);
+        firstTickAtRef.current = null;
         checkOnboarding();
 
         const catSnap = await getDoc(doc(db, 'lists', code, 'meta', 'categories'));
@@ -1408,12 +1661,16 @@ export default function App() {
     setRecipes([]);
     setListName('');
     setEditingListName('');
+    setHideCompleted(false);
+    hideCompletedMigratedRef.current = null;
+    firstTickAtRef.current = null;
     localStorage.removeItem('breadcrumbs-current-list');
   };
 
   const clearAllItems = async () => {
     triggerHaptic('success');
     setItems([]);
+    firstTickAtRef.current = null;
     await saveList([]);
     setShowClearAllConfirm(false);
   };
@@ -1532,7 +1789,24 @@ export default function App() {
 
     const newItems = items.map(i => i.id === id ? { ...i, checked: !i.checked } : i);
     setItems(newItems);
-    await saveList(newItems);
+
+    // Start the clock on the first tick of a shop. State only — never
+    // written to Firestore.
+    if (willCheck && firstTickAtRef.current === null) firstTickAtRef.current = Date.now();
+
+    // Ticking the last unticked item finishes the shop.
+    const shopComplete = willCheck && newItems.length > 0 && newItems.every(i => i.checked);
+
+    // The tick itself still gets saved first, so that a failed trip write
+    // leaves the list exactly as the user left it — ticks and all.
+    const savePromise = saveList(newItems);
+    if (shopComplete) {
+      // Not awaiting the tick save: offline its promise stays pending until
+      // the device reconnects, and the shop has to finish now, in the shop.
+      await finishShop(newItems);
+      return;
+    }
+    await savePromise;
   };
 
   const deleteItem = async (id) => {
@@ -2649,6 +2923,18 @@ export default function App() {
                       <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: theme.textSecondary }}>{checkedCount}</span>
                     </button>
                   )}
+                  {/* TEMPORARY — test hook for trip logging. The real finish
+                      control arrives with the celebration screen. */}
+                  {checkedCount > 0 && (
+                    <button
+                      onClick={() => finishShop()}
+                      className="w-full flex items-center justify-between bc-press bc-hover-row"
+                      style={{ padding: '13px 10px', margin: '0 -10px', width: 'calc(100% + 20px)', borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer' }}
+                    >
+                      <span style={{ fontSize: 14.5, fontWeight: 600, color: INK }}>Finish shop (test)</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: theme.textSecondary }}>{checkedCount}</span>
+                    </button>
+                  )}
                   {totalItems > 0 && (
                     <button
                       onClick={() => { triggerHaptic('light'); setShowClearAllConfirm(true); }}
@@ -2701,7 +2987,7 @@ export default function App() {
                     <h2 style={settingsCardTitle}>Ticked items</h2>
                   </div>
                   <button
-                    onClick={() => { triggerHaptic('light'); setHideCompleted(!hideCompleted); }}
+                    onClick={toggleHideCompleted}
                     className="w-full flex items-center justify-between bc-press bc-hover-row"
                     aria-pressed={hideCompleted}
                     style={{ padding: '11px 10px', margin: '0 -10px', width: 'calc(100% + 20px)', borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
@@ -2803,6 +3089,19 @@ export default function App() {
                   style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
                 >
                   <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Clear ticked items</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: theme.textSecondary }}>{checkedCount}</span>
+                </button>
+              )}
+
+              {/* TEMPORARY — test hook for trip logging. The real finish
+                  control arrives with the celebration screen. */}
+              {checkedCount > 0 && (
+                <button
+                  onClick={() => finishShop()}
+                  className="w-full flex items-center justify-between bc-press"
+                  style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
+                >
+                  <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Finish shop (test)</span>
                   <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: theme.textSecondary }}>{checkedCount}</span>
                 </button>
               )}
@@ -3163,7 +3462,7 @@ export default function App() {
               <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
               <div className="flex gap-3">
                 <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer' }}>Clear</button>
+                <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); firstTickAtRef.current = null; await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer' }}>Clear</button>
               </div>
             </div>
           </div>
@@ -3453,7 +3752,7 @@ export default function App() {
               </button>
             ) : (
               <button
-                onClick={() => { triggerHaptic('light'); setHideCompleted(!hideCompleted); }}
+                onClick={toggleHideCompleted}
                 className={`bc-press flex items-center${hideCompleted ? '' : ' bc-icon-btn'}`}
                 aria-pressed={hideCompleted}
                 style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: `1.5px solid ${hideCompleted ? 'transparent' : theme.border}`, backgroundColor: hideCompleted ? INK : theme.bgSecondary, color: hideCompleted ? theme.accentOnInk : theme.textSecondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease' }}
@@ -3510,7 +3809,7 @@ export default function App() {
             </button>
           ) : (
             <button
-              onClick={() => { triggerHaptic('light'); setHideCompleted(!hideCompleted); }}
+              onClick={toggleHideCompleted}
               className="bc-press flex items-center"
               style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: `1.5px solid ${hideCompleted ? 'transparent' : theme.border}`, backgroundColor: hideCompleted ? INK : theme.bgSecondary, color: hideCompleted ? theme.accentOnInk : theme.textSecondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease' }}
             >
@@ -3707,7 +4006,7 @@ export default function App() {
             <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
             <div className="flex gap-3">
               <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer' }}>Clear</button>
+              <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); firstTickAtRef.current = null; await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer' }}>Clear</button>
             </div>
           </div>
         </div>

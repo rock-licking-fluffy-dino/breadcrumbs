@@ -1,0 +1,106 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Shopping lists - accessed by 6-character code
+    match /lists/{listId} {
+
+      function isReadableListId() {
+        return listId.matches('^[A-Za-z0-9]{6}$');
+      }
+
+      // Main document: items, recipes, the shared hide-completed preference
+      function isValidListData() {
+        let data = request.resource.data;
+        return data.keys().hasOnly([
+          'items',
+          'recipes',
+          'hideCompleted',
+          'updatedAt'
+        ]) &&
+        data.items is list &&
+        ('recipes' in data ? data.recipes is list : true) &&
+        ('hideCompleted' in data ? data.hideCompleted is bool : true) &&
+        data.updatedAt is string;
+      }
+
+      function hasReasonableSize() {
+        let data = request.resource.data;
+        return data.items.size() <= 500 &&
+               ('recipes' in data ? data.recipes.size() <= 100 : true);
+      }
+
+      allow read: if isReadableListId();
+      allow write: if isReadableListId() &&
+                      isValidListData() &&
+                      hasReasonableSize();
+
+      // Category order and store layouts - one fixed document
+      match /meta/categories {
+
+        function isValidCategoryData() {
+          let data = request.resource.data;
+          return data.keys().hasOnly([
+            'categories',
+            'storeLayouts',
+            'activeStoreLayoutId',
+            'updatedAt'
+          ]) &&
+          data.categories is list &&
+          ('storeLayouts' in data ? data.storeLayouts is list : true) &&
+          ('activeStoreLayoutId' in data ? data.activeStoreLayoutId is string : true) &&
+          data.updatedAt is string;
+        }
+
+        function hasReasonableCategorySize() {
+          let data = request.resource.data;
+          return data.categories.size() <= 50 &&
+                 ('storeLayouts' in data ? data.storeLayouts.size() <= 20 : true);
+        }
+
+        allow read: if isReadableListId();
+        allow write: if isReadableListId() &&
+                        isValidCategoryData() &&
+                        hasReasonableCategorySize();
+      }
+
+      // Completed shops - append only. Never updated, never deleted.
+      match /trips/{tripId} {
+
+        function isValidTrip() {
+          let data = request.resource.data;
+          return data.keys().hasOnly([
+            'finishedAt',
+            'itemCount',
+            'lineCount',
+            'aisleCount',
+            'durationMinutes',
+            'storeLayoutId',
+            'storeName',
+            'lines'
+          ]) &&
+          data.finishedAt is string &&
+          data.itemCount is int && data.itemCount >= 0 && data.itemCount <= 5000 &&
+          data.lineCount is int && data.lineCount >= 0 && data.lineCount <= 500 &&
+          data.aisleCount is int && data.aisleCount >= 0 && data.aisleCount <= 50 &&
+          ('durationMinutes' in data ? data.durationMinutes is int : true) &&
+          ('storeLayoutId' in data ? data.storeLayoutId is string : true) &&
+          ('storeName' in data ? data.storeName is string : true) &&
+          data.lines is list &&
+          data.lines.size() <= 500;
+        }
+
+        allow read: if isReadableListId();
+        allow create: if isReadableListId() &&
+                         tripId.matches('^[A-Za-z0-9_-]{1,64}$') &&
+                         isValidTrip();
+        allow update, delete: if false;
+      }
+    }
+
+    // Deny access to everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
