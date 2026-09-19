@@ -553,117 +553,795 @@ const useMediaQuery = (query) => {
   return matches;
 };
 
-// Onboarding Modal Component
-const OnboardingModal = ({ listCode, onComplete, t, isDesktop }) => {
-  const [currentCard, setCurrentCard] = useState(0);
+// ─────────────────────────────────────────────────────────────
+// First-run walkthrough
+//
+// A fullscreen layer with three fixed regions: header, viewport,
+// footer. Only the track inside the viewport moves, so the slide
+// animates instead of jumping. Every card teaches with a real
+// fragment of the interface rather than an illustration of one,
+// which is why the specimens below reuse TrailHome, FinishGlyph,
+// StatCard and SyncPill instead of redrawing them.
+// ─────────────────────────────────────────────────────────────
+
+// A specimen is a fixed picture of a piece of the app. Nothing here is
+// interactive and nothing reads live state: the copy beside it does the
+// explaining, so the whole thing is hidden from assistive technology.
+const ObSpecimen = ({ children }) => (
+  <div
+    className="bc-ob-specimen"
+    aria-hidden="true"
+    style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+  >
+    {children}
+  </div>
+);
+
+// The app's own card: secondary paper, hairline border, soft shadow.
+const ObCard = ({ t, children, style }) => (
+  <div
+    style={{
+      width: 300, maxWidth: '100%', boxSizing: 'border-box', textAlign: 'left',
+      backgroundColor: t.bgSecondary, border: `1.5px solid ${t.border}`,
+      borderRadius: 20, boxShadow: t.cardShadow, padding: 18,
+      ...style
+    }}
+  >
+    {children}
+  </div>
+);
+
+const ObTick = ({ color, size = 15, width = 3 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 12l6 6L20 6" />
+  </svg>
+);
+
+const ObCaption = ({ t, weight = 600, children }) => (
+  <p style={{ fontSize: 12.5, fontWeight: weight, lineHeight: 1.4, color: t.textSecondary, margin: '14px 0 0', textAlign: 'center' }}>
+    {children}
+  </p>
+);
+
+const obEyebrow = (t) => ({
+  fontSize: 11, fontWeight: 700, letterSpacing: '0.13em',
+  textTransform: 'uppercase', color: t.textSecondary
+});
+
+// An unticked item ring, at the size the aisle list draws it.
+const ObRing = ({ t, size = 18 }) => (
+  <span style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box', border: `2px solid ${t.ink}` }} />
+);
+
+// Crumbs plus the house that closes them. The house is unlit here on
+// purpose: an unfinished trail has an unlit house, which is what TrailHome
+// draws when lit is false.
+const ObTrail = ({ t, dots, size = 13, houseSize = 30 }) => (
+  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+    {dots.map((filled, i) => (
+      <span
+        key={i}
+        style={{
+          width: size, height: size, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box',
+          backgroundColor: filled ? YELLOW : 'transparent',
+          border: filled ? '2px solid transparent' : `2px solid ${t.textTertiary}`
+        }}
+      />
+    ))}
+    <span style={{ display: 'flex', marginLeft: 4 }}><TrailHome lit={false} t={t} size={houseSize} /></span>
+  </span>
+);
+
+// Card 19 is the one place the opposite theme's tokens are used
+// deliberately, because it has to show both palettes at once.
+const ObPaletteSnapshot = ({ palette, label }) => (
+  <div style={{ width: 130, borderRadius: 18, padding: 14, backgroundColor: palette.bg, border: `1.5px solid ${palette.border}`, boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW }} />
+      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
+      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
+      <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '-0.01em', color: palette.ink, marginLeft: 3 }}>Breadcrumbs</span>
+    </div>
+    <div style={{ height: 7, borderRadius: 9999, backgroundColor: palette.bgTertiary, marginBottom: 7 }} />
+    <div style={{ height: 7, width: '70%', borderRadius: 9999, backgroundColor: palette.bgTertiary, marginBottom: 14 }} />
+    <div style={{ height: 24, borderRadius: 9999, backgroundColor: YELLOW }} />
+    <div style={{ ...obEyebrow(palette), textAlign: 'center', marginTop: 12 }}>{label}</div>
+  </div>
+);
+
+// The twenty cards. Copy only: the picture beside each one is chosen by
+// index in ObSpecimenFor below.
+const OB_CARDS = [
+  {
+    kicker: 'Welcome',
+    title: 'Breadcrumbs',
+    hero: true,
+    lede: 'Never get lost in the aisles again.',
+    body: 'A shopping list that sorts itself into aisles, keeps everyone in the house on the same list, and remembers every shop you finish. Give this two minutes and you will know where all of it lives.'
+  },
+  {
+    kicker: 'The list',
+    title: 'Add it the moment you think of it',
+    body: 'Tap the yellow button, type what you need, and it lands on the list. No picking a category, no second screen. Add the same thing twice and it counts up rather than appearing twice.'
+  },
+  {
+    kicker: 'The list',
+    title: 'Every item finds its aisle',
+    body: 'Breadcrumbs recognises around nine hundred grocery words, so milk goes to Dairy and coriander goes to Fruits and Vegetables without you saying so. Twenty aisles, in the order a supermarket actually runs.'
+  },
+  {
+    kicker: 'The list',
+    title: 'Correct it once and it stays corrected',
+    body: 'Something in the wrong aisle? Hold your finger on it and choose where it belongs. Breadcrumbs remembers that choice, so the next time you add it the fix is already in place.'
+  },
+  {
+    kicker: 'The list',
+    title: 'Two of something, not two lines',
+    body: 'Tap the number beside an item to change how many you need. Quantities carry through to your aisle totals and into your history, so a big shop reads as a big shop.'
+  },
+  {
+    kicker: 'The list',
+    title: 'Tidy the list as you go',
+    body: 'Tap the eye to hide everything already in the trolley. What is left is all you really want to see when you are halfway round the shop.'
+  },
+  {
+    kicker: 'Together',
+    title: 'One list, everyone in the house',
+    body: 'Every list has a six character code. Share it with whoever shops with you and they are in, with no account and no sign up. Add bread at home and it appears in their hand in the shop.'
+  },
+  {
+    kicker: 'Together',
+    title: 'No signal, no problem',
+    body: 'Breadcrumbs keeps working in the far corner of the shop where your phone gives up. Tick things off, add things, carry on. The pill at the top reads Live or Offline, and everything you did syncs the moment you are back.'
+  },
+  {
+    kicker: 'Your shops',
+    title: 'A layout for every shop you use',
+    body: 'Aisles run in a different order in every supermarket. Ten layouts are here already, from Tesco to Waitrose to Aldi. Pick the shop you are standing in and the whole list reorders to match the route you walk.'
+  },
+  {
+    kicker: 'Your shops',
+    title: 'Meals, not ingredients',
+    body: 'Save a recipe once with everything it needs, then send the lot to your list in a single tap. There is a notes field too, for where the recipe actually lives, like page 74 of the yellow cookbook.'
+  },
+  {
+    kicker: 'The trail',
+    title: 'The trail is the whole idea',
+    body: 'Above your list is a row of crumbs, one for every item. Solid yellow means still to get. Each one hollows out as you tick it off, and when the last one goes the house at the end lights up. That is the shop done.'
+  },
+  {
+    kicker: 'The trail',
+    title: 'Tap the trail. There is more behind it.',
+    body: 'The crumbs are a door, and almost nobody finds it. Behind them sits everything Breadcrumbs has quietly kept: what you buy, when you shop, and how today compared with last time.'
+  },
+  {
+    kicker: 'Finishing',
+    title: 'Finish the shop, not just the list',
+    body: 'Once you are past halfway, the add button becomes Finish shop. Press it on the way to the car and Breadcrumbs writes that shop down: what you carried home, how many aisles, and how long you were in there.'
+  },
+  {
+    kicker: 'Finishing',
+    title: 'Home stocked',
+    body: 'Every finished shop gets a screen of its own. Items, aisles, minutes in store, and one plain line comparing it with last time. Three seconds and it steps out of your way.'
+  },
+  {
+    kicker: 'Your history',
+    title: 'Where it all goes',
+    body: 'Choose a week, a month or a year and Breadcrumbs says it in plain English. Three shops last month, and a hundred and twelve items carried home. Under that, the aisles you feed most and the day your shop really happens.'
+  },
+  {
+    kicker: 'Your history',
+    title: 'Every shop this year, in dots',
+    body: 'Twelve columns, one for each month, and a crumb for every shop you finished. Tap any dot to open that shop again and see exactly what came home.'
+  },
+  {
+    kicker: 'Your history',
+    title: 'Milestones that arrive on their own',
+    body: 'Fifty items carried home, then a hundred, then a thousand. Ten shops, then twenty five. They turn up when you finish the shop that crosses one, and the ones still ahead tell you how far you have to go.'
+  },
+  {
+    kicker: 'The list',
+    title: 'It learns what you usually buy',
+    body: 'After a handful of shops, Breadcrumbs starts offering your usuals when the list is nearly empty. It leans on what you bought on this day of the week, because Thursday you and Saturday you buy different things.'
+  },
+  {
+    kicker: 'Settings',
+    title: 'Light, dark, or whatever your phone is doing',
+    body: 'There is a full dark version of everything here. Choose light, choose dark, or let it follow your phone.'
+  },
+  {
+    kicker: 'Ready',
+    title: 'That is everything',
+    lede: 'Start with one thing you need and let the trail take care of the rest.',
+    body: '',
+    note: 'You can walk through this again any time from Settings.'
+  }
+];
+
+const OB_STORES = ["Tesco", "Sainsbury's", 'Aldi', 'Waitrose', 'Lidl', 'Co-op'];
+const OB_WEEKDAY_SHADES = [1, 2, 1, 0, 1, 2, 1];
+const OB_YEAR_COUNTS = [2, 1, 3, 2, 4, 2, 1, 3, 2, 2, 1, 3];
+
+const ObSpecimenFor = ({ index, t, listCode }) => {
+  switch (index) {
+    // 1. The logo alone, still breathing.
+    case 0:
+      return (
+        <ObSpecimen>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div className="breathe-1" style={{ width: 76, height: 76, borderRadius: '50%', backgroundColor: YELLOW }} />
+            <div className="breathe-2" style={{ width: 54, height: 54, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
+            <div className="breathe-3" style={{ width: 38, height: 38, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
+          </div>
+        </ObSpecimen>
+      );
+
+    // 2. Quick add, and the aisle it landed in.
+    case 1:
+      return (
+        <ObSpecimen>
+          <div style={{ width: 300, maxWidth: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 7px 7px 15px', borderRadius: 9999, border: `1.5px solid ${t.border}`, backgroundColor: t.bgSecondary }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, color: t.ink }}>oat milk</span>
+              <span style={{ padding: '9px 17px', borderRadius: 9999, backgroundColor: YELLOW, color: '#1c1917', fontSize: 13, fontWeight: 700 }}>Add</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 16 }}>
+              <span style={obEyebrow(t)}>Dairy &amp; Eggs</span>
+              <ObTick color={YELLOW} size={13} />
+            </div>
+          </div>
+        </ObSpecimen>
+      );
+
+    // 3. Three aisles, sorted without being asked.
+    case 2: {
+      const aisles = [
+        ['Fruits & Vegetables', ['Spinach', 'Lemons']],
+        ['Bakery', ['Sourdough']],
+        ['Dairy & Eggs', ['Butter']]
+      ];
+      return (
+        <ObSpecimen>
+          <ObCard t={t}>
+            {aisles.map(([name, entries], i) => (
+              <div key={name} style={{ marginTop: i === 0 ? 0 : 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ ...obEyebrow(t), whiteSpace: 'nowrap' }}>{name}</span>
+                  <span style={{ flex: 1, height: 1.5, backgroundColor: t.borderLight }} />
+                </div>
+                {entries.map((entry) => (
+                  <div key={entry} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 0 0' }}>
+                    <ObRing t={t} />
+                    <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', color: t.ink }}>{entry}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </ObCard>
+        </ObSpecimen>
+      );
+    }
+
+    // 4. The long press sheet, top portion only.
+    case 3: {
+      const rows = [
+        ['Sauces & Condiments', false],
+        ['Spices & Seasonings', true],
+        ['Snacks & Confectionery', false]
+      ];
+      return (
+        <ObSpecimen>
+          <ObCard t={t} style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 18px', borderBottom: `1.5px solid ${t.border}` }}>
+              <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.015em', color: t.ink }}>Move "bay leaves" to</span>
+            </div>
+            <div style={{ padding: '2px 18px 14px' }}>
+              {rows.map(([name, current]) => (
+                <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: `1.5px solid ${t.borderLight}` }}>
+                  <span style={{ fontSize: 15, fontWeight: current ? 700 : 600, color: t.ink }}>{name}</span>
+                  {current && <ObTick color={YELLOW} size={17} />}
+                </div>
+              ))}
+            </div>
+          </ObCard>
+        </ObSpecimen>
+      );
+    }
+
+    // 5. The quantity editor, open, exactly as the aisle row draws it.
+    case 4:
+      return (
+        <ObSpecimen>
+          <ObCard t={t}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box', border: `2.5px solid ${t.ink}` }} />
+              <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em', whiteSpace: 'nowrap', color: t.ink }}>Tinned soup</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: t.bgTertiary, color: t.ink, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</span>
+                <span style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, width: 24, textAlign: 'center', color: t.ink }}>3</span>
+                <span style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: t.bgTertiary, color: t.ink, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</span>
+                <span style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: YELLOW, marginLeft: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ObTick color="#1c1917" size={13} width={3.4} />
+                </span>
+              </span>
+            </div>
+          </ObCard>
+          <ObCaption t={t}>At rest it is just <span style={{ fontFamily: MONO, fontWeight: 700 }}>&times;3</span></ObCaption>
+        </ObSpecimen>
+      );
+
+    // 6. Hide done: off, then on.
+    case 5:
+      return (
+        <ObSpecimen>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <span style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: t.bgTertiary, color: t.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+              </svg>
+            </span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+            <span style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: t.ink, color: t.accentOnInk, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            </span>
+          </div>
+        </ObSpecimen>
+      );
+
+    // 7. The share code.
+    case 6:
+      return (
+        <ObSpecimen>
+          <div style={{ padding: '12px 26px', borderRadius: 9999, border: `2px solid ${t.ink}`, color: t.ink, fontFamily: MONO, fontSize: 24, fontWeight: 700, letterSpacing: '0.16em' }}>
+            {listCode || 'ABC123'}
+          </div>
+          <ObCaption t={t}>Two people on this list</ObCaption>
+        </ObSpecimen>
+      );
+
+    // 8. The real sync pill, both states.
+    case 7:
+      return (
+        <ObSpecimen>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <SyncPill isOnline t={t} />
+            <SyncPill isOnline={false} t={t} />
+          </div>
+        </ObSpecimen>
+      );
+
+    // 9. Store layouts.
+    case 8:
+      return (
+        <ObSpecimen>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 300 }}>
+            {OB_STORES.map((store, i) => (
+              <span
+                key={store}
+                style={{
+                  padding: '10px 16px', borderRadius: 9999, fontSize: 13, fontWeight: 700,
+                  backgroundColor: i === 0 ? YELLOW : t.bgTertiary,
+                  color: i === 0 ? '#1c1917' : t.textSecondary,
+                  boxShadow: i === 0 ? t.yellowGlow : 'none'
+                }}
+              >
+                {store}
+              </span>
+            ))}
+          </div>
+        </ObSpecimen>
+      );
+
+    // 10. A saved recipe.
+    case 9:
+      return (
+        <ObSpecimen>
+          <ObCard t={t}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 700, letterSpacing: '-0.01em', color: t.ink }}>Sunday Roast</span>
+              <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: t.ink }}>11</span>
+            </div>
+            <p style={{ fontSize: 13, fontWeight: 500, color: t.textSecondary, margin: '6px 0 14px' }}>pg 74, yellow cookbook</p>
+            <div style={{ height: 44, borderRadius: 9999, backgroundColor: YELLOW, color: '#1c1917', fontSize: 13.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              Add all to list
+            </div>
+          </ObCard>
+        </ObSpecimen>
+      );
+
+    // 11. The trail itself, four ticked off.
+    case 10:
+      return (
+        <ObSpecimen>
+          <ObTrail t={t} dots={[false, false, false, false, true, true, true, true, true]} />
+          <ObCaption t={t}>Five of nine still to get</ObCaption>
+        </ObSpecimen>
+      );
+
+    // 12. The same trail as a door.
+    case 11:
+      return (
+        <ObSpecimen>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 20, backgroundColor: t.bgSecondary, border: `1.5px solid ${YELLOW}`, boxShadow: t.yellowGlow }}>
+            <ObTrail t={t} dots={[false, false, true, true, true, true]} />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+          <ObCaption t={t} weight={700}>Tap</ObCaption>
+        </ObSpecimen>
+      );
+
+    // 13. The add button once it has become Finish shop.
+    case 12:
+      return (
+        <ObSpecimen>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, height: 54, padding: '0 26px', borderRadius: 9999, backgroundColor: YELLOW, color: '#1c1917', boxShadow: t.yellowGlow }}>
+            <FinishGlyph finishing color="#1c1917" />
+            <span style={{ fontSize: 15, fontWeight: 700 }}>Finish shop</span>
+          </div>
+          <ObCaption t={t}>Appears once you are past halfway</ObCaption>
+        </ObSpecimen>
+      );
+
+    // 14. The house lit, and the shop written down.
+    case 13:
+      return (
+        <ObSpecimen>
+          <TrailHome lit t={t} size={62} />
+          <div style={{ display: 'flex', gap: 8, width: 300, maxWidth: '100%', marginTop: 18 }}>
+            <StatCard value="24" label="items" t={t} />
+            <StatCard value="7" label="aisles" t={t} />
+            <StatCard value="38m" label="in store" t={t} />
+          </div>
+          <ObCaption t={t}>Three fewer items than last shop, and six minutes quicker.</ObCaption>
+        </ObSpecimen>
+      );
+
+    // 15. The two figures from the stats sheet.
+    case 14: {
+      const leaders = [['Dairy & Eggs', 10, 34], ['Fruits & Veg', 7, 24], ['Bakery', 4, 12]];
+      return (
+        <ObSpecimen>
+          <ObCard t={t} style={{ padding: '16px 18px' }}>
+            <h3 style={{ ...obEyebrow(t), fontSize: 11.5, margin: '0 0 10px' }}>Where it goes</h3>
+            {leaders.map(([name, filled, count]) => (
+              <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
+                <span style={{ width: 96, flexShrink: 0, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', color: t.ink }}>{name}</span>
+                <span style={{ display: 'flex', gap: 3, flex: 1, minWidth: 0 }}>
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, backgroundColor: i < filled ? YELLOW : t.border }} />
+                  ))}
+                </span>
+                <span style={{ fontFamily: MONO, fontSize: 12.5, fontWeight: 600, color: t.textSecondary, minWidth: 24, textAlign: 'right' }}>{count}</span>
+              </div>
+            ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
+              {WEEKDAY_NAMES.map((day, i) => (
+                <span key={day} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: t.textTertiary }}>{day.charAt(0)}</span>
+                  <span
+                    style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      backgroundColor: OB_WEEKDAY_SHADES[i] === 0 ? YELLOW : OB_WEEKDAY_SHADES[i] === 1 ? t.border : 'rgba(250,204,21,0.45)'
+                    }}
+                  />
+                </span>
+              ))}
+            </div>
+            <p style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.5, color: t.textSecondary, margin: '14px 0 0' }}>
+              Thursday is your shop. Two thirds of everything lands then.
+            </p>
+          </ObCard>
+        </ObSpecimen>
+      );
+    }
+
+    // 16. The year, one crumb per shop.
+    case 15:
+      return (
+        <ObSpecimen>
+          <div style={{ display: 'flex', gap: 3, width: 300, maxWidth: '100%' }}>
+            {MONTH_INITIALS.map((initial, m) => (
+              <div key={m} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: t.textTertiary, marginBottom: 8 }}>{initial}</span>
+                {Array.from({ length: 4 }).map((_, r) => (
+                  <span
+                    key={r}
+                    style={{ width: 8, height: 8, borderRadius: '50%', marginBottom: 9, backgroundColor: r < OB_YEAR_COUNTS[m] ? YELLOW : t.bgTertiary }}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+          <ObCaption t={t}>Twenty six shops so far. Tap a dot to open that one.</ObCaption>
+        </ObSpecimen>
+      );
+
+    // 17. Two rungs of the milestone ladder.
+    case 16: {
+      const rungs = [
+        { threshold: 100, achieved: true, detail: '14 March 2026' },
+        { threshold: 250, achieved: false, detail: 'Sixty one items to go' }
+      ];
+      return (
+        <ObSpecimen>
+          <ObCard t={t}>
+            {rungs.map((rung) => (
+              <div key={rung.threshold} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '9px 0' }}>
+                <span
+                  style={{
+                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontFamily: MONO, fontSize: 13, fontWeight: 600,
+                    backgroundColor: rung.achieved ? YELLOW : t.bgTertiary,
+                    color: rung.achieved ? '#1c1917' : t.textSecondary
+                  }}
+                >
+                  {rung.threshold}
+                </span>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: rung.achieved ? t.ink : t.textSecondary }}>
+                    {milestoneName('items', rung.threshold)}
+                  </span>
+                  <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: t.textSecondary, marginTop: 2 }}>{rung.detail}</span>
+                </span>
+              </div>
+            ))}
+          </ObCard>
+        </ObSpecimen>
+      );
+    }
+
+    // 18. Your usuals, offered back.
+    case 17:
+      return (
+        <ObSpecimen>
+          <ObCard t={t}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em', color: t.ink, margin: 0 }}>You usually buy these</h3>
+            <p style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.5, color: t.textSecondary, margin: '6px 0 14px' }}>
+              Milk has been on three of your last four Thursday shops.
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {['Milk', 'Bananas', 'Coffee', 'Bin bags', 'Cheddar'].map((name) => (
+                <span key={name} style={{ padding: '8px 14px', borderRadius: 9999, border: `2px dashed ${t.textTertiary}`, fontSize: 13, fontWeight: 600, color: t.text }}>
+                  {name}
+                </span>
+              ))}
+            </div>
+          </ObCard>
+        </ObSpecimen>
+      );
+
+    // 19. Both palettes at once.
+    case 18:
+      return (
+        <ObSpecimen>
+          <div style={{ display: 'flex', gap: 14 }}>
+            <ObPaletteSnapshot palette={THEMES.light} label="Light" />
+            <ObPaletteSnapshot palette={THEMES.dark} label="Dark" />
+          </div>
+        </ObSpecimen>
+      );
+
+    // 20. Done. Not the house: a lit house means a finished shop.
+    default:
+      return (
+        <ObSpecimen>
+          <div style={{ width: 118, height: 118, borderRadius: '50%', backgroundColor: 'rgba(250,204,21,0.18)', border: `1.5px solid ${YELLOW}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke={YELLOW} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12.5l5.5 5.5L20 6" />
+            </svg>
+          </div>
+        </ObSpecimen>
+      );
+  }
+};
+
+const OnboardingModal = ({ listCode, onComplete, t }) => {
+  const [index, setIndex] = useState(0);
   const touchStartX = useRef(null);
-  const touchStartY = useRef(null);
+  const total = OB_CARDS.length;
+  const isLast = index === total - 1;
 
-  const cards = [
-    { isWelcome: true, title: 'Welcome to Breadcrumbs', description: 'Never get lost in the aisles again.' },
-    { emoji: '⚡', title: 'Add anything, instantly', description: 'Tap the yellow button and type what you need. Breadcrumbs drops it into the right category automatically — no fussing around.' },
-    { emoji: '🗂️', title: 'Organised like a real shop', description: 'Items are sorted by aisle automatically — Dairy, Bakery, Frozen and more. Switch to your store and the order updates to match.' },
-    { emoji: '🔗', title: 'Shop together', description: 'Share your 6-character code with anyone. They join instantly — no account needed — and your list updates for everyone in real time.', showCode: true },
-    { emoji: '👨‍🍳', title: 'Recipes', description: 'Save your favourite meals and add every ingredient to your list in one tap.' },
-    { emoji: '🏪', title: 'Shop by store', description: "Save a layout for every supermarket you visit. Switch stores and your list reorders itself to match that store's aisles." },
-  ];
+  const step = useCallback((delta) => {
+    setIndex((i) => {
+      const next = Math.min(total - 1, Math.max(0, i + delta));
+      if (next !== i) triggerHaptic('light');
+      return next;
+    });
+  }, [total]);
 
-  const isLastCard = currentCard === cards.length - 1;
-  const card = cards[currentCard];
-
-  const goNext = () => {
-    if (!isLastCard) { setCurrentCard(c => c + 1); triggerHaptic('light'); }
-    else onComplete();
-  };
+  const goNext = () => { if (isLast) onComplete(); else step(1); };
+  const goBack = () => step(-1);
   const skip = () => { triggerHaptic('light'); onComplete(); };
+
+  // Left and right walk the deck. Modifier combinations belong to the
+  // browser, so they are left alone.
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+      if (e.key === 'ArrowRight') { e.preventDefault(); step(1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [step]);
+
+  // The list behind is still mounted, so hold it still while the layer is up.
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, []);
 
   const handleTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
   const handleTouchEnd = (e) => {
     if (touchStartX.current === null) return;
     const diff = touchStartX.current - e.changedTouches[0].clientX;
-    if (diff > 50) goNext();
-    else if (diff < -50 && currentCard > 0) { setCurrentCard(c => c - 1); triggerHaptic('light'); }
+    if (diff > 50) step(1);
+    else if (diff < -50) step(-1);
     touchStartX.current = null;
   };
 
-  const ctaLabel = currentCard === 0 ? 'Get started' : isLastCard ? 'Start shopping' : 'Next';
-
   return (
     <div
-      className={`fixed inset-0 z-[100] flex select-none ${isDesktop ? 'items-center justify-center p-6' : 'items-end'}`}
-      style={{ backgroundColor: t.overlay, fontFamily: 'Inter, sans-serif' }}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
+      role="region"
+      aria-label="Welcome to Breadcrumbs"
+      className="select-none"
+      style={{
+        position: 'fixed', inset: 0, zIndex: 100,
+        backgroundColor: t.bg, fontFamily: 'Inter, system-ui, sans-serif',
+        display: 'flex', flexDirection: 'column'
+      }}
     >
-      <div
-        className="w-full flex flex-col"
-        style={isDesktop
-          ? { backgroundColor: t.bg, borderRadius: 28, maxWidth: 460, maxHeight: '88vh', overflowY: 'auto', border: `1.5px solid ${t.border}`, boxShadow: '0 24px 64px rgba(0,0,0,0.35)' }
-          : { backgroundColor: t.bg, borderRadius: '28px 28px 0 0', maxHeight: '92vh', overflowY: 'auto' }}
-      >
-        <div
-          className="flex justify-center"
-          style={{ marginTop: 12, marginBottom: 12, visibility: isDesktop ? 'hidden' : 'visible', height: isDesktop ? 4 : undefined }}
-          onTouchStart={(e) => { touchStartY.current = e.touches[0].clientY; }}
-          onTouchEnd={(e) => { if (touchStartY.current !== null && e.changedTouches[0].clientY - touchStartY.current > 60) skip(); touchStartY.current = null; }}
+      <style>{`
+        .bc-ob-viewport { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+        .bc-ob-track { display: flex; height: 100%; width: 100%; transition: transform 320ms cubic-bezier(.2,.7,.3,1); }
+        .bc-ob-screen { flex: 0 0 100%; min-width: 0; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: 12px 22px; }
+        .bc-ob-inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; width: 100%; max-width: 1000px; margin: auto; text-align: center; }
+        .bc-ob-text { flex: 0 0 auto; min-width: 0; }
+        .bc-ob-kicker { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.13em; color: ${t.textSecondary}; margin: 0 0 10px; }
+        .bc-ob-title { font-size: clamp(28px, 7vw, 30px); font-weight: 800; line-height: 1.05; letter-spacing: -0.035em; color: ${t.ink}; margin: 0; }
+        .bc-ob-title-hero { font-size: 40px; line-height: 1.02; letter-spacing: -0.02em; }
+        .bc-ob-lede { font-size: 15px; font-weight: 700; color: ${t.text}; margin: 14px 0 0; }
+        .bc-ob-body { font-size: 15px; font-weight: 500; line-height: 1.6; color: ${t.text}; max-width: 40ch; margin: 14px auto 0; }
+        .bc-ob-note { font-size: 12.5px; font-weight: 500; line-height: 1.5; color: ${t.textSecondary}; max-width: 40ch; margin: 16px auto 0; }
+        @media (min-width: 768px) {
+          .bc-ob-inner { flex-direction: row; flex-wrap: wrap; gap: clamp(26px, 4vw, 60px); text-align: left; }
+          /* Only once the columns sit side by side does the basis apply
+             to the width; in the phone's column it would set a height. */
+          .bc-ob-text { flex: 1 1 340px; }
+          .bc-ob-title { font-size: clamp(30px, 5vw, 46px); }
+          .bc-ob-title-hero { font-size: clamp(40px, 6vw, 56px); }
+          .bc-ob-lede { font-size: 17px; }
+          .bc-ob-body { font-size: 18px; max-width: 52ch; margin-left: 0; margin-right: 0; }
+          .bc-ob-note { margin-left: 0; margin-right: 0; }
+        }
+        /* A phone on its side has no vertical room, so the ramp and the
+           specimen come down rather than the screen scrolling. The shrink is
+           zoom rather than a transform because it has to take the specimen's
+           layout box down with it, not just its pixels. */
+        @media (max-height: 520px) {
+          .bc-ob-screen { padding: 10px 20px; }
+          .bc-ob-inner { gap: 16px; }
+          .bc-ob-kicker { margin-bottom: 6px; }
+          .bc-ob-title, .bc-ob-title-hero { font-size: clamp(24px, 5vw, 30px); }
+          .bc-ob-lede { font-size: 14px; margin-top: 8px; }
+          .bc-ob-body { font-size: 13.5px; line-height: 1.5; margin-top: 8px; }
+          .bc-ob-note { margin-top: 10px; }
+          .bc-ob-specimen { zoom: 0.62; }
+        }
+        /* Below this there is no room for a picture at all: the words win. */
+        @media (max-height: 420px) {
+          .bc-ob-specimen { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .bc-ob-track { transition: none; }
+        }
+      `}</style>
+
+      <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 'max(14px, env(safe-area-inset-top, 0px)) 22px 8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span aria-hidden="true" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW }} />
+            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW }} />
+          </span>
+          <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '-0.01em', color: t.ink }}>Breadcrumbs</span>
+        </div>
+        <button
+          onClick={skip}
+          className="bc-press"
+          style={{
+            height: 44, padding: '0 4px', background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 12, fontWeight: 700, color: t.textSecondary,
+            textDecoration: 'underline', textUnderlineOffset: 3,
+            visibility: isLast ? 'hidden' : 'visible'
+          }}
         >
-          <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: t.border }} />
-        </div>
+          Skip
+        </button>
+      </div>
 
-        <div className="flex items-center justify-center" style={{ height: 170 }}>
-          {card.isWelcome ? (
-            <div key="welcome-hero" className="flex items-center gap-4" style={{ animation: 'onboardSlideIn 0.5s cubic-bezier(0.22,1,0.36,1)' }}>
-              <div className="breathe-1" style={{ width: 76, height: 76, borderRadius: '50%', backgroundColor: '#FACC15' }} />
-              <div className="breathe-2" style={{ width: 54, height: 54, borderRadius: '50%', backgroundColor: '#FACC15', opacity: 0.6 }} />
-              <div className="breathe-3" style={{ width: 38, height: 38, borderRadius: '50%', backgroundColor: '#FACC15', opacity: 0.3 }} />
-            </div>
-          ) : (
-            <div key={`circle-${currentCard}`} style={{ width: 130, height: 130, borderRadius: '50%', backgroundColor: t.bgSecondary, border: `2px solid ${t.ink}`, display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'onboardSlideIn 0.5s cubic-bezier(0.22,1,0.36,1)' }}>
-              <span style={{ fontSize: 44, lineHeight: 1, display: 'block' }}>{card.emoji}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col" style={{ paddingLeft: 32, paddingRight: 32, paddingBottom: isDesktop ? 32 : 'max(32px, calc(env(safe-area-inset-bottom, 0px) + 24px))' }}>
-          <div key={`text-${currentCard}`} className="text-center" style={{ animation: 'onboardSlideIn 0.5s cubic-bezier(0.22,1,0.36,1)', minHeight: 128 }}>
-            <h2 style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.02em', color: t.text, marginBottom: 10, lineHeight: 1.3 }}>{card.title}</h2>
-            <p style={{ fontSize: 14, lineHeight: 1.65, color: t.textSecondary, margin: 0 }}>{card.description}</p>
-            {card.showCode && (
-              <div className="flex justify-center mt-4">
-                <div style={{ paddingLeft: 24, paddingRight: 24, paddingTop: 8, paddingBottom: 8, borderRadius: 9999, border: `2px solid ${t.ink}`, color: t.text, fontFamily: MONO, fontWeight: 700, letterSpacing: '0.14em' }}>
-                  {listCode || 'ABC123'}
+      <div className="bc-ob-viewport" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <div className="bc-ob-track" style={{ transform: `translateX(-${index * 100}%)` }}>
+          {OB_CARDS.map((card, i) => (
+            <div
+              key={card.title}
+              className="bc-ob-screen"
+              role="group"
+              aria-roledescription="slide"
+              aria-label={`${i + 1} of ${total}`}
+            >
+              <div className="bc-ob-inner">
+                <ObSpecimenFor index={i} t={t} listCode={listCode} />
+                <div className="bc-ob-text">
+                  <p className="bc-ob-kicker">{card.kicker}</p>
+                  <h2 className={card.hero ? 'bc-ob-title bc-ob-title-hero' : 'bc-ob-title'}>{card.title}</h2>
+                  {card.lede && <p className="bc-ob-lede">{card.lede}</p>}
+                  {card.body && <p className="bc-ob-body">{card.body}</p>}
+                  {card.note && <p className="bc-ob-note">{card.note}</p>}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-          <div style={{ flex: 1 }} />
-
-          <div className="text-center" style={{ marginBottom: 12, visibility: isLastCard ? 'hidden' : 'visible' }}>
-            <button onClick={skip} style={{ fontSize: 13, color: t.textTertiary, background: 'none', border: 'none', cursor: isLastCard ? 'default' : 'pointer', padding: '4px 8px' }}>Skip</button>
-          </div>
-
-          <div className="flex justify-center" style={{ gap: 8, marginBottom: 16 }}>
-            {cards.map((_, i) => (
-              <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: i === currentCard ? '#FACC15' : t.border, transition: 'background-color 0.3s' }} />
+      <div style={{ flex: '0 0 auto', padding: '0 22px max(28px, calc(env(safe-area-inset-bottom, 0px) + 24px))' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <div aria-hidden="true" style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+            {OB_CARDS.map((card, i) => (
+              <span
+                key={card.title}
+                style={{
+                  height: 6, width: i === index ? 22 : 8, borderRadius: 9999, flexShrink: 0,
+                  backgroundColor: i === index ? YELLOW : t.border,
+                  transition: 'width 200ms ease, background-color 200ms ease'
+                }}
+              />
             ))}
           </div>
-
-          <button
-            onClick={goNext}
-            className="w-full transition-all active:scale-[0.97] bc-cta"
-            style={{ height: 54, borderRadius: 9999, backgroundColor: '#FACC15', color: INK, fontSize: 16, fontWeight: 700, border: 'none', cursor: 'pointer' }}
-          >
-            {ctaLabel}
-          </button>
+          <span aria-live="polite" style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: t.textTertiary, flexShrink: 0 }}>
+            {index + 1} of {total}
+          </span>
         </div>
 
-        <style>{`
-          @keyframes onboardSlideIn {
-            from { opacity: 0; transform: translateX(20px); }
-            to   { opacity: 1; transform: translateX(0); }
-          }
-        `}</style>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={goBack}
+            disabled={index === 0}
+            className="bc-press"
+            style={{
+              flex: '0 1 112px', height: 54, borderRadius: 9999,
+              border: `1.5px solid ${t.border}`, backgroundColor: 'transparent',
+              fontSize: 13.5, fontWeight: 700, color: t.textSecondary,
+              opacity: index === 0 ? 0.45 : 1
+            }}
+          >
+            Back
+          </button>
+          <button
+            onClick={goNext}
+            className="bc-press bc-cta"
+            style={{
+              flexGrow: 1, height: 54, borderRadius: 9999, border: 'none',
+              backgroundColor: YELLOW, color: '#1c1917', fontSize: 15, fontWeight: 700, cursor: 'pointer'
+            }}
+          >
+            {isLast ? 'Start shopping' : 'Next'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -4486,7 +5164,7 @@ export default function App() {
           );
         })()}
 
-        {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} isDesktop={isDesktop} />}
+        {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} />}
         {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={theme} />}
       </div>
     );
@@ -4592,7 +5270,7 @@ export default function App() {
       {desktopSidebar}
       <Toast message={toastMessage} visible={showToast} t={theme} />
 
-      {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} isDesktop={isDesktop} />}
+      {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} />}
 
       {/* Offline is already spelled out by the sidebar's sync pill on desktop. */}
       {!isOnline && !isDesktop && (
