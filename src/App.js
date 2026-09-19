@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, setDoc, updateDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, updateDoc, onSnapshot, getDoc, collection, getDocs } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 // Firebase configuration
@@ -890,11 +890,823 @@ const DesktopSidebar = ({
   );
 };
 
-// Crumb-trail home — lights up when the trail is complete
-const TrailHome = ({ lit, t }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill={lit ? YELLOW : 'none'} stroke={lit ? '#1c1917' : t.textTertiary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'stroke 0.3s ease, fill 0.3s ease' }}>
+// ══════════════════════════════════════════════════════════════════════════
+// Trail, celebration and stats — everything built on the trip records.
+// Nothing in this section writes to Firestore. Trips are read once per list
+// and every number below is derived from that array in the browser.
+// ══════════════════════════════════════════════════════════════════════════
+
+const MS_DAY = 86400000;
+const WEEKDAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const MONTH_INITIALS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+
+const SMALL_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+  'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS_WORDS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+// Counts in prose read as words, not digits — "Nine shops last month", not
+// "9 shops". Past ninety-nine the word form stops helping, so fall back to
+// the numeral rather than spelling out three-hundred-and-eighty-two.
+const numberWord = (n) => {
+  const v = Math.abs(Math.round(Number(n) || 0));
+  if (v < 20) return SMALL_WORDS[v];
+  if (v < 100) {
+    const tens = TENS_WORDS[Math.floor(v / 10)];
+    const ones = v % 10;
+    return ones ? `${tens}-${SMALL_WORDS[ones]}` : tens;
+  }
+  return String(v);
+};
+const capitalise = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+const plural = (n, one, many) => (Math.abs(n) === 1 ? one : many);
+const clampNum = (min, value, max) => Math.min(max, Math.max(min, value));
+
+// Monday-first weekday index, which is how the rhythm strip reads.
+const weekdayIndex = (date) => (date.getDay() + 6) % 7;
+
+const timeOfDay = (date) => {
+  const h = date.getHours();
+  if (h < 12) return 'morning';
+  if (h < 17) return 'afternoon';
+  return 'evening';
+};
+
+// Trip documents come back as plain data. Normalise once on load so every
+// consumer below can assume numbers are numbers and `ts` is sortable.
+const normaliseTrip = (id, data) => {
+  if (!data || typeof data.finishedAt !== 'string') return null;
+  const ts = Date.parse(data.finishedAt);
+  if (!Number.isFinite(ts)) return null;
+  const lines = Array.isArray(data.lines) ? data.lines : [];
+  return {
+    id,
+    ts,
+    finishedAt: data.finishedAt,
+    itemCount: asInt(data.itemCount, 0),
+    lineCount: asInt(data.lineCount, lines.length),
+    aisleCount: asInt(data.aisleCount, 0),
+    durationMinutes: Number.isFinite(Number(data.durationMinutes)) && data.durationMinutes !== undefined
+      ? asInt(data.durationMinutes, 0)
+      : null,
+    storeName: typeof data.storeName === 'string' ? data.storeName : '',
+    storeLayoutId: typeof data.storeLayoutId === 'string' ? data.storeLayoutId : '',
+    lines: lines.map((l) => ({
+      name: String(l?.name || ''),
+      categoryId: String(l?.categoryId || ''),
+      categoryName: String(l?.categoryName || 'Other'),
+      quantity: Math.max(1, asInt(l?.quantity, 1))
+    }))
+  };
+};
+
+// ── The trail ─────────────────────────────────────────────────────────────
+// One dot per item, always — never aggregated. The dot and the gap shrink
+// together so a three-item list and an eighty-item list both read as a trail
+// rather than as a progress bar.
+const trailMetrics = (availableWidth, itemCount) => {
+  const width = Math.max(40, availableWidth);
+  const measure = (count) => {
+    const slot = width / Math.max(1, count);
+    return {
+      slot,
+      dot: clampNum(4, slot * 0.62, 11),
+      gap: clampNum(2, slot - clampNum(4, slot * 0.62, 11), 14)
+    };
+  };
+  const single = measure(itemCount);
+  // Past roughly fifty items a single line stops being legible. Wrap onto a
+  // second line and recompute with half the count — and stop there. A third
+  // line would eat the header.
+  if (single.slot >= 6 || itemCount < 4) return { ...single, rows: 1, perRow: itemCount };
+  const perRow = Math.ceil(itemCount / 2);
+  return { ...measure(perRow), rows: 2, perRow };
+};
+
+const useElementWidth = () => {
+  const ref = useRef(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setWidth(el.clientWidth);
+    update();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', update);
+      return () => window.removeEventListener('resize', update);
+    }
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, width];
+};
+
+// Crumb-trail home — accent stroke over a soft accent fill once the last
+// item is ticked, text-tertiary until then.
+const TrailHome = ({ lit, t, size = 17 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={lit ? 'rgba(250,204,21,0.22)' : 'none'} stroke={lit ? YELLOW : t.textTertiary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'stroke 0.3s ease, fill 0.3s ease' }}>
     <path d="M4 11l8-7 8 7" /><path d="M6 9.5V20h12V9.5" />
   </svg>
+);
+
+// The house closes the trail, so the width it occupies comes out of the
+// space the dots are laid into.
+const HOUSE_SLOT = 48;
+
+const CrumbTrail = ({ items, t, onOpen }) => {
+  const [ref, width] = useElementWidth();
+  const total = items.length;
+  const remaining = items.filter((i) => !i.checked).length;
+  const complete = total > 0 && remaining === 0;
+  const { dot, gap, rows, perRow } = trailMetrics((width || 300) - HOUSE_SLOT, total);
+  const rowItems = rows === 2 ? [items.slice(0, perRow), items.slice(perRow)] : [items];
+
+  return (
+    <button
+      ref={ref}
+      onClick={onOpen}
+      className="bc-press"
+      aria-label={`${remaining} of ${total} ${plural(total, 'item', 'items')} still to get. Open your trail.`}
+      style={{ display: 'flex', alignItems: 'center', width: '100%', minHeight: 44, background: 'none', border: 'none', padding: '8px 0', cursor: 'pointer' }}
+    >
+      <div aria-hidden="true" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+        {rowItems.map((row, rowIndex) => (
+          <div key={rowIndex} style={{ display: 'flex', alignItems: 'center', gap }}>
+            {row.map((item) => (
+              <span
+                key={item.id}
+                style={{
+                  width: dot, height: dot, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0,
+                  backgroundColor: item.checked ? 'transparent' : YELLOW,
+                  border: `1.5px solid ${item.checked ? t.border : 'transparent'}`,
+                  transition: 'background-color 0.25s ease, border-color 0.25s ease'
+                }}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      <span aria-hidden="true" style={{ display: 'flex', marginLeft: 10, flexShrink: 0 }}>
+        <TrailHome lit={complete} t={t} size={26} />
+      </span>
+    </button>
+  );
+};
+
+// ── The finish glyph ──────────────────────────────────────────────────────
+// The + and the chequered flag live on top of each other and swap by
+// rotating: the + retracts as the flag draws in. The movement is the point —
+// it stops a thumb on autopilot finishing a shop by accident.
+const FinishGlyph = ({ finishing, color }) => (
+  <span style={{ position: 'relative', width: 24, height: 24, display: 'block' }}>
+    <svg
+      className="bc-glyph" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"
+      style={{ position: 'absolute', inset: 0, opacity: finishing ? 0 : 1, transform: finishing ? 'rotate(90deg) scale(0.35)' : 'rotate(0deg) scale(1)' }}
+    >
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+    <svg
+      className="bc-glyph" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+      style={{ position: 'absolute', inset: 0, opacity: finishing ? 1 : 0, transform: finishing ? 'rotate(0deg) scale(1)' : 'rotate(-90deg) scale(0.35)' }}
+    >
+      <path d="M5 21V3" />
+      <rect x="5" y="4" width="15" height="9" />
+      <rect x="5" y="4" width="5" height="3" fill={color} stroke="none" />
+      <rect x="15" y="4" width="5" height="3" fill={color} stroke="none" />
+      <rect x="10" y="7" width="5" height="3" fill={color} stroke="none" />
+      <rect x="5" y="10" width="5" height="3" fill={color} stroke="none" />
+      <rect x="15" y="10" width="5" height="3" fill={color} stroke="none" />
+    </svg>
+  </span>
+);
+
+// ── Milestones ────────────────────────────────────────────────────────────
+// Two ladders, because one goes quiet after a year. Nothing is persisted:
+// a milestone is a fact about the totals, so it is recomputed from the trips
+// every time rather than stored as a "celebrated" flag.
+const ITEM_MILESTONES = [50, 100, 250, 500, 750, 1000, 1500, 2000, 2500];
+const SHOP_MILESTONES = [10, 25, 50, 100, 150, 200, 250];
+
+const crossedThreshold = (ladder, before, after) =>
+  ladder.filter((threshold) => before < threshold && threshold <= after).pop() || null;
+
+// The highest threshold crossed by this shop. Items win a tie: carrying the
+// thousandth item home is the bigger moment.
+const detectMilestone = (previousTrips, newTrip) => {
+  const itemsBefore = previousTrips.reduce((sum, t) => sum + t.itemCount, 0);
+  const shopsBefore = previousTrips.length;
+  const itemsAfter = itemsBefore + newTrip.itemCount;
+  const shopsAfter = shopsBefore + 1;
+
+  const items = crossedThreshold(ITEM_MILESTONES, itemsBefore, itemsAfter);
+  if (items) return { kind: 'items', threshold: items, items: itemsAfter, shops: shopsAfter };
+  const shops = crossedThreshold(SHOP_MILESTONES, shopsBefore, shopsAfter);
+  if (shops) return { kind: 'shops', threshold: shops, items: itemsAfter, shops: shopsAfter };
+  return null;
+};
+
+// Walk the trips in order and note the date each threshold was passed.
+// Used by the year trail's milestone list.
+const milestoneLadder = (trips) => {
+  const sorted = [...trips].sort((a, b) => a.ts - b.ts);
+  const reached = [];
+  const pendingItems = [...ITEM_MILESTONES];
+  const pendingShops = [...SHOP_MILESTONES];
+  let items = 0;
+  let shops = 0;
+  sorted.forEach((trip) => {
+    items += trip.itemCount;
+    shops += 1;
+    while (pendingItems.length && pendingItems[0] <= items) {
+      reached.push({ kind: 'items', threshold: pendingItems.shift(), ts: trip.ts });
+    }
+    while (pendingShops.length && pendingShops[0] <= shops) {
+      reached.push({ kind: 'shops', threshold: pendingShops.shift(), ts: trip.ts });
+    }
+  });
+  const upcoming = [];
+  if (pendingItems.length) upcoming.push({ kind: 'items', threshold: pendingItems[0], toGo: pendingItems[0] - items });
+  if (pendingShops.length) upcoming.push({ kind: 'shops', threshold: pendingShops[0], toGo: pendingShops[0] - shops });
+  upcoming.sort((a, b) => a.toGo - b.toGo);
+  return { reached, upcoming: upcoming.slice(0, 2) };
+};
+
+const milestoneName = (kind, threshold) =>
+  kind === 'items' ? `${threshold} items carried home` : `${threshold} shops`;
+
+// "items carried home since December" — the month the first trip landed in.
+const sinceMonth = (trips) => {
+  if (!trips.length) return '';
+  const first = trips.reduce((earliest, t) => (t.ts < earliest.ts ? t : earliest), trips[0]);
+  return MONTH_NAMES[new Date(first.ts).getMonth()];
+};
+
+const monthsOfHistory = (trips) => {
+  if (!trips.length) return 0;
+  const first = trips.reduce((earliest, t) => (t.ts < earliest.ts ? t : earliest), trips[0]);
+  return Math.max(1, Math.round((Date.now() - first.ts) / (MS_DAY * 30.44)));
+};
+
+// ── Range statistics ──────────────────────────────────────────────────────
+const RANGES = [
+  { id: '7D', days: 7, phrase: 'in the last week' },
+  { id: '1M', days: 30, phrase: 'last month' },
+  { id: '3M', days: 91, phrase: 'in the last three months' },
+  { id: '6M', days: 182, phrase: 'in the last six months' },
+  { id: '1Y', days: 365, phrase: 'in the last year' }
+];
+
+const computeRangeStats = (trips, days) => {
+  const since = Date.now() - days * MS_DAY;
+  const inRange = trips.filter((t) => t.ts >= since);
+  const items = inRange.reduce((sum, t) => sum + t.itemCount, 0);
+  const shops = inRange.length;
+
+  const byCategory = new Map();
+  inRange.forEach((trip) => {
+    trip.lines.forEach((line) => {
+      const key = line.categoryName || 'Other';
+      byCategory.set(key, (byCategory.get(key) || 0) + line.quantity);
+    });
+  });
+  const leaderboard = [...byCategory.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, 5);
+
+  const weekdays = [0, 0, 0, 0, 0, 0, 0];
+  inRange.forEach((trip) => { weekdays[weekdayIndex(new Date(trip.ts))] += 1; });
+
+  return {
+    trips: inRange,
+    items,
+    shops,
+    average: shops ? Math.round(items / shops) : 0,
+    leaderboard,
+    weekdays
+  };
+};
+
+// Plain English for a proportion. No percentages in prose — "two thirds"
+// is how someone would say it out loud.
+const sharePhrase = (share) => {
+  if (share >= 0.85) return 'Almost everything';
+  if (share >= 0.7) return 'Three quarters of everything';
+  if (share >= 0.58) return 'Two thirds of everything';
+  if (share >= 0.45) return 'About half of everything';
+  if (share >= 0.28) return 'About a third of everything';
+  return 'Most of it';
+};
+
+const rhythmSentence = (weekdays, shops) => {
+  if (!shops) return '';
+  const best = weekdays.indexOf(Math.max(...weekdays));
+  const share = weekdays[best] / shops;
+  if (share < 0.28) return 'No day really owns it — you shop when you need to.';
+  return `${WEEKDAY_NAMES[best]} is your shop. ${sharePhrase(share)} lands then.`;
+};
+
+const recapSentence = (stats, range) => {
+  if (!stats.shops) return `No shops ${range.phrase}.`;
+  const opening = `${capitalise(numberWord(stats.shops))} ${plural(stats.shops, 'shop', 'shops')} ${range.phrase}, and ${stats.items} ${plural(stats.items, 'item', 'items')} carried home.`;
+  if (!stats.leaderboard.length) return opening;
+  return `${opening} ${stats.leaderboard[0].name} led again.`;
+};
+
+// The one comparison line on the complete screen. A sentence, not a set of
+// deltas — and omitted entirely on the first ever shop.
+const comparisonSentence = (trip, previous) => {
+  if (!previous) return '';
+  const itemDelta = trip.itemCount - previous.itemCount;
+  let first;
+  if (itemDelta === 0) {
+    first = 'The same number of items as last shop';
+  } else {
+    first = `${capitalise(numberWord(Math.abs(itemDelta)))} ${itemDelta > 0 ? 'more' : 'fewer'} ${plural(itemDelta, 'item', 'items')} than last shop`;
+  }
+  if (trip.durationMinutes === null || previous.durationMinutes === null) return `${first}.`;
+  const timeDelta = trip.durationMinutes - previous.durationMinutes;
+  if (timeDelta === 0) return `${first}, and exactly as quick.`;
+  return `${first}, and ${numberWord(Math.abs(timeDelta))} ${plural(timeDelta, 'minute', 'minutes')} ${timeDelta < 0 ? 'quicker' : 'longer'}.`;
+};
+
+// ── Usuals ────────────────────────────────────────────────────────────────
+// Score each distinct name across the last twelve trips by how often it
+// appears, weighted up when it appears on the same weekday as today.
+// Names are matched case-insensitively and trimmed, so "Milk" and "milk "
+// are one item.
+const normaliseName = (name) => String(name || '').trim().toLowerCase();
+
+const buildUsuals = (trips, currentItems) => {
+  if (trips.length < 4) return null;
+  const recent = [...trips].sort((a, b) => b.ts - a.ts).slice(0, 12);
+  const today = weekdayIndex(new Date());
+  const onList = new Set(currentItems.map((i) => normaliseName(i.name)));
+  const sameWeekdayTrips = recent.filter((t) => weekdayIndex(new Date(t.ts)) === today).length;
+
+  const scores = new Map();
+  recent.forEach((trip) => {
+    const sameWeekday = weekdayIndex(new Date(trip.ts)) === today;
+    // One trip counts once per name, however many lines carry it.
+    const seen = new Set();
+    trip.lines.forEach((line) => {
+      const key = normaliseName(line.name);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      const entry = scores.get(key) || { key, label: line.name.trim(), trips: 0, sameWeekday: 0, score: 0, categories: new Map() };
+      entry.trips += 1;
+      entry.score += sameWeekday ? 1.6 : 1;
+      if (sameWeekday) entry.sameWeekday += 1;
+      if (line.categoryId) entry.categories.set(line.categoryId, (entry.categories.get(line.categoryId) || 0) + 1);
+      scores.set(key, entry);
+    });
+  });
+
+  const suggestions = [...scores.values()]
+    .filter((entry) => !onList.has(entry.key) && entry.trips > 1)
+    .sort((a, b) => b.score - a.score || b.trips - a.trips)
+    .slice(0, 5)
+    .map((entry) => ({
+      key: entry.key,
+      name: entry.label,
+      categoryId: [...entry.categories.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || ''
+    }));
+
+  if (!suggestions.length) return null;
+
+  const top = scores.get(suggestions[0].key);
+  const context = sameWeekdayTrips >= 3 && top.sameWeekday >= 2
+    ? `${suggestions[0].name} has been on ${numberWord(top.sameWeekday)} of your last ${numberWord(sameWeekdayTrips)} ${WEEKDAY_NAMES[today]} shops.`
+    : `${suggestions[0].name} has been on ${numberWord(top.trips)} of your last ${numberWord(recent.length)} shops.`;
+
+  return { suggestions, context };
+};
+
+// ── Shared furniture ──────────────────────────────────────────────────────
+const StatCard = ({ value, label, t, quiet }) => (
+  <div
+    style={{
+      flex: 1, minWidth: 0, textAlign: 'center', borderRadius: 20, padding: quiet ? '15px 8px' : '17px 10px',
+      backgroundColor: quiet ? t.bgTertiary : t.bgSecondary,
+      border: quiet ? 'none' : `1.5px solid ${t.border}`,
+      boxShadow: quiet ? 'none' : t.cardShadow
+    }}
+  >
+    <div style={{ fontFamily: MONO, fontSize: quiet ? 24 : 26, fontWeight: 700, letterSpacing: '-0.02em', color: t.ink, fontFeatureSettings: '"tnum"' }}>{value}</div>
+    <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary, marginTop: 6 }}>{label}</div>
+  </div>
+);
+
+// Bottom sheet — grabber, drag down or tap outside to dismiss.
+const BottomSheet = ({ onClose, t, children, labelledBy }) => {
+  const [dragY, setDragY] = useState(0);
+  const startY = useRef(null);
+
+  const onTouchStart = (e) => { startY.current = e.touches[0].clientY; };
+  const onTouchMove = (e) => {
+    if (startY.current === null) return;
+    setDragY(Math.max(0, e.touches[0].clientY - startY.current));
+  };
+  const onTouchEnd = () => {
+    startY.current = null;
+    if (dragY > 110) onClose();
+    setDragY(0);
+  };
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 210, backgroundColor: t.overlay, display: 'flex', alignItems: 'flex-end', animation: 'fadeIn 0.2s ease-out' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
+        style={{
+          width: '100%', marginTop: 54, maxHeight: 'calc(100% - 54px)', display: 'flex', flexDirection: 'column',
+          backgroundColor: t.bgSecondary, border: `1.5px solid ${t.border}`, borderBottom: 'none',
+          borderRadius: '28px 28px 0 0', boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
+          transform: `translateY(${dragY}px)`, transition: dragY ? 'none' : 'transform 0.25s cubic-bezier(0.22,1,0.36,1)',
+          animation: 'bcSheetUp 0.32s cubic-bezier(0.22,1,0.36,1)'
+        }}
+      >
+        <div onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd} style={{ padding: '10px 0 2px', display: 'flex', justifyContent: 'center', flexShrink: 0, touchAction: 'none' }}>
+          <span aria-hidden="true" style={{ width: 44, height: 5, borderRadius: 9999, backgroundColor: t.border }} />
+        </div>
+        <div style={{ overflowY: 'auto', padding: '10px 22px calc(28px + env(safe-area-inset-bottom, 0px))' }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── The shop complete screen ──────────────────────────────────────────────
+// Shown the moment a shop is finished by either route, and reused without
+// its buttons as the per-shop summary behind a year-trail dot.
+const ShopCompleteScreen = ({ trip, previousTrip, milestone, t, onDismiss, onOpenStats, summary, totals }) => {
+  const [arrived, setArrived] = useState(false);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setArrived(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // Never block the list: three seconds and it steps aside on its own.
+  // The timer is armed once, on mount. `onDismiss` is a fresh closure on
+  // every parent render, so depending on it would restart the countdown —
+  // and re-fire the haptic — each time the list behind this screen changed.
+  const dismissRef = useRef(onDismiss);
+  dismissRef.current = onDismiss;
+  useEffect(() => {
+    if (summary) return undefined;
+    triggerHaptic('success');
+    const timer = setTimeout(() => dismissRef.current(), 3000);
+    return () => clearTimeout(timer);
+  }, [summary]);
+
+  const finishedAt = new Date(trip.ts || Date.parse(trip.finishedAt));
+  const when = `${WEEKDAY_NAMES[weekdayIndex(finishedAt)]} ${timeOfDay(finishedAt)}`;
+  const subtitle = trip.storeName ? `${trip.storeName} · ${when}` : when;
+  const comparison = summary ? '' : comparisonSentence(trip, previousTrip);
+
+  const cards = milestone
+    ? [
+      { value: milestone.shops, label: 'shops' },
+      { value: Math.round(milestone.items / Math.max(1, milestone.shops)), label: 'items per shop' },
+      { value: totals?.months || 1, label: plural(totals?.months || 1, 'month', 'months') }
+    ]
+    : [
+      { value: trip.itemCount, label: 'items' },
+      { value: trip.aisleCount, label: 'aisles' },
+      ...(trip.durationMinutes === null || trip.durationMinutes === undefined
+        ? []
+        : [{ value: `${trip.durationMinutes}m`, label: 'in store' }])
+    ];
+
+  // The crumbs run into the house as the screen enters. Capped at a dozen —
+  // past that they stop reading as individual crumbs anyway.
+  const crumbCount = Math.min(12, Math.max(3, trip.lineCount || trip.itemCount || 3));
+
+  const content = (
+    <>
+      {milestone && (
+        <div
+          className="bc-fu1"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999, backgroundColor: t.ink, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', marginBottom: 26 }}
+        >
+          <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW }} />
+          <span style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.bg }}>Milestone</span>
+        </div>
+      )}
+
+      <div style={{ position: 'relative', width: 140, height: 150, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+        <div aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 7 }}>
+          {Array.from({ length: crumbCount }).map((_, i) => (
+            <span
+              key={i}
+              className="bc-crumb-home"
+              style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: YELLOW, animationDelay: `${i * 0.045}s` }}
+            />
+          ))}
+        </div>
+        <svg
+          width="120" height="120" viewBox="0 0 24 24"
+          fill={milestone ? YELLOW : (arrived ? 'rgba(250,204,21,0.18)' : 'transparent')}
+          stroke={YELLOW} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+          style={{ transition: 'fill 0.45s ease 0.3s' }}
+        >
+          <path d="M4 11l8-7 8 7" /><path d="M6 9.5V20h12V9.5" />
+        </svg>
+      </div>
+
+      {milestone ? (
+        <>
+          <div className="bc-fu2" style={{ fontFamily: MONO, fontSize: 72, fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1, color: t.ink, marginTop: 6 }}>
+            {milestone.threshold}
+          </div>
+          <p className="bc-fu2" style={{ fontSize: 16, fontWeight: 500, color: t.textSecondary, margin: '14px 0 0', textAlign: 'center' }}>
+            {milestone.kind === 'items'
+              ? `items carried home${totals?.since ? ` since ${totals.since}` : ''}`
+              : `shops finished${totals?.since ? ` since ${totals.since}` : ''}`}
+          </p>
+        </>
+      ) : (
+        <>
+          <h1 className="bc-fu2" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', color: t.ink, margin: '6px 0 0' }}>
+            Home stocked
+          </h1>
+          <p className="bc-fu2" style={{ fontSize: 14, fontWeight: 500, color: t.textSecondary, margin: '10px 0 0' }}>{subtitle}</p>
+        </>
+      )}
+
+      <div className="bc-fu3" style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 380, marginTop: 30 }}>
+        {cards.map((card) => (
+          <StatCard key={card.label} value={card.value} label={card.label} t={t} />
+        ))}
+      </div>
+
+      {comparison && (
+        <p className="bc-fu3" style={{ fontSize: 14, fontWeight: 500, color: t.text, margin: '22px 0 0', maxWidth: 330, lineHeight: 1.55, textAlign: 'center' }}>
+          {comparison}
+        </p>
+      )}
+
+      {!summary && (
+        <>
+          <button
+            onClick={(e) => { e.stopPropagation(); onOpenStats(); }}
+            className="bc-press bc-cta bc-fu4"
+            style={{ marginTop: 30, height: 54, width: '100%', maxWidth: 330, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: INK, fontSize: 13.5, fontWeight: 700, letterSpacing: '0.01em', cursor: 'pointer' }}
+          >
+            See the trail
+          </button>
+          <p className="bc-fu4" style={{ fontSize: 13.5, fontWeight: 700, color: t.textTertiary, margin: '16px 0 0' }}>Tap anywhere to carry on</p>
+        </>
+      )}
+    </>
+  );
+
+  if (summary) return content;
+
+  return (
+    <div
+      onClick={onDismiss}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 220, backgroundColor: t.bg,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: '40px 26px', textAlign: 'center', animation: 'fadeIn 0.25s ease-out'
+      }}
+    >
+      {content}
+    </div>
+  );
+};
+
+// ── The stats sheet ───────────────────────────────────────────────────────
+// Opens from the trail, and from the complete screen's button. Every number
+// here is computed in the browser from the trips read once when it opened.
+const StatsSheet = ({ trips, t, onClose, onOpenYear }) => {
+  // Read once on open: the sheet works from the snapshot it was given, so
+  // nothing shifts under the user while they change the range.
+  const [snapshot] = useState(() => trips);
+  const [rangeId, setRangeId] = useState('1M');
+  const range = RANGES.find((r) => r.id === rangeId) || RANGES[1];
+  const stats = computeRangeStats(snapshot, range.days);
+  const thin = snapshot.length < 3;
+  const leader = stats.leaderboard[0]?.count || 0;
+  const busiestDay = Math.max(...stats.weekdays, 0);
+
+  return (
+    <BottomSheet onClose={onClose} t={t} labelledBy="bc-stats-heading">
+      <h2 id="bc-stats-heading" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.015em', color: t.ink, margin: '4px 0 16px' }}>Your trail</h2>
+
+      {snapshot.length === 0 ? (
+        <p style={{ fontSize: 16, fontWeight: 500, color: t.textSecondary, margin: '0 0 12px', lineHeight: 1.55 }}>
+          No finished shops yet. Tick your way to the house and the first one lands here.
+        </p>
+      ) : (
+        <>
+          <div role="group" aria-label="Range" style={{ display: 'flex', gap: 6, marginBottom: 18 }}>
+            {RANGES.map((r) => {
+              const active = r.id === rangeId;
+              return (
+                <button
+                  key={r.id}
+                  aria-pressed={active}
+                  onClick={() => { triggerHaptic('light'); setRangeId(r.id); }}
+                  className="bc-press"
+                  style={{
+                    flex: 1, minWidth: 0, height: 44, borderRadius: 9999, cursor: 'pointer',
+                    fontSize: 13.5, fontWeight: 700, fontFamily: MONO,
+                    backgroundColor: active ? YELLOW : 'transparent',
+                    color: active ? INK : t.textSecondary,
+                    border: active ? '2px solid transparent' : `2px solid ${t.border}`,
+                    transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease'
+                  }}
+                >
+                  {r.id}
+                </button>
+              );
+            })}
+          </div>
+
+          <p style={{ fontSize: 16, fontWeight: 500, color: t.text, margin: '0 0 18px', lineHeight: 1.55 }}>
+            {recapSentence(stats, range)}
+          </p>
+
+          {/* Three zeroes say nothing. When the range is empty the recap
+              sentence has already said so — the pills are how you widen it. */}
+          {stats.shops > 0 && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+              <StatCard quiet t={t} value={stats.items} label="items" />
+              <StatCard quiet t={t} value={stats.shops} label="shops" />
+              <StatCard quiet t={t} value={stats.average} label="per shop" />
+            </div>
+          )}
+
+          {/* Fewer than three shops and there is nothing true to say about
+              aisles or rhythm yet — so nothing is said. */}
+          {!thin && stats.leaderboard.length > 0 && (
+            <div style={{ marginBottom: 26 }}>
+              <h3 style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary, margin: '0 0 14px' }}>Where it goes</h3>
+              {stats.leaderboard.map((row) => {
+                const filled = leader ? Math.max(1, Math.round((row.count / leader) * 10)) : 0;
+                return (
+                  <div key={row.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0' }}>
+                    <span className="truncate" style={{ width: 96, flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: t.ink }}>{row.name}</span>
+                    <span aria-hidden="true" style={{ display: 'flex', gap: 4, flex: 1, minWidth: 0 }}>
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, backgroundColor: i < filled ? YELLOW : t.border }} />
+                      ))}
+                    </span>
+                    <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: t.textSecondary, minWidth: 30, textAlign: 'right', fontFeatureSettings: '"tnum"' }}>{row.count}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!thin && stats.shops > 0 && (
+            <div style={{ marginBottom: 26 }}>
+              <h3 style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary, margin: '0 0 14px' }}>When you shop</h3>
+              <div aria-hidden="true" style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
+                {stats.weekdays.map((count, i) => {
+                  const shade = count === 0
+                    ? t.border
+                    : count === busiestDay ? YELLOW : 'rgba(250,204,21,0.45)';
+                  return (
+                    <span key={WEEKDAY_NAMES[i]} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                      <span style={{ width: 26, height: 26, borderRadius: '50%', backgroundColor: shade }} />
+                      <span style={{ fontSize: 11, fontWeight: 700, color: t.textTertiary }}>{WEEKDAY_NAMES[i].charAt(0)}</span>
+                    </span>
+                  );
+                })}
+              </div>
+              <p style={{ fontSize: 14, fontWeight: 500, color: t.textSecondary, margin: '14px 0 0', lineHeight: 1.5 }}>
+                {rhythmSentence(stats.weekdays, stats.shops)}
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={onOpenYear}
+            className="bc-press bc-cta"
+            style={{ width: '100%', height: 54, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: INK, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}
+          >
+            Every shop this year
+          </button>
+        </>
+      )}
+    </BottomSheet>
+  );
+};
+
+// ── The year trail ────────────────────────────────────────────────────────
+const YearTrailSheet = ({ trips, t, onClose, onOpenTrip }) => {
+  const [snapshot] = useState(() => trips);
+  const year = new Date().getFullYear();
+  const thisYear = snapshot.filter((trip) => new Date(trip.ts).getFullYear() === year);
+  const byMonth = MONTH_NAMES.map((_, m) => thisYear.filter((trip) => new Date(trip.ts).getMonth() === m).sort((a, b) => a.ts - b.ts));
+  const rows = Math.max(5, ...byMonth.map((m) => m.length));
+  const { reached, upcoming } = milestoneLadder(snapshot);
+  const ladderRows = [
+    ...reached.map((m) => ({ ...m, achieved: true })),
+    ...upcoming.map((m) => ({ ...m, achieved: false }))
+  ];
+
+  return (
+    <BottomSheet onClose={onClose} t={t} labelledBy="bc-year-heading">
+      <h2 id="bc-year-heading" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.015em', color: t.ink, margin: '4px 0 18px' }}>Every shop, {year}</h2>
+
+      <div style={{ display: 'flex', gap: 3 }}>
+        {byMonth.map((monthTrips, m) => (
+          <div key={m} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <span aria-hidden="true" style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: t.textTertiary, marginBottom: 8 }}>{MONTH_INITIALS[m]}</span>
+            {Array.from({ length: rows }).map((_, r) => {
+              const trip = monthTrips[r];
+              if (!trip) {
+                return <span key={r} aria-hidden="true" style={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: t.bgTertiary, margin: '0 0 15px' }} />;
+              }
+              return (
+                <button
+                  key={r}
+                  onClick={() => onOpenTrip(trip)}
+                  aria-label={`Shop on ${new Date(trip.ts).toDateString()}, ${trip.itemCount} items`}
+                  style={{ width: '100%', minWidth: 20, height: 24, padding: 0, border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}
+                >
+                  <span style={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: YELLOW }} />
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      <p style={{ fontSize: 14, fontWeight: 500, color: t.textSecondary, margin: '16px 0 26px', lineHeight: 1.5 }}>
+        {thisYear.length === 0
+          ? 'No shops logged this year yet.'
+          : `${capitalise(numberWord(thisYear.length))} ${plural(thisYear.length, 'shop', 'shops')} so far. Tap a dot to open that one.`}
+      </p>
+
+      <h3 style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary, margin: '0 0 14px' }}>Milestones</h3>
+      {ladderRows.length === 0 ? (
+        <p style={{ fontSize: 14, fontWeight: 500, color: t.textSecondary, margin: 0 }}>Nothing reached yet — the first one is fifty items.</p>
+      ) : ladderRows.map((row) => (
+        <div key={`${row.kind}-${row.threshold}`} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '9px 0' }}>
+          <span
+            aria-hidden="true"
+            style={{
+              width: 44, height: 44, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: row.achieved ? YELLOW : t.bgTertiary,
+              fontFamily: MONO, fontSize: 13, fontWeight: 600,
+              color: row.achieved ? INK : t.textSecondary
+            }}
+          >
+            {row.threshold}
+          </span>
+          <span style={{ minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 16, fontWeight: 700, color: row.achieved ? t.ink : t.textSecondary }}>
+              {milestoneName(row.kind, row.threshold)}
+            </span>
+            <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: t.textSecondary, marginTop: 2 }}>
+              {row.achieved
+                ? new Date(row.ts).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+                : `${numberWord(row.toGo)} ${row.kind === 'items' ? plural(row.toGo, 'item', 'items') : plural(row.toGo, 'shop', 'shops')} to go`}
+            </span>
+          </span>
+        </div>
+      ))}
+    </BottomSheet>
+  );
+};
+
+// ── Usuals ────────────────────────────────────────────────────────────────
+// Above the list when it is nearly empty — and the empty state itself, once
+// there is enough history to draw on.
+const UsualsCard = ({ usuals, t, onAdd }) => (
+  <div style={{ backgroundColor: t.bgSecondary, border: `1.5px solid ${t.border}`, borderRadius: 20, boxShadow: t.cardShadow, padding: 20, marginBottom: 18 }}>
+    <h3 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em', color: t.ink, margin: 0 }}>You usually buy these</h3>
+    <p style={{ fontSize: 14, fontWeight: 500, color: t.textSecondary, margin: '6px 0 16px', lineHeight: 1.5 }}>{usuals.context}</p>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      {usuals.suggestions.map((suggestion) => (
+        <button
+          key={suggestion.key}
+          onClick={() => onAdd(suggestion)}
+          className="bc-press bc-dashed"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 44, padding: '10px 16px',
+            borderRadius: 9999, border: `2px dashed ${t.textTertiary}`, backgroundColor: 'transparent',
+            color: t.ink, fontSize: 13.5, fontWeight: 700, cursor: 'pointer'
+          }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14" /></svg>
+          {suggestion.name}
+        </button>
+      ))}
+    </div>
+  </div>
 );
 
 export default function App() {
@@ -991,6 +1803,16 @@ export default function App() {
   const PAPER = theme.bg;
 
   // Quick Add state — the only way to add items
+  // Completed shops. Read once per list and never written here — the only
+  // write to a trip is the one prompt 1 makes when a shop is finished.
+  const [trips, setTrips] = useState([]);
+  // The celebration currently on screen: { trip, previousTrip, milestone }.
+  const [completion, setCompletion] = useState(null);
+  const [showStats, setShowStats] = useState(false);
+  const [showYearTrail, setShowYearTrail] = useState(false);
+  // A past shop opened from a year-trail dot.
+  const [tripDetail, setTripDetail] = useState(null);
+
   const [fabOpen, setFabOpen] = useState(false);
   const [fabInput, setFabInput] = useState('');
   const [fabNoMatchMode, setFabNoMatchMode] = useState(false);
@@ -1077,6 +1899,43 @@ export default function App() {
     } catch (e) {
       setHiddenCategories(['baby', 'alcohol']);
     }
+  }, [listId]);
+
+  // Load the completed shops for this list, once. Everything the trail,
+  // the celebration and the stats sheet show is derived from this array in
+  // the browser; new trips are appended locally as they are written.
+  useEffect(() => {
+    if (!listId) {
+      setTrips([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDocs(collection(db, 'lists', listId, 'trips'));
+        if (cancelled) return;
+        const rows = [];
+        snap.forEach((tripDoc) => {
+          const normalised = normaliseTrip(tripDoc.id, tripDoc.data());
+          if (normalised) rows.push(normalised);
+        });
+        rows.sort((a, b) => a.ts - b.ts);
+        setTrips(rows);
+      } catch (error) {
+        // Offline, or the list has no history yet. Neither is worth a toast:
+        // the stats sheet simply says there is nothing to show.
+        console.error('Error loading trips:', error);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [listId]);
+
+  // Close every celebration and sheet when the list changes.
+  useEffect(() => {
+    setCompletion(null);
+    setShowStats(false);
+    setShowYearTrail(false);
+    setTripDetail(null);
   }, [listId]);
 
   // Save list name to localStorage
@@ -1356,6 +2215,22 @@ export default function App() {
 
       await commitTrip(tripRef, trip);
 
+      // The shop is recorded. Everything from here is presentation: the
+      // celebration reads the trip we just built plus the history already in
+      // memory, and nothing else is written.
+      const recorded = normaliseTrip(tripRef.id, trip);
+      if (recorded) {
+        const previousTrips = trips.filter((existing) => existing.id !== recorded.id);
+        const previousTrip = previousTrips.length
+          ? previousTrips.reduce((latest, candidate) => (candidate.ts > latest.ts ? candidate : latest))
+          : null;
+        // If both ladders cross on this shop, detectMilestone returns the
+        // items one — the bigger moment of the two.
+        const milestone = detectMilestone(previousTrips, recorded);
+        setTrips([...previousTrips, recorded].sort((a, b) => a.ts - b.ts));
+        setCompletion({ trip: recorded, previousTrip, milestone });
+      }
+
       // Only now do the ticked items come off the list. If the trip write
       // had failed we would have thrown above and left the list untouched:
       // an unrecorded shop is annoying, a cleared and unrecorded shop is
@@ -1377,7 +2252,7 @@ export default function App() {
     } finally {
       finishingShopRef.current = false;
     }
-  }, [listId, items, recipes, categories, storeLayouts, activeStoreLayoutId, commitTrip, saveList, showToastMessage]);
+  }, [listId, items, recipes, categories, storeLayouts, activeStoreLayoutId, trips, commitTrip, saveList, showToastMessage]);
 
   // Save categories / store layouts to the shared meta document.
   // Same rule as saveList: merge write, and only the fields the caller
@@ -1988,6 +2863,107 @@ export default function App() {
   // Aisles that actually render a card — drives the desktop sparse state.
   const activeCategoryCount = visibleCategories.filter(cat => items.some(i => i.category === cat.id)).length;
 
+  // Items in trail order — aisle by aisle, the way they'll be walked.
+  const trailItems = visibleCategories.flatMap(cat => items.filter(item => item.category === cat.id));
+
+  // Halfway, rounded down, so the finish control arrives a tick early on an
+  // odd list rather than late. Seven items: after the third tick.
+  const finishReady = totalItems > 0 && checkedCount >= Math.max(1, Math.floor(totalItems / 2));
+
+  // Past the halfway mark the add affordance goes away entirely, including
+  // an input bar that happens to be open.
+  useEffect(() => {
+    if (finishReady && fabOpen) {
+      setFabOpen(false);
+      setFabInput('');
+      setFabNoMatchMode(false);
+    }
+  }, [finishReady, fabOpen]);
+
+
+  // Suggestions are only worth showing on a nearly-empty list, and only once
+  // there is enough history for them to be true rather than noise.
+  const usuals = totalItems <= 3 ? buildUsuals(trips, items) : null;
+
+  const addUsual = async (suggestion) => {
+    triggerHaptic('success');
+    const categoryId = suggestion.categoryId && categories.some(c => c.id === suggestion.categoryId)
+      ? suggestion.categoryId
+      : (findCategoryForItem(suggestion.name)?.categoryId || 'other');
+    const newItems = [...items, { id: generateId(), name: suggestion.name, category: categoryId, checked: false, quantity: 1, addedAt: Date.now() }];
+    setItems(newItems);
+    unhideCategoriesIfNeeded([categoryId]);
+    await saveList(newItems);
+  };
+
+  // Hide done — a 40px circular icon button beside the title. It used to be
+  // a pill in a row of its own under the trail; that row, and the counter
+  // line that shared it, are gone.
+  const hideDoneButton = (
+    <button
+      onClick={toggleHideCompleted}
+      aria-label="Hide done items"
+      aria-pressed={hideCompleted}
+      className="bc-press bc-icon-btn"
+      style={{
+        width: 40, height: 40, borderRadius: '50%', flexShrink: 0, border: 'none', padding: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+        backgroundColor: hideCompleted ? INK : theme.bgTertiary,
+        color: hideCompleted ? theme.accentOnInk : theme.textSecondary
+      }}
+    >
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        {hideCompleted
+          ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></>
+          : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>}
+      </svg>
+    </button>
+  );
+
+  const openStatsSheet = () => { triggerHaptic('light'); setCompletion(null); setShowStats(true); };
+
+  // Every celebration and sheet in one place, so the list screen and the
+  // desktop shell mount exactly the same overlays.
+  const trailOverlays = (
+    <>
+      {completion && (
+        <ShopCompleteScreen
+          trip={completion.trip}
+          previousTrip={completion.previousTrip}
+          milestone={completion.milestone}
+          totals={{ since: sinceMonth(trips), months: monthsOfHistory(trips) }}
+          t={theme}
+          onDismiss={() => setCompletion(null)}
+          onOpenStats={openStatsSheet}
+        />
+      )}
+      {showStats && (
+        <StatsSheet
+          trips={trips}
+          t={theme}
+          onClose={() => setShowStats(false)}
+          onOpenYear={() => { triggerHaptic('light'); setShowStats(false); setShowYearTrail(true); }}
+        />
+      )}
+      {showYearTrail && (
+        <YearTrailSheet
+          trips={trips}
+          t={theme}
+          onClose={() => setShowYearTrail(false)}
+          onOpenTrip={(trip) => { triggerHaptic('light'); setTripDetail(trip); }}
+        />
+      )}
+      {tripDetail && (
+        <div
+          onClick={() => setTripDetail(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 230, backgroundColor: theme.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 26px', textAlign: 'center', animation: 'fadeIn 0.2s ease-out' }}
+        >
+          <ShopCompleteScreen summary trip={tripDetail} t={theme} onDismiss={() => setTripDetail(null)} onOpenStats={() => {}} />
+        </div>
+      )}
+    </>
+  );
+
   // ── Bold Crumb motion vocabulary ──
   const styles = `
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
@@ -2008,6 +2984,13 @@ export default function App() {
       50% { transform: scale(1.02); background-color: #FACC15; }
       100% { transform: scale(1); background-color: #FACC15; }
     }
+    @keyframes bcSheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    /* The crumbs run into the house as the complete screen enters. */
+    @keyframes bcCrumbHome {
+      0%   { opacity: 1; transform: translateY(0) scale(1); }
+      70%  { opacity: 1; }
+      100% { opacity: 0; transform: translateY(74px) scale(0.3); }
+    }
     @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
     @keyframes fabSlideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .fade-in { animation: fadeIn 0.2s ease-out; }
@@ -2019,6 +3002,10 @@ export default function App() {
     .bc-charpop { animation: bcCharPop 0.18s ease-out; }
     .bc-num { display: inline-block; animation: bcNumIn 0.28s cubic-bezier(0.22,1,0.36,1); }
     .bc-hint { animation: bcHintIn 0.25s ease-out; }
+    .bc-crumb-home { animation: bcCrumbHome 0.7s cubic-bezier(0.55,0,0.35,1) both; }
+    /* The + retracts as the flag draws in. Nothing translates, nothing
+       resizes — only the glyph inside the button changes. */
+    .bc-glyph { transform-origin: 50% 50%; transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.22,1,0.36,1); }
     .bc-press { transition: transform 0.12s ease; }
     .bc-press:active { transform: scale(0.96); }
     .breathe-1 { animation: breathe 2.8s ease-in-out infinite; }
@@ -2070,6 +3057,10 @@ export default function App() {
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+      /* The glyph swap still needs to be noticeable enough that nobody
+         finishes a shop on autopilot — so it cross-fades rather than
+         snapping, and never rotates. */
+      .bc-glyph { transform: none !important; transition: opacity 0.3s ease !important; transition-duration: 0.3s !important; }
     }
   `;
 
@@ -2112,11 +3103,14 @@ export default function App() {
     if (categoryItems.length === 0) return null;
     const uncheckedCount = categoryItems.filter(i => !i.checked).length;
     const allHidden = hideCompleted && uncheckedCount === 0;
+    // Every item in the aisle ticked: the whole section steps back. A small
+    // reward in each aisle rather than only at the end of the shop.
+    const aisleDone = uncheckedCount === 0;
 
     return (
       <div
         key={category.id}
-        style={{ display: 'grid', gridTemplateRows: allHidden ? '0fr' : '1fr', opacity: allHidden ? 0 : 1, transition: 'grid-template-rows 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.22s ease', breakInside: 'avoid' }}
+        style={{ display: 'grid', gridTemplateRows: allHidden ? '0fr' : '1fr', opacity: allHidden ? 0 : (aisleDone ? 0.5 : 1), transition: 'grid-template-rows 0.32s cubic-bezier(0.22,1,0.36,1), opacity 0.3s ease', breakInside: 'avoid' }}
       >
         <div style={{ overflow: 'hidden', padding: isDesktop ? '6px 8px 16px' : 0 }}>
           <div
@@ -2128,8 +3122,10 @@ export default function App() {
             {/* Aisle label */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: isDesktop ? 6 : 2 }}>
               <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>{category.name}</span>
-              {uncheckedCount > 0 && (
+              {uncheckedCount > 0 ? (
                 <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{uncheckedCount}</span>
+              ) : (
+                <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: YELLOW, flexShrink: 0 }} />
               )}
               <div style={{ flex: 1, height: 1.5, backgroundColor: isDesktop ? theme.borderLight : theme.border }} />
             </div>
@@ -2923,18 +3919,6 @@ export default function App() {
                       <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: theme.textSecondary }}>{checkedCount}</span>
                     </button>
                   )}
-                  {/* TEMPORARY — test hook for trip logging. The real finish
-                      control arrives with the celebration screen. */}
-                  {checkedCount > 0 && (
-                    <button
-                      onClick={() => finishShop()}
-                      className="w-full flex items-center justify-between bc-press bc-hover-row"
-                      style={{ padding: '13px 10px', margin: '0 -10px', width: 'calc(100% + 20px)', borderRadius: 10, background: 'none', border: 'none', cursor: 'pointer' }}
-                    >
-                      <span style={{ fontSize: 14.5, fontWeight: 600, color: INK }}>Finish shop (test)</span>
-                      <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: theme.textSecondary }}>{checkedCount}</span>
-                    </button>
-                  )}
                   {totalItems > 0 && (
                     <button
                       onClick={() => { triggerHaptic('light'); setShowClearAllConfirm(true); }}
@@ -3093,18 +4077,6 @@ export default function App() {
                 </button>
               )}
 
-              {/* TEMPORARY — test hook for trip logging. The real finish
-                  control arrives with the celebration screen. */}
-              {checkedCount > 0 && (
-                <button
-                  onClick={() => finishShop()}
-                  className="w-full flex items-center justify-between bc-press"
-                  style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
-                >
-                  <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Finish shop (test)</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: theme.textSecondary }}>{checkedCount}</span>
-                </button>
-              )}
 
               {totalItems > 0 && (
                 <button
@@ -3638,9 +4610,12 @@ export default function App() {
              it, so content starts immediately instead of after a gap. */
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 32 }}>
             <div style={{ minWidth: 0 }}>
-              <h1 className="truncate" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.05, margin: 0, color: INK }}>
-                {listName || 'Breadcrumbs'}
-              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+                <h1 className="truncate" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.05, margin: 0, color: INK }}>
+                  {listName || 'Breadcrumbs'}
+                </h1>
+                {hideDoneButton}
+              </div>
               <p style={{ fontSize: 13, color: theme.textSecondary, margin: '7px 0 0' }}>
                 {totalItems === 0
                   ? 'Nothing on the list yet.'
@@ -3648,8 +4623,21 @@ export default function App() {
               </p>
             </div>
 
-            {/* Inline quick add — the desktop replacement for the thumb-reach FAB */}
+            {/* Inline quick add — the desktop replacement for the thumb-reach
+                FAB. Past the halfway mark it becomes the finish control, and
+                adding is no longer offered. */}
             <div className="fab-area" style={{ position: 'relative', width: isWide ? 460 : 400, flexShrink: 0, paddingBottom: 2 }}>
+              {finishReady ? (
+                <button
+                  onClick={() => { triggerHaptic('light'); finishShop(); }}
+                  aria-label="Finish shop"
+                  className="bc-press bc-cta"
+                  style={{ width: '100%', height: 54, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', boxShadow: theme.yellowGlow }}
+                >
+                  <FinishGlyph finishing color="#1c1917" />
+                  Finish shop
+                </button>
+              ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 5px 5px 16px', borderRadius: 9999, border: `1.5px solid ${theme.border}`, backgroundColor: theme.bgSecondary }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14" /></svg>
                 <input
@@ -3672,8 +4660,9 @@ export default function App() {
                   Add
                 </button>
               </div>
+              )}
 
-              {fabNoMatchMode && (
+              {!finishReady && fabNoMatchMode && (
                 <div
                   className="fade-in"
                   style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 60, backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 18, boxShadow: theme.cardShadow, padding: 14, maxHeight: 300, overflowY: 'auto' }}
@@ -3696,132 +4685,33 @@ export default function App() {
             </div>
           </div>
         ) : (
-          <h1 className="truncate" style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, margin: 0, color: INK }}>
-            {listName || 'Breadcrumbs'}
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <h1 className="truncate" style={{ flex: 1, minWidth: 0, fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, margin: 0, color: INK }}>
+              {listName || 'Breadcrumbs'}
+            </h1>
+            {hideDoneButton}
+          </div>
         )}
 
         {isDesktop ? (
-          /* Toolbar: progress, the crumb-trail home it belongs to, and the
-             hide/clear control — one row, directly under the header. */
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 16, padding: '11px 0 13px', borderTop: `1.5px solid ${theme.borderLight}` }}>
-            {/* Crumbs run left to right and the house closes the trail, so
-                the icon reads as its destination rather than as decoration
-                stranded in the corner. */}
-            {totalItems > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, minWidth: 80, overflow: 'hidden' }}>
-                {totalItems > 40 ? (
-                  <div style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: theme.border, overflow: 'hidden' }}>
-                    <div style={{ width: `${(remainingCount / totalItems) * 100}%`, height: '100%', borderRadius: 2, backgroundColor: YELLOW, transition: 'width 0.35s cubic-bezier(0.22,1,0.36,1)' }} />
-                  </div>
-                ) : (
-                  visibleCategories.flatMap(cat => items.filter(item => item.category === cat.id)).map(item => {
-                    const crumbSize = totalItems <= 16 ? 10 : totalItems <= 28 ? 8 : 6;
-                    return (
-                      <span
-                        key={item.id}
-                        style={{ width: crumbSize, height: crumbSize, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0, backgroundColor: item.checked ? 'transparent' : YELLOW, border: `1.5px solid ${item.checked ? theme.border : 'transparent'}`, transition: 'background-color 0.25s ease, border-color 0.25s ease' }}
-                      />
-                    );
-                  })
-                )}
-                <span style={{ display: 'flex', marginLeft: 6 }}>
-                  <TrailHome lit={remainingCount === 0 && totalItems > 0} t={theme} />
-                </span>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0, marginLeft: 'auto' }}>
-              {remainingCount === 0 && totalItems > 0 ? (
-                <span className="bc-hint" style={{ fontSize: 12, fontFamily: MONO, fontWeight: 700, color: INK, whiteSpace: 'nowrap' }}>Trail complete — you’re home</span>
-              ) : (
-                <span style={{ fontSize: 12, fontFamily: MONO, fontWeight: 700, color: INK, fontFeatureSettings: '"tnum"', whiteSpace: 'nowrap' }}>
-                  {remainingCount} to go <span style={{ fontWeight: 500, color: theme.textTertiary }}>· {checkedCount} picked up</span>
-                </span>
-              )}
+          /* The trail is the whole toolbar now: the dots carry the count the
+             old "n to go" line spelled out, and tapping them opens the
+             stats sheet. */
+          totalItems > 0 && (
+            <div style={{ marginTop: 12, padding: '2px 0 6px', borderTop: `1.5px solid ${theme.borderLight}` }}>
+              <CrumbTrail items={trailItems} t={theme} onOpen={openStatsSheet} />
             </div>
-
-            {remainingCount === 0 && totalItems > 0 ? (
-              <button
-                onClick={() => { triggerHaptic('light'); setShowClearConfirm(true); }}
-                className="bc-press bc-hint bc-icon-btn flex items-center"
-                style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: `1.5px solid ${theme.border}`, backgroundColor: theme.bgSecondary, color: theme.textSecondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /></svg>
-                Clear ticked
-              </button>
-            ) : (
-              <button
-                onClick={toggleHideCompleted}
-                className={`bc-press flex items-center${hideCompleted ? '' : ' bc-icon-btn'}`}
-                aria-pressed={hideCompleted}
-                style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: `1.5px solid ${hideCompleted ? 'transparent' : theme.border}`, backgroundColor: hideCompleted ? INK : theme.bgSecondary, color: hideCompleted ? theme.accentOnInk : theme.textSecondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease' }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  {hideCompleted
-                    ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></>
-                    : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>}
-                </svg>
-                Hide done
-              </button>
-            )}
-          </div>
+          )
         ) : (
         <>
-        {/* The crumb trail — one crumb per item, picked up as you shop */}
+        {/* The crumb trail — one crumb per item, picked up as you shop.
+            It replaces the old "n to go · n picked up" line: the dots tell
+            that story, and the line only repeated it. */}
         {totalItems > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 18 }}>
-            {totalItems > 40 ? (
-              <div style={{ flex: 1, height: 4, borderRadius: 2, backgroundColor: theme.border, marginRight: 10, overflow: 'hidden' }}>
-                <div style={{ width: `${(remainingCount / totalItems) * 100}%`, height: '100%', borderRadius: 2, backgroundColor: YELLOW, transition: 'width 0.35s cubic-bezier(0.22,1,0.36,1)' }} />
-              </div>
-            ) : (
-              visibleCategories.flatMap(cat => items.filter(item => item.category === cat.id)).map(item => {
-                const crumbSize = totalItems <= 16 ? 10 : totalItems <= 28 ? 7 : 5;
-                return (
-                  <span
-                    key={item.id}
-                    style={{ width: crumbSize, height: crumbSize, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0, backgroundColor: item.checked ? 'transparent' : YELLOW, border: `1.5px solid ${item.checked ? theme.border : 'transparent'}`, transition: 'background-color 0.25s ease, border-color 0.25s ease' }}
-                  />
-                );
-              })
-            )}
-            <TrailHome lit={remainingCount === 0 && totalItems > 0} t={theme} />
+          <div style={{ marginTop: 10 }}>
+            <CrumbTrail items={trailItems} t={theme} onOpen={openStatsSheet} />
           </div>
         )}
-
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-          {remainingCount === 0 && totalItems > 0 ? (
-            <span className="bc-hint" style={{ fontSize: 12, fontFamily: MONO, fontWeight: 700, color: INK }}>Trail complete — you’re home</span>
-          ) : (
-            <span style={{ fontSize: 12, fontFamily: MONO, fontWeight: 700, color: INK, fontFeatureSettings: '"tnum"' }}>
-              {remainingCount} to go <span style={{ fontWeight: 500, color: theme.textTertiary }}>· {checkedCount} picked up</span>
-            </span>
-          )}
-          {remainingCount === 0 && totalItems > 0 ? (
-            <button
-              onClick={() => { triggerHaptic('light'); setShowClearConfirm(true); }}
-              className="bc-press bc-hint flex items-center"
-              style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: `1.5px solid ${theme.border}`, backgroundColor: theme.bgSecondary, color: theme.textSecondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-            >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-              Clear
-            </button>
-          ) : (
-            <button
-              onClick={toggleHideCompleted}
-              className="bc-press flex items-center"
-              style={{ gap: 7, padding: '8px 14px', borderRadius: 9999, border: `1.5px solid ${hideCompleted ? 'transparent' : theme.border}`, backgroundColor: hideCompleted ? INK : theme.bgSecondary, color: hideCompleted ? theme.accentOnInk : theme.textSecondary, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease' }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                {hideCompleted
-                  ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></>
-                  : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>}
-              </svg>
-              Hide done
-            </button>
-          )}
-        </div>
         </>
         )}
         </div>
@@ -3829,7 +4719,11 @@ export default function App() {
 
       {/* ── Aisles ── */}
       <div style={{ padding: isDesktop ? `18px ${shellPadX}px 0` : '16px 28px 0', paddingBottom: isDesktop ? 40 : 110, maxWidth: isDesktop ? contentMax.list : 'none', margin: isDesktop ? '0 auto' : undefined }}>
-        {totalItems === 0 ? (
+        {/* Usuals sit above the list while it is nearly empty, and stand in
+            for the empty state once there is history to draw on. */}
+        {usuals && <UsualsCard usuals={usuals} t={theme} onAdd={addUsual} />}
+
+        {totalItems === 0 && usuals ? null : totalItems === 0 ? (
           <div className="text-center" style={{ paddingTop: isDesktop ? 96 : 70 }}>
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 24 }}>
               <div className={isDesktop ? 'breathe-1' : ''} style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: YELLOW }} />
@@ -3883,9 +4777,15 @@ export default function App() {
       {/* ── Quick Add FAB — phone only; desktop adds inline from the header ── */}
       {activeTab === 'list' && !fabOpen && !isDesktop && (
         <button
-          onClick={() => { triggerHaptic('light'); setFabOpen(true); }}
+          onClick={() => {
+            triggerHaptic('light');
+            // Halfway through a shop the button stops adding and starts
+            // finishing. Same routine as ticking the last item.
+            if (finishReady) finishShop();
+            else setFabOpen(true);
+          }}
           className="bc-fab"
-          aria-label="Quick add an item"
+          aria-label={finishReady ? 'Finish shop' : 'Add item'}
           style={{
             position: 'fixed', bottom: 'calc(66px + max(34px, calc(env(safe-area-inset-bottom, 0px) + 8px)))', right: 24,
             width: 62, height: 62, borderRadius: '50%',
@@ -3899,7 +4799,7 @@ export default function App() {
           onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          <FinishGlyph finishing={finishReady} color="#1c1917" />
         </button>
       )}
 
@@ -3995,6 +4895,8 @@ export default function App() {
       )}
 
       {/* Bottom Navigation */}
+      {trailOverlays}
+
       {!isDesktop && !fabOpen && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={theme} />}
 
       {/* Clear ticked items confirmation */}
@@ -4014,3 +4916,4 @@ export default function App() {
     </div>
   );
 }
+
