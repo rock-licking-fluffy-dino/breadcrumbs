@@ -134,11 +134,11 @@ const CATEGORY_DICTIONARY = {
     'cherry tomatoes', 'chilli', 'chillies', 'chives', 'cilantro', 'clementine',
     'clementines', 'coleslaw', 'collard greens', 'corn', 'corn on the cob',
     'courgette', 'courgettes', 'cranberries', 'cucumber', 'cucumbers', 'dates',
-    'dill', 'edamame', 'eggplant', 'fennel', 'figs', 'fruit', 'fruit salad',
+    'aubergine', 'aubergines', 'dill', 'edamame', 'eggplant', 'fennel', 'figs', 'fruit', 'fruit salad',
     'garlic', 'ginger', 'grapes', 'green beans', 'green onion', 'green onions',
     'green pepper', 'herbs', 'honeydew', 'jalapeño', 'jalapeños', 'kale',
     'kiwi', 'kiwis', 'leek', 'leeks', 'lemon', 'lemons', 'lemongrass',
-    'lettuce', 'lime', 'limes', 'mandarin', 'mandarins', 'mango', 'mangoes',
+    'lemon juice', 'lettuce', 'lime', 'lime juice', 'limes', 'mandarin', 'mandarins', 'mango', 'mangoes',
     'melon', 'mint', 'mixed greens', 'mixed salad', 'mushroom', 'mushrooms',
     'nectarine', 'nectarines', 'okra', 'onion', 'onions', 'orange', 'oranges',
     'pak choi', 'parsley', 'parsnip', 'parsnips', 'passion fruit', 'pea pods',
@@ -168,8 +168,7 @@ const CATEGORY_DICTIONARY = {
     'waffles', 'white bread', 'wholemeal bread', 'wraps'
   ],
   'deli-chilled': [
-    'antipasto', 'baba ganoush', 'chicken breast', 'chicken pieces',
-    'chicken thighs', 'chicken wings', 'chorizo', 'cooked chicken',
+    'antipasto', 'baba ganoush', 'chorizo', 'cooked chicken',
     'cooked ham', 'cooked meats', 'couscous', 'deli meat', 'deli meats',
     'dip', 'dips', 'falafel', 'fresh juice', 'fresh pasta', 'fresh pizza',
     'fresh ravioli', 'fresh salsa', 'fresh soup', 'guacamole', 'ham',
@@ -193,7 +192,8 @@ const CATEGORY_DICTIONARY = {
     'spread', 'whipping cream', 'whole milk', 'yoghurt', 'yogurt'
   ],
   'meat-poultry': [
-    'bacon', 'beef', 'beef mince', 'chicken', 'chicken drumsticks',
+    'bacon', 'beef', 'beef mince', 'chicken', 'chicken breast',
+    'chicken drumsticks', 'chicken pieces', 'chicken thighs', 'chicken wings',
     'duck', 'gammon', 'ground beef', 'ground pork', 'ground turkey',
     'ham joint', 'hot dogs', 'kebab meat', 'lamb', 'lamb chops',
     'lamb mince', 'liver', 'mince', 'minced beef', 'minced meat',
@@ -241,26 +241,28 @@ const CATEGORY_DICTIONARY = {
     'canned tomatoes', 'canned tuna', 'chickpeas', 'chopped tomatoes',
     'coconut cream', 'coconut milk tinned', 'condensed milk', 'corn canned',
     'evaporated milk', 'green beans canned', 'kidney beans', 'lentils',
-    'mixed beans', 'mushy peas', 'passata', 'peaches canned',
+    'mixed beans', 'mushy peas', 'passata', 'tomato purée', 'peaches canned',
     'pineapple canned', 'soup', 'sweetcorn', 'tinned fruit',
     'tinned peaches', 'tinned tomatoes', 'tomato paste', 'tomato puree',
     'tuna', 'tuna tinned'
   ],
   'sauces-condiments': [
-    'barbecue sauce', 'bbq sauce', 'brown sauce', 'chilli sauce',
+    'barbecue sauce', 'bbq sauce', 'beef stock', 'bouillon', 'broth',
+    'brown sauce', 'chicken stock', 'chilli sauce',
     'chutney', 'cooking sauce', 'cranberry sauce', 'curry paste',
     'curry sauce', 'fish sauce', 'gravy', 'gravy granules', 'harissa',
     'hoisin sauce', 'horseradish', 'hot sauce', 'ketchup', 'mayo',
     'mayonnaise', 'mint sauce', 'mustard', 'olive oil', 'oyster sauce',
     'pasta sauce', 'pesto', 'pickle', 'relish', 'salad cream',
     'salad dressing', 'salsa', 'soy sauce', 'sriracha', 'stir fry sauce',
+    'fish stock', 'stock', 'stock cube', 'stock cubes', 'stock pot', 'stock pots',
+    'vegetable stock',
     'sweet chilli sauce', 'tabasco', 'tahini', 'tartar sauce',
     'teriyaki sauce', 'tomato ketchup', 'tomato sauce', 'vinaigrette',
     'vinegar', 'worcestershire sauce'
   ],
   'spices-seasonings': [
-    'all spice', 'basil dried', 'bay leaves', 'black pepper',
-    'bouillon', 'cardamom', 'cayenne pepper', 'chilli flakes',
+    'all spice', 'basil dried', 'bay leaves', 'black pepper', 'cardamom', 'cayenne pepper', 'chilli flakes',
     'chilli powder', 'chinese five spice', 'cinnamon', 'cloves',
     'coriander ground', 'cumin', 'curry powder', 'fennel seeds',
     'garam masala', 'garlic granules', 'garlic powder', 'ground ginger',
@@ -268,7 +270,7 @@ const CATEGORY_DICTIONARY = {
     'nutmeg', 'onion powder', 'oregano', 'paprika', 'parsley dried',
     'pepper', 'peppercorns', 'rosemary dried', 'saffron', 'sage dried',
     'salt', 'sea salt', 'seasoning', 'smoked paprika', 'star anise',
-    'stock cubes', 'thyme dried', 'turmeric', 'vanilla essence',
+    'thyme dried', 'turmeric', 'vanilla essence',
     'vanilla extract'
   ],
   'snacks-confectionery': [
@@ -357,10 +359,37 @@ const CATEGORY_DICTIONARY = {
   ]
 };
 
-// Pre-sort longest-first at module level so matching is fast at runtime
+// Lowercase and strip accents (NFD, then drop the combining marks), so
+// "purée" and "puree" are the same word to the matcher.
+const normaliseForMatch = (text) => String(text || '')
+  .normalize('NFD')
+  .replace(/[̀-ͯ]/g, '')
+  .toLowerCase()
+  .trim();
+
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Pre-sort longest-first at module level so matching is fast at runtime.
+// Each keyword matches as a whole word — bounded by the ends of the text or a
+// non-letter, with an optional plural "s" or "es" — so "aubergine" no longer
+// contains "gin" and lands in Alcohol.
 const SORTED_DICTIONARY = Object.entries(CATEGORY_DICTIONARY)
-  .flatMap(([categoryId, keywords]) => keywords.map(kw => ({ keyword: kw.toLowerCase(), categoryId })))
+  .flatMap(([categoryId, keywords]) => keywords.map(kw => {
+    const keyword = normaliseForMatch(kw);
+    return {
+      keyword,
+      categoryId,
+      pattern: new RegExp(`(?:^|[^a-z])${escapeRegExp(keyword)}(?:s|es)?(?=$|[^a-z])`)
+    };
+  }))
   .sort((a, b) => b.keyword.length - a.keyword.length);
+
+// Dictionary step only: no per-device corrections, so it stays pure.
+const matchDictionary = (text) => {
+  const normalised = normaliseForMatch(text);
+  if (!normalised) return null;
+  return SORTED_DICTIONARY.find(entry => entry.pattern.test(normalised)) || null;
+};
 
 const findCategoryForItem = (itemName) => {
   const normalised = itemName.toLowerCase().trim();
@@ -379,12 +408,9 @@ const findCategoryForItem = (itemName) => {
     // Ignore localStorage errors
   }
 
-  // 2. Check keyword dictionary (longest match wins, already sorted)
-  for (const entry of SORTED_DICTIONARY) {
-    if (normalised.includes(entry.keyword)) {
-      return { categoryId: entry.categoryId, source: 'dictionary' };
-    }
-  }
+  // 2. Check keyword dictionary (longest whole-word match wins, already sorted)
+  const entry = matchDictionary(normalised);
+  if (entry) return { categoryId: entry.categoryId, source: 'dictionary' };
 
   return null;
 };
@@ -398,6 +424,228 @@ const saveCategoryCorrection = (itemName, categoryId) => {
   } catch (e) {
     // Ignore localStorage errors
   }
+};
+
+// ── Ingredient lines ──────────────────────────────────────────────────────
+// One line of a recipe — typed by hand, or scraped from a recipe site — is
+// split into the thing you'd buy, how many to buy (the ×N), and a note that
+// keeps the amount, unit, size and preparation for reference. Notes never
+// reach the shopping list.
+const UNICODE_FRACTIONS = { '½': 1 / 2, '¼': 1 / 4, '¾': 3 / 4, '⅓': 1 / 3, '⅔': 2 / 3, '⅛': 1 / 8 };
+const FRACTION_CHARS = Object.keys(UNICODE_FRACTIONS).join('');
+// 1½ · 1 ½ · 1 1/2 · 1/2 · 1.5 · 2 · ½
+const NUMBER_SRC = `(?:\\d+(?:\\.\\d+)?\\s?[${FRACTION_CHARS}]|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+|\\d+(?:\\.\\d+)?|[${FRACTION_CHARS}])`;
+// An amount, optionally a range: 2-3 · 2–3 · 2 to 3. Group 1 is the low end,
+// group 2 the separator as typed, group 3 the high end.
+const AMOUNT_RE = new RegExp(`^(${NUMBER_SRC})(?:(\\s*[-–—]\\s*|\\s+to\\s+)(${NUMBER_SRC}))?`, 'i');
+
+const byLengthDesc = (words) => [...words].sort((a, b) => b.length - a.length).join('|');
+const MEASURE_UNITS = byLengthDesc([
+  'g', 'kg', 'mg', 'ml', 'l', 'litre', 'litres', 'liter', 'liters', 'cl',
+  'tsp', 'tsps', 'tbsp', 'tbsps', 'teaspoon', 'teaspoons', 'tablespoon', 'tablespoons',
+  'cup', 'cups', 'oz', 'lb', 'lbs', 'pint', 'pints'
+]);
+const PACK_UNITS = byLengthDesc([
+  'tin', 'tins', 'can', 'cans', 'jar', 'jars', 'pack', 'packs', 'packet', 'packets',
+  'bag', 'bags', 'bottle', 'bottles', 'carton', 'cartons', 'pot', 'pots'
+]);
+const SIZE_WORDS = 'large|medium|small|heaped';
+// Straight after the amount: an optional size word, then a unit. Glued units
+// ("400g") count, and a unit is never the start of a longer word ("large").
+const UNIT_AFTER_AMOUNT_RE = new RegExp(`^\\s*(?:(?:${SIZE_WORDS})\\s+)?(?:(${MEASURE_UNITS})|(${PACK_UNITS}))\\.?(?![a-z])`, 'i');
+const PACK_AFTER_MEASURE_RE = new RegExp(`^\\s+(?:${PACK_UNITS})(?![a-z])`, 'i');
+// "400g tins" in a note is the size of the pack, not an amount to scale.
+const PACK_SIZE_NOTE_RE = new RegExp(`^\\s*(?:${MEASURE_UNITS})\\.?\\s+(?:${PACK_UNITS})(?![a-z])`, 'i');
+const SIZE_BEFORE_NAME_RE = new RegExp(`^(${SIZE_WORDS})\\s+`, 'i');
+// Measuring part of something: "3 garlic cloves" is one bulb of garlic.
+const PART_OF_RE = /(?:\b(an?)\s+)?\b(cloves?|sprigs?|rashers?|slices?|sticks?|leaf|leaves|sheets?|pinch(?:es)?|dash(?:es)?|handfuls?|bunch(?:es)?|knobs?|drizzle|splash)\b(?:\s+of\b)?/i;
+const SERVING_PHRASES_RE = /\b(to taste|optional|to serve|for frying)\b/gi;
+const LEADING_PHRASE_RE = /^(zest and juice of|juice and zest of|juice of|zest of)\s+/i;
+const MULTIPLIER_RE = /^(\d+)\s*[x×](?:\s+|(?=\d))/i;
+
+const parseAmountValue = (text) => {
+  const s = String(text || '').trim();
+  let m = s.match(new RegExp(`^(\\d+(?:\\.\\d+)?)\\s?([${FRACTION_CHARS}])$`));
+  if (m) return parseFloat(m[1]) + UNICODE_FRACTIONS[m[2]];
+  m = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if (m) return Number(m[1]) + (Number(m[3]) ? Number(m[2]) / Number(m[3]) : 0);
+  m = s.match(/^(\d+)\/(\d+)$/);
+  if (m) return Number(m[2]) ? Number(m[1]) / Number(m[2]) : 0;
+  if (UNICODE_FRACTIONS[s] !== undefined) return UNICODE_FRACTIONS[s];
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const tidySpaces = (text) => String(text || '').replace(/\s+/g, ' ').trim();
+const capitaliseFirst = (text) => (text ? text.charAt(0).toUpperCase() + text.slice(1) : text);
+
+// Index of the first comma that isn't inside brackets, or -1.
+const firstTopLevelComma = (text) => {
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '(') depth += 1;
+    else if (ch === ')') depth = Math.max(0, depth - 1);
+    else if (ch === ',' && depth === 0) return i;
+  }
+  return -1;
+};
+
+const parseIngredientLine = (text) => {
+  const original = tidySpaces(text);
+  if (!original) return { name: '', quantity: 1, note: '' };
+  const fallback = { name: capitaliseFirst(original), quantity: 1, note: '' };
+
+  let rest = original;
+  const leadParts = [];
+  const noteParts = [];
+
+  // "Juice of 1 lemon" — the lemon is what you buy.
+  let m = rest.match(LEADING_PHRASE_RE);
+  if (m) {
+    leadParts.push(m[1].toLowerCase());
+    rest = rest.slice(m[0].length);
+  }
+
+  // "2 x 400g tins": the multiplier is the ×N, the rest is the note.
+  let multiplier = null;
+  m = rest.match(MULTIPLIER_RE);
+  if (m) {
+    multiplier = clampNum(1, parseInt(m[1], 10), 20);
+    rest = rest.slice(m[0].length);
+  }
+
+  // Preparation after the first comma is kept whole.
+  const commaAt = firstTopLevelComma(rest);
+  let head = commaAt >= 0 ? rest.slice(0, commaAt) : rest;
+  const preparation = commaAt >= 0 ? tidySpaces(rest.slice(commaAt + 1)) : '';
+
+  // Leading amount, its unit, a pack word after a weight ("400g tin"), and
+  // a bracket straight after the unit ("100g (3½oz)").
+  let amountText = '';
+  let amountValue = null;
+  let hasUnit = false;
+  m = head.match(AMOUNT_RE);
+  if (m) {
+    amountValue = parseAmountValue(m[3] || m[1]);
+    let consumed = m[0];
+    const unit = head.slice(consumed.length).match(UNIT_AFTER_AMOUNT_RE);
+    if (unit) {
+      hasUnit = true;
+      consumed += unit[0];
+      if (unit[1]) {
+        const pack = head.slice(consumed.length).match(PACK_AFTER_MEASURE_RE);
+        if (pack) consumed += pack[0];
+      }
+      const bracket = head.slice(consumed.length).match(/^\s*\([^)]*\)/);
+      if (bracket) consumed += bracket[0];
+    }
+    amountText = tidySpaces(consumed);
+    head = head.slice(consumed.length);
+  }
+
+  // "2 large eggs": the size goes to the note, the eggs are what you buy.
+  head = head.trimStart();
+  let sizeWord = '';
+  m = head.match(SIZE_BEFORE_NAME_RE);
+  if (m) {
+    sizeWord = m[1].toLowerCase();
+    head = head.slice(m[0].length);
+  }
+
+  // Anything else in brackets, and the serving phrases, are notes too.
+  const bracketParts = [];
+  head = head.replace(/\(([^)]*)\)/g, (_, inner) => {
+    if (tidySpaces(inner)) bracketParts.push(tidySpaces(inner));
+    return ' ';
+  });
+  const phraseParts = [];
+  head = head.replace(SERVING_PHRASES_RE, (phrase) => {
+    phraseParts.push(phrase.toLowerCase());
+    return ' ';
+  });
+
+  // Part-of words. The word stays in the name when taking it out would
+  // leave nothing, or would stop the name matching an aisle it matches
+  // with the word in ("bay leaves", "cloves").
+  let partOf = false;
+  let partWordText = '';
+  let partMerged = false;
+  m = head.match(PART_OF_RE);
+  if (m) {
+    partOf = true;
+    const stripped = tidySpaces(head.slice(0, m.index) + ' ' + head.slice(m.index + m[0].length));
+    const keepWord = !stripped || (!matchDictionary(stripped) && matchDictionary(head));
+    if (!keepWord) {
+      head = stripped;
+      const word = m[2].toLowerCase();
+      if (amountText && !hasUnit && multiplier === null) {
+        amountText = `${amountText} ${word}`;
+        partMerged = true;
+      } else if (!amountText && m[1]) {
+        partWordText = `${m[1].toLowerCase()} ${word}`;
+      } else {
+        partWordText = word;
+      }
+    }
+  }
+
+  let name = tidySpaces(head).replace(/^of\s+/i, '').replace(/^[\s,.;:–—-]+|[\s,.;:–—-]+$/g, '');
+  if (!name) return fallback;
+  name = capitaliseFirst(name);
+
+  let quantity = 1;
+  if (multiplier !== null) quantity = multiplier;
+  else if (partOf || hasUnit) quantity = 1;
+  else if (amountValue !== null) quantity = clampNum(1, Math.ceil(amountValue - 1e-9), 20);
+
+  // A plain count is the ×N, so it only reaches the note when a unit, a
+  // part-of word or a multiplier says it measures something.
+  const amountInNote = amountText && (hasUnit || partMerged || multiplier !== null || partOf);
+  noteParts.push(...leadParts);
+  if (amountInNote) noteParts.push(amountText);
+  if (sizeWord) noteParts.push(sizeWord);
+  if (partWordText) noteParts.push(partWordText);
+  noteParts.push(...bracketParts, ...phraseParts);
+  if (preparation) noteParts.push(preparation);
+
+  return { name, quantity, note: noteParts.join(', ') };
+};
+
+// ── Serving scaler ────────────────────────────────────────────────────────
+// ×N always rounds up: nobody buys 1.5 onions. The small epsilon stops
+// float noise (3 × 7/3 = 7.000000001) from buying one too many.
+const scaleIngredientQuantity = (quantity, factor = 1) =>
+  Math.max(1, Math.ceil((Number(quantity) || 1) * factor - 1e-9));
+
+// Below ten, to the nearest quarter; ten and above, to the whole number.
+const formatScaledAmount = (value) => {
+  if (value >= 10) return String(Math.round(value));
+  const quarters = Math.max(1, Math.round(value * 4));
+  const whole = Math.floor(quarters / 4);
+  const fraction = ['', '¼', '½', '¾'][quarters % 4];
+  return whole ? `${whole}${fraction}` : fraction;
+};
+
+// Scales only the first amount at the start of a note (both ends of a
+// range), leaving the rest as typed. A pack size ("400g tins") is not an
+// amount — the count of tins is already in ×N.
+const scaleIngredientNote = (note, factor = 1) => {
+  const text = String(note || '');
+  if (!text || factor === 1) return text;
+  const m = text.match(AMOUNT_RE);
+  if (!m) return text;
+  const after = text.slice(m[0].length);
+  if (PACK_SIZE_NOTE_RE.test(after)) return text;
+  const low = formatScaledAmount(parseAmountValue(m[1]) * factor);
+  const scaled = m[3] ? `${low}${m[2]}${formatScaledAmount(parseAmountValue(m[3]) * factor)}` : low;
+  return scaled + after;
+};
+
+// A recipe's saved servings, or null when it has none (or something invalid).
+const recipeServings = (recipe) => {
+  const servings = recipe?.servings;
+  return Number.isInteger(servings) && servings >= 1 && servings <= 50 ? servings : null;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -2281,6 +2529,126 @@ const StatsSheet = ({ trips, t, onClose, onOpenYear }) => {
   );
 };
 
+// ── Recipe flags ──────────────────────────────────────────────────────────
+// Outline when off, filled yellow when on. Used as the sheet's toggles and,
+// small and always filled, as the read-only marks beside a recipe's name.
+const RECIPE_FLAG_PATHS = {
+  favourite: 'M12 2.8l2.85 5.95 6.55.8-4.83 4.5 1.24 6.5L12 17.4l-5.81 3.15 1.24-6.5-4.83-4.5 6.55-.8L12 2.8z',
+  wantToCook: 'M6.5 3h11a.5.5 0 01.5.5V21l-6-4.3L6 21V3.5a.5.5 0 01.5-.5z'
+};
+
+const RecipeFlagIcon = ({ flag, on, size = 18, color }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={on ? YELLOW : 'none'} stroke={on ? YELLOW : color} strokeWidth="2" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
+    <path d={RECIPE_FLAG_PATHS[flag]} />
+  </svg>
+);
+
+const RecipeFlagMarks = ({ recipe, size = 13 }) => (
+  (recipe.favourite === true || recipe.wantToCook === true) ? (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+      {recipe.favourite === true && <span role="img" aria-label="Favourite" style={{ display: 'flex' }}><RecipeFlagIcon flag="favourite" on size={size} /></span>}
+      {recipe.wantToCook === true && <span role="img" aria-label="Want to cook" style={{ display: 'flex' }}><RecipeFlagIcon flag="wantToCook" on size={size} /></span>}
+    </span>
+  ) : null
+);
+
+// A 28px round stepper button, the same as the ingredient steppers.
+const stepperButtonStyle = (t) => ({
+  width: 28, height: 28, borderRadius: '50%', backgroundColor: t.bgTertiary, color: t.ink,
+  border: 'none', cursor: 'pointer', fontSize: 14, flexShrink: 0, padding: 0
+});
+
+// ── The recipe sheet ──────────────────────────────────────────────────────
+// Read-only. The serving scaler is view-only too: it starts at the saved
+// servings every time the sheet opens and never writes to the recipe.
+const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, onEdit }) => {
+  const servings = recipeServings(recipe);
+  const [target, setTarget] = useState(servings);
+  const factor = servings && target ? target / servings : 1;
+  const step = (delta) => {
+    triggerHaptic('light');
+    setTarget((current) => clampNum(1, (current || servings) + delta, 50));
+  };
+  const flagButton = (flag, label) => {
+    const on = recipe[flag] === true;
+    return (
+      <button
+        onClick={() => onToggleFlag(recipe.id, flag)}
+        aria-label={label}
+        aria-pressed={on}
+        title={label}
+        className="bc-press bc-icon-btn"
+        style={{ width: 40, height: 40, borderRadius: '50%', border: `1.5px solid ${on ? YELLOW : t.border}`, background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer', flexShrink: 0 }}
+      >
+        <RecipeFlagIcon flag={flag} on={on} size={19} color={t.textSecondary} />
+      </button>
+    );
+  };
+
+  return (
+    <BottomSheet onClose={onClose} t={t} labelledBy="bc-recipe-heading">
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, margin: '4px 0 18px' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 id="bc-recipe-heading" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.015em', color: t.ink, margin: 0, lineHeight: 1.2 }}>{recipe.name}</h2>
+          {recipe.notes && (
+            <p style={{ fontSize: 13.5, fontStyle: 'italic', color: t.textTertiary, margin: '6px 0 0', lineHeight: 1.4 }}>{recipe.notes}</p>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          {flagButton('favourite', 'Favourite')}
+          {flagButton('wantToCook', 'Want to cook')}
+        </div>
+      </div>
+
+      {servings && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 16, backgroundColor: t.bgTertiary, marginBottom: 20 }}>
+          <span style={{ flex: 1, fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary }}>Serves</span>
+          <button onClick={() => step(-1)} disabled={target <= 1} aria-label="Fewer servings" className="bc-press" style={{ ...stepperButtonStyle(t), backgroundColor: t.bgSecondary, opacity: target <= 1 ? 0.4 : 1 }}>−</button>
+          <span aria-live="polite" style={{ fontSize: 15, fontWeight: 700, fontFamily: MONO, color: t.ink, width: 30, textAlign: 'center' }}>{target}</span>
+          <button onClick={() => step(1)} disabled={target >= 50} aria-label="More servings" className="bc-press" style={{ ...stepperButtonStyle(t), backgroundColor: t.bgSecondary, opacity: target >= 50 ? 0.4 : 1 }}>+</button>
+        </div>
+      )}
+
+      {groups.map((group) => (
+        <div key={group.id} style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 2 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>{group.name}</span>
+            <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{group.ingredients.length}</span>
+            <div style={{ flex: 1, height: 1.5, backgroundColor: t.borderLight }} />
+          </div>
+          {group.ingredients.map((ingredient) => {
+            const note = scaleIngredientNote(ingredient.note, factor);
+            return (
+              <div key={ingredient.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 15.5, fontWeight: 600, color: t.ink }}>{ingredient.name}</div>
+                  {note && <div style={{ fontSize: 12.5, color: t.textTertiary, marginTop: 2 }}>{note}</div>}
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: t.ink, flexShrink: 0 }}>×{scaleIngredientQuantity(ingredient.quantity || 1, factor)}</span>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+
+      <button
+        onClick={() => onAdd(recipe, factor)}
+        className="bc-press bc-cta"
+        style={{ width: '100%', height: 54, marginTop: 6, borderRadius: 9999, border: 'none', backgroundColor: added ? t.ink : YELLOW, color: added ? t.accentOnInk : INK, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
+      >
+        {added ? 'Added ✓' : 'Add to list'}
+      </button>
+      <button
+        onClick={() => onEdit(recipe)}
+        className="bc-press"
+        style={{ display: 'block', margin: '14px auto 0', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 700, color: t.textSecondary }}
+      >
+        Edit recipe
+      </button>
+    </BottomSheet>
+  );
+};
+
 // ── The year trail ────────────────────────────────────────────────────────
 const YearTrailSheet = ({ trips, t, onClose, onOpenTrip }) => {
   const [snapshot] = useState(() => trips);
@@ -2437,8 +2805,20 @@ export default function App() {
   const [newRecipeName, setNewRecipeName] = useState('');
   const [newRecipeNotes, setNewRecipeNotes] = useState('');
   const [newRecipeIngredients, setNewRecipeIngredients] = useState([]);
-  const [recipeAddingTo, setRecipeAddingTo] = useState(null);
+  // The editor's single ingredient input, and the parsed line waiting on
+  // "Which aisle?" when nothing matched it.
   const [newRecipeItemText, setNewRecipeItemText] = useState('');
+  const [recipeNoMatch, setRecipeNoMatch] = useState(null);
+  const [newRecipeServings, setNewRecipeServings] = useState(null);
+  const [editingIngredientId, setEditingIngredientId] = useState(null);
+  const [editingIngredientName, setEditingIngredientName] = useState('');
+  const [editingIngredientNote, setEditingIngredientNote] = useState('');
+  const [movingIngredient, setMovingIngredient] = useState(null);
+  // The recipe open in the sheet, by id, so flag changes from another
+  // phone show up while it is open.
+  const [viewingRecipeId, setViewingRecipeId] = useState(null);
+  // React state only: back to All on every visit to the tab.
+  const [recipeFilter, setRecipeFilter] = useState('all');
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -2500,6 +2880,11 @@ export default function App() {
   const fabInputRef = useRef(null);
 
   const recipeInputRef = useRef(null);
+  // The recipes array every recipe write is built from. It follows state on
+  // each render and is moved forward the moment a write is made, so two
+  // writes in quick succession each start from the one before.
+  const recipesRef = useRef(recipes);
+  recipesRef.current = recipes;
   const codeInputRef = useRef(null);
 
   // Show toast helper. Stable identity so the callbacks below (which report
@@ -2545,6 +2930,8 @@ export default function App() {
     setFabNoMatchMode(false);
     setShowClearConfirm(false);
     setShowClearAllConfirm(false);
+    setViewingRecipeId(null);
+    setRecipeFilter('all');
   }, [activeTab]);
 
   // Load list name from localStorage when listId changes
@@ -2614,6 +3001,7 @@ export default function App() {
     setShowStats(false);
     setShowYearTrail(false);
     setTripDetail(null);
+    setViewingRecipeId(null);
   }, [listId]);
 
   // Save list name to localStorage
@@ -2632,9 +3020,9 @@ export default function App() {
   const activeStoreLayout = storeLayouts.find(s => s.id === activeStoreLayoutId) || storeLayouts[0];
 
   // Sort categories based on active store layout, then filter hidden ones
-  const visibleCategories = (() => {
+  const layoutCategories = (() => {
     const categoryOrder = activeStoreLayout?.categoryOrder || [];
-    const sortedCategories = [...categories].sort((a, b) => {
+    return [...categories].sort((a, b) => {
       const aIndex = categoryOrder.indexOf(a.id);
       const bIndex = categoryOrder.indexOf(b.id);
       if (aIndex === -1 && bIndex === -1) return 0;
@@ -2642,8 +3030,22 @@ export default function App() {
       if (bIndex === -1) return -1;
       return aIndex - bIndex;
     });
-    return sortedCategories.filter(cat => !hiddenCategories.includes(cat.id));
   })();
+  const visibleCategories = layoutCategories.filter(cat => !hiddenCategories.includes(cat.id));
+
+  // A recipe's ingredients grouped by aisle, in store order, filled aisles
+  // only. A hidden aisle still shows here (and an aisle that no longer
+  // exists shows under its id) so no ingredient is ever out of sight.
+  const recipeGroups = (ingredients) => {
+    const list = Array.isArray(ingredients) ? ingredients : [];
+    const known = new Set(layoutCategories.map(c => c.id));
+    const groups = layoutCategories
+      .map(c => ({ id: c.id, name: c.name, ingredients: list.filter(i => i.category === c.id) }))
+      .filter(g => g.ingredients.length > 0);
+    const unknownIds = [...new Set(list.filter(i => !known.has(i.category)).map(i => i.category))];
+    unknownIds.forEach(id => groups.push({ id: String(id), name: String(id || 'Other'), ingredients: list.filter(i => i.category === id) }));
+    return groups;
+  };
 
   const checkOnboarding = useCallback(() => {
     const hasSeenOnboarding = localStorage.getItem('breadcrumbs-has-seen-onboarding');
@@ -3077,10 +3479,6 @@ export default function App() {
     await saveCategories({ storeLayouts: newLayouts, activeStoreLayoutId: newActiveId });
   };
 
-  useEffect(() => {
-    if (recipeAddingTo && recipeInputRef.current) recipeInputRef.current.focus();
-  }, [recipeAddingTo]);
-
   const createNewList = async () => {
     setCreateAnim(true);
     triggerHaptic('success');
@@ -3228,6 +3626,19 @@ export default function App() {
     setShowClearAllConfirm(false);
   };
 
+  // The aisle tag beside a row that was just added, gone after two seconds.
+  // Shared by Quick Add and the recipe editor.
+  const flashCategoryTag = (id) => {
+    setShowingCategoryTag(prev => new Set([...prev, id]));
+    setTimeout(() => {
+      setShowingCategoryTag(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 2000);
+  };
+
   // Quick Add functions — the only way to add items
   const handleFabAdd = async () => {
     if (!fabInput.trim()) return;
@@ -3260,14 +3671,7 @@ export default function App() {
       unhideCategoriesIfNeeded([result.categoryId]);
       await saveList(newItems);
 
-      setShowingCategoryTag(prev => new Set([...prev, newItemId]));
-      setTimeout(() => {
-        setShowingCategoryTag(prev => {
-          const next = new Set(prev);
-          next.delete(newItemId);
-          return next;
-        });
-      }, 2000);
+      flashCategoryTag(newItemId);
     } else {
       setFabNoMatchMode(true);
     }
@@ -3303,14 +3707,7 @@ export default function App() {
     unhideCategoriesIfNeeded([categoryId]);
     await saveList(newItems);
 
-    setShowingCategoryTag(prev => new Set([...prev, newItemId]));
-    setTimeout(() => {
-      setShowingCategoryTag(prev => {
-        const next = new Set(prev);
-        next.delete(newItemId);
-        return next;
-      });
-    }, 2000);
+    flashCategoryTag(newItemId);
 
     if (fabInputRef.current) fabInputRef.current.focus();
   };
@@ -3400,27 +3797,53 @@ export default function App() {
   };
 
   // Recipe functions
-  const startRecipeAdding = (categoryId) => {
-    triggerHaptic('light');
-    setRecipeAddingTo(categoryId);
-    setNewRecipeItemText('');
+  //
+  // RECIPES MUST BE PRESERVED. Every recipe write goes through here: it is
+  // built from recipesRef (the latest array, see above), carries the whole
+  // array, and goes out through saveRecipes, which never touches `items`.
+  const writeRecipes = (newRecipes) => {
+    recipesRef.current = newRecipes;
+    setRecipes(newRecipes);
+    return saveRecipes(newRecipes);
   };
 
-  const addRecipeIngredient = () => {
-    if (!newRecipeItemText.trim() || !recipeAddingTo) return;
+  // Adds a parsed line to the recipe being edited. The same name already in
+  // that aisle takes the extra quantity and keeps its own note.
+  const addParsedIngredient = (parsed, categoryId) => {
     triggerHaptic('success');
-    const existingIdx = newRecipeIngredients.findIndex(i =>
-      i.name.toLowerCase() === newRecipeItemText.trim().toLowerCase() &&
-      i.category === recipeAddingTo
+    const existing = newRecipeIngredients.find(i =>
+      i.name.toLowerCase() === parsed.name.toLowerCase() && i.category === categoryId
     );
-    if (existingIdx >= 0) {
-      const updated = [...newRecipeIngredients];
-      updated[existingIdx] = { ...updated[existingIdx], quantity: (updated[existingIdx].quantity || 1) + 1 };
-      setNewRecipeIngredients(updated);
+    let ingredientId;
+    if (existing) {
+      ingredientId = existing.id;
+      setNewRecipeIngredients(newRecipeIngredients.map(i =>
+        i.id === existing.id ? { ...i, quantity: (i.quantity || 1) + parsed.quantity } : i
+      ));
     } else {
-      setNewRecipeIngredients([...newRecipeIngredients, { id: generateId(), name: newRecipeItemText.trim(), category: recipeAddingTo, quantity: 1 }]);
+      ingredientId = generateId();
+      const ingredient = { id: ingredientId, name: parsed.name, category: categoryId, quantity: parsed.quantity };
+      if (parsed.note) ingredient.note = parsed.note;
+      setNewRecipeIngredients([...newRecipeIngredients, ingredient]);
     }
     setNewRecipeItemText('');
+    setRecipeNoMatch(null);
+    flashCategoryTag(ingredientId);
+    if (recipeInputRef.current) recipeInputRef.current.focus();
+  };
+
+  const handleRecipeAdd = () => {
+    if (!newRecipeItemText.trim()) return;
+    const parsed = parseIngredientLine(newRecipeItemText);
+    const result = findCategoryForItem(parsed.name);
+    if (result) addParsedIngredient(parsed, result.categoryId);
+    else setRecipeNoMatch(parsed);
+  };
+
+  const handleRecipeChipSelect = (categoryId) => {
+    if (!recipeNoMatch) return;
+    saveCategoryCorrection(recipeNoMatch.name, categoryId);
+    addParsedIngredient(recipeNoMatch, categoryId);
   };
 
   const removeRecipeIngredient = (id) => {
@@ -3441,61 +3864,144 @@ export default function App() {
     }
   };
 
-  const cancelRecipeAdding = () => {
-    triggerHaptic('light');
-    setRecipeAddingTo(null);
-    setNewRecipeItemText('');
+  const startEditIngredient = (ingredient) => {
+    setEditingIngredientId(ingredient.id);
+    setEditingIngredientName(ingredient.name);
+    setEditingIngredientNote(ingredient.note || '');
   };
 
-  const saveRecipe = async () => {
-    if (!newRecipeName.trim() || newRecipeIngredients.length === 0 || savingRecipe) return;
-    setSavingRecipe(true);
+  // An emptied name keeps the old one; an emptied note drops the key.
+  const saveEditIngredient = () => {
+    if (!editingIngredientId) return;
+    const name = editingIngredientName.trim();
+    const note = editingIngredientNote.trim();
+    setNewRecipeIngredients(newRecipeIngredients.map(i => {
+      if (i.id !== editingIngredientId) return i;
+      const { note: _previousNote, ...rest } = i;
+      const updated = { ...rest, name: name || i.name };
+      if (note) updated.note = note;
+      return updated;
+    }));
+    setEditingIngredientId(null);
+    setEditingIngredientName('');
+    setEditingIngredientNote('');
+  };
+
+  // Same picker, same memory as moving an item on the list. Moving onto a
+  // name the aisle already has merges the two, as adding does.
+  const moveRecipeIngredient = (ingredient, categoryId) => {
     triggerHaptic('success');
-    let newRecipes;
-    if (editingRecipeId) {
-      newRecipes = recipes.map(r =>
-        r.id === editingRecipeId
-          ? { ...r, name: newRecipeName.trim(), ingredients: newRecipeIngredients, notes: newRecipeNotes.trim() }
-          : r
-      );
+    saveCategoryCorrection(ingredient.name, categoryId);
+    setMovingIngredient(null);
+    if (ingredient.category === categoryId) return;
+    const existing = newRecipeIngredients.find(i =>
+      i.id !== ingredient.id && i.category === categoryId && i.name.toLowerCase() === ingredient.name.toLowerCase()
+    );
+    if (existing) {
+      setNewRecipeIngredients(newRecipeIngredients
+        .filter(i => i.id !== ingredient.id)
+        .map(i => (i.id === existing.id ? { ...i, quantity: (i.quantity || 1) + (ingredient.quantity || 1) } : i)));
     } else {
-      newRecipes = [...recipes, { id: generateId(), name: newRecipeName.trim(), ingredients: newRecipeIngredients, createdAt: Date.now(), notes: newRecipeNotes.trim() }];
+      setNewRecipeIngredients(newRecipeIngredients.map(i => (i.id === ingredient.id ? { ...i, category: categoryId } : i)));
     }
-    setRecipes(newRecipes);
-    await saveRecipes(newRecipes);
+  };
+
+  // Serves: unset shows —, + from unset starts at 4, − at 1 goes back to unset.
+  const stepRecipeServings = (delta) => {
+    triggerHaptic('light');
+    setNewRecipeServings(current => {
+      if (current === null) return delta > 0 ? 4 : null;
+      const next = current + delta;
+      if (next < 1) return null;
+      return Math.min(50, next);
+    });
+  };
+
+  const resetRecipeEditor = () => {
     setNewRecipeName('');
     setNewRecipeNotes('');
     setNewRecipeIngredients([]);
+    setNewRecipeItemText('');
+    setNewRecipeServings(null);
+    setRecipeNoMatch(null);
+    setEditingIngredientId(null);
+    setMovingIngredient(null);
     setShowCreateRecipe(false);
     setEditingRecipeId(null);
+  };
+
+  const saveRecipe = () => {
+    if (!newRecipeName.trim() || newRecipeIngredients.length === 0 || savingRecipe) return;
+    setSavingRecipe(true);
+    triggerHaptic('success');
+    // `servings` is left off entirely when unset — never null or 0.
+    const withServings = (recipe) => {
+      const { servings: _previousServings, ...rest } = recipe;
+      return newRecipeServings === null ? rest : { ...rest, servings: newRecipeServings };
+    };
+    const current = recipesRef.current;
+    let newRecipes;
+    if (editingRecipeId) {
+      newRecipes = current.map(r =>
+        r.id === editingRecipeId
+          ? withServings({ ...r, name: newRecipeName.trim(), ingredients: newRecipeIngredients, notes: newRecipeNotes.trim() })
+          : r
+      );
+    } else {
+      newRecipes = [...current, withServings({ id: generateId(), name: newRecipeName.trim(), ingredients: newRecipeIngredients, createdAt: Date.now(), notes: newRecipeNotes.trim() })];
+    }
+    // Not awaited: offline the write stays pending until the device
+    // reconnects (Firestore replays it then), and the editor would sit on
+    // "Saving…" until it did. saveList reports a real failure itself.
+    writeRecipes(newRecipes);
+    resetRecipeEditor();
     setSavingRecipe(false);
     showToastMessage(editingRecipeId ? 'Recipe updated!' : 'Recipe saved!');
   };
 
   const cancelCreateRecipe = () => {
     triggerHaptic('light');
-    setNewRecipeName('');
-    setNewRecipeNotes('');
-    setNewRecipeIngredients([]);
-    setRecipeAddingTo(null);
-    setShowCreateRecipe(false);
-    setEditingRecipeId(null);
+    resetRecipeEditor();
   };
 
   const startEditRecipe = (recipe) => {
     triggerHaptic('light');
+    setViewingRecipeId(null);
     setEditingRecipeId(recipe.id);
     setNewRecipeName(recipe.name);
     setNewRecipeNotes(recipe.notes || '');
-    setNewRecipeIngredients([...recipe.ingredients]);
+    setNewRecipeIngredients([...(recipe.ingredients || [])]);
+    setNewRecipeServings(recipeServings(recipe));
+    setNewRecipeItemText('');
+    setRecipeNoMatch(null);
+    setEditingIngredientId(null);
     setShowCreateRecipe(true);
   };
 
-  const addRecipeToList = async (recipe) => {
+  // Favourite and want-to-cook. Missing means false, so switching one off
+  // removes the key rather than writing false.
+  const toggleRecipeFlag = (recipeId, flag) => {
+    triggerHaptic('light');
+    const newRecipes = recipesRef.current.map(r => {
+      if (r.id !== recipeId) return r;
+      if (r[flag] === true) {
+        const { [flag]: _cleared, ...rest } = r;
+        return rest;
+      }
+      return { ...r, [flag]: true };
+    });
+    writeRecipes(newRecipes);
+  };
+
+  // `factor` is target servings ÷ saved servings, from the recipe sheet.
+  // Only the ×N is scaled; notes never reach the list.
+  const addRecipeToList = async (recipe, factor = 1) => {
     triggerHaptic('success');
     setAddingRecipeId(recipe.id);
+    const ingredients = recipe.ingredients || [];
     let newItems = [...items];
-    for (const ingredient of recipe.ingredients) {
+    for (const ingredient of ingredients) {
+      const quantity = scaleIngredientQuantity(ingredient.quantity || 1, factor);
       const existingItem = newItems.find(i =>
         i.name.toLowerCase() === ingredient.name.toLowerCase() &&
         i.category === ingredient.category &&
@@ -3503,7 +4009,7 @@ export default function App() {
       );
       if (existingItem) {
         newItems = newItems.map(i =>
-          i.id === existingItem.id ? { ...i, quantity: (i.quantity || 1) + (ingredient.quantity || 1) } : i
+          i.id === existingItem.id ? { ...i, quantity: (i.quantity || 1) + quantity } : i
         );
       } else {
         newItems.push({
@@ -3511,26 +4017,26 @@ export default function App() {
           name: ingredient.name,
           category: ingredient.category,
           checked: false,
-          quantity: ingredient.quantity || 1,
+          quantity,
           addedAt: Date.now()
         });
       }
     }
     setItems(newItems);
-    unhideCategoriesIfNeeded(recipe.ingredients.map(i => i.category));
+    unhideCategoriesIfNeeded(ingredients.map(i => i.category));
     await saveList(newItems);
-    showToastMessage(`Added ${recipe.ingredients.length} items to your list`);
+    showToastMessage(`Added ${ingredients.length} items to your list`);
     setTimeout(() => {
       setAddingRecipeId(currentId => (currentId === recipe.id ? null : currentId));
     }, 1600);
   };
 
-  const confirmDeleteRecipe = async () => {
+  const confirmDeleteRecipe = () => {
     if (!deletingRecipeId) return;
     triggerHaptic('success');
-    const newRecipes = recipes.filter(r => r.id !== deletingRecipeId);
-    setRecipes(newRecipes);
-    await saveRecipes(newRecipes);
+    const newRecipes = recipesRef.current.filter(r => r.id !== deletingRecipeId);
+    // Not awaited, for the same reason as saveRecipe.
+    writeRecipes(newRecipes);
     setDeletingRecipeId(null);
     showToastMessage('Recipe deleted');
   };
@@ -3927,114 +4433,290 @@ export default function App() {
     );
   };
 
-  // ── Recipe editor: one aisle's worth of ingredients ──
-  // Shared by both layouts. Phone keeps the original underlined-row treatment;
-  // desktop gets a card, and `compact` is the collapsed form used for the
-  // aisles that have nothing in them yet.
-  const renderRecipeCategoryBlock = (category, compact) => {
-    const categoryIngredients = newRecipeIngredients.filter(i => i.category === category.id);
-    const hasIngredients = categoryIngredients.length > 0;
-    const isAdding = recipeAddingTo === category.id;
-
-    const addButton = (
-      <button
-        onClick={() => isAdding ? cancelRecipeAdding() : startRecipeAdding(category.id)}
-        className="bc-press recipe-input-area"
-        aria-label={isAdding ? `Stop adding to ${category.name}` : `Add an ingredient to ${category.name}`}
-        style={{ width: 28, height: 28, borderRadius: '50%', border: isAdding ? 'none' : `1.5px solid ${theme.border}`, backgroundColor: isAdding ? INK : 'transparent', color: isAdding ? PAPER : theme.textTertiary, cursor: 'pointer', fontSize: 15, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}
-      >
-        <span style={{ transform: isAdding ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s', fontWeight: 300 }}>+</span>
-      </button>
-    );
-
-    const addInput = isAdding && (
-      <div className="mt-2 fade-in recipe-input-area">
-        <div className="flex items-center gap-3">
-          <input
-            ref={recipeInputRef}
-            type="text"
-            value={newRecipeItemText}
-            onChange={(e) => setNewRecipeItemText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') addRecipeIngredient(); if (e.key === 'Escape') cancelRecipeAdding(); }}
-            placeholder={`Add to ${category.name}…`}
-            className="flex-1 py-2 focus:outline-none bg-transparent"
-            style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 15, minWidth: 0 }}
-          />
-          <button
-            onClick={addRecipeIngredient}
-            disabled={!newRecipeItemText.trim()}
-            className="bc-press bc-cta"
-            style={{ padding: '8px 18px', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: newRecipeItemText.trim() ? YELLOW : theme.bgTertiary, color: newRecipeItemText.trim() ? '#1c1917' : theme.textTertiary, cursor: newRecipeItemText.trim() ? 'pointer' : 'default', flexShrink: 0 }}
-          >
-            Add
-          </button>
+  // ── "Move … to" sheet ──
+  // The list's long-press reassign sheet, shared with the recipe editor.
+  const renderMoveSheet = (name, currentCategoryId, onPick, onClose) => (
+    <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }} onClick={onClose}>
+      <div className="w-full max-h-[75vh] flex flex-col" style={{ backgroundColor: PAPER, borderRadius: '28px 28px 0 0', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-center" style={{ marginTop: 12, marginBottom: 4 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: theme.border }} />
+        </div>
+        <div className="px-6 py-3" style={{ borderBottom: `1.5px solid ${theme.border}` }}>
+          <h2 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.015em', color: INK, margin: 0 }}>Move "{name}" to…</h2>
+        </div>
+        <div className="overflow-y-auto px-6 py-2" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
+          {visibleCategories.map((cat) => {
+            const isCurrent = cat.id === currentCategoryId;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => onPick(cat.id)}
+                className="w-full flex items-center justify-between bc-press"
+                style={{ padding: '14px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.borderLight}`, cursor: 'pointer' }}
+              >
+                <span style={{ fontSize: 15, fontWeight: isCurrent ? 700 : 600, color: INK }}>{cat.name}</span>
+                {isCurrent && (
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={YELLOW} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12l6 6L20 6"/></svg>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
-    );
+    </div>
+  );
 
-    const ingredientRows = hasIngredients && categoryIngredients.map(ingredient => (
+  // ── Recipe editor ──
+  // One input finds each ingredient's aisle; the filled aisles are listed
+  // below it in store order. Shared by both layouts: phone keeps the
+  // underlined-row treatment, desktop puts each aisle on a card.
+  const renderAisleHeading = (name, count) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span className={isDesktop ? 'truncate' : undefined} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, whiteSpace: 'nowrap', flexShrink: isDesktop ? 1 : 0 }}>{name}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{count}</span>
+      <div style={{ flex: 1, height: 1.5, backgroundColor: theme.borderLight, minWidth: 8 }} />
+    </div>
+  );
+
+  const renderRecipeIngredientRow = (ingredient) => {
+    const isEditing = editingIngredientId === ingredient.id;
+    const cancelLongPress = () => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); };
+    const fieldStyle = { backgroundColor: theme.bgTertiary, color: INK, border: 'none', borderRadius: 8, padding: '5px 8px', width: '100%' };
+    return (
       <div
         key={ingredient.id}
         className={`flex items-center gap-3 fade-in${isDesktop ? ' bc-item-row' : ''}`}
         style={isDesktop ? { padding: '7px 8px', margin: '0 -8px', borderRadius: 10 } : { padding: '9px 0' }}
-      >
-        <span className="flex-1 truncate" style={{ fontSize: isDesktop ? 14.5 : 15.5, fontWeight: 600, color: INK }}>{ingredient.name}</span>
-        <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, -1)} className="bc-press" aria-label={`One fewer ${ingredient.name}`} style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>−</button>
-        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: INK, width: 30, textAlign: 'center', flexShrink: 0 }}>×{ingredient.quantity || 1}</span>
-        <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, 1)} className="bc-press" aria-label={`One more ${ingredient.name}`} style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>+</button>
-        <button onClick={() => removeRecipeIngredient(ingredient.id)} aria-label={`Remove ${ingredient.name}`} style={{ width: 28, height: 28, color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, fontWeight: 300, padding: 0, flexShrink: 0 }}>×</button>
-      </div>
-    ));
-
-    if (!isDesktop) {
-      return (
-        <div key={category.id} style={{ marginBottom: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: hasIngredients ? theme.textSecondary : theme.textTertiary, whiteSpace: 'nowrap', flexShrink: 0 }}>{category.name}</span>
-            {hasIngredients && (
-              <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{categoryIngredients.length}</span>
-            )}
-            <div style={{ flex: 1, height: 1.5, backgroundColor: theme.borderLight }} />
-            {addButton}
-          </div>
-          {addInput}
-          {ingredientRows}
-        </div>
-      );
-    }
-
-    return (
-      <div
-        key={category.id}
-        className="bc-card"
-        title={compact ? category.name : undefined}
-        style={{
-          backgroundColor: compact && !isAdding ? 'transparent' : theme.bgSecondary,
-          border: `1.5px solid ${compact && !isAdding ? theme.borderLight : theme.border}`,
-          borderRadius: compact && !isAdding ? 14 : 18,
-          padding: compact && !isAdding ? '9px 10px 9px 14px' : '14px 16px',
-          boxShadow: compact && !isAdding ? 'none' : theme.cardShadow,
+        onTouchStart={() => {
+          if (isEditing) return;
+          longPressTimerRef.current = setTimeout(() => {
+            triggerHaptic('light');
+            setMovingIngredient(ingredient);
+          }, 500);
         }}
+        onTouchEnd={cancelLongPress}
+        onTouchMove={cancelLongPress}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span className="truncate" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: hasIngredients ? theme.textSecondary : theme.textTertiary }}>{category.name}</span>
-          {hasIngredients && (
-            <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{categoryIngredients.length}</span>
-          )}
-          <div style={{ flex: 1, height: 1.5, backgroundColor: theme.borderLight, minWidth: 8 }} />
-          {addButton}
-        </div>
-        {addInput}
-        {ingredientRows && <div style={{ marginTop: 6 }}>{ingredientRows}</div>}
+        {isEditing ? (
+          <div
+            className="flex-1"
+            style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}
+            onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) saveEditIngredient(); }}
+          >
+            <input
+              type="text"
+              value={editingIngredientName}
+              onChange={(e) => setEditingIngredientName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveEditIngredient(); }}
+              aria-label="Ingredient name"
+              className="focus:outline-none"
+              style={{ ...fieldStyle, fontSize: 15, fontWeight: 600 }}
+              autoFocus
+            />
+            <input
+              type="text"
+              value={editingIngredientNote}
+              onChange={(e) => setEditingIngredientNote(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') saveEditIngredient(); }}
+              placeholder="Note (optional)"
+              aria-label="Ingredient note"
+              className="focus:outline-none"
+              style={{ ...fieldStyle, fontSize: 13, color: theme.textSecondary }}
+            />
+          </div>
+        ) : (
+          <div className="flex-1" style={{ minWidth: 0 }}>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={() => startEditIngredient(ingredient)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEditIngredient(ingredient); } }}
+              aria-label={`Edit ${ingredient.name}`}
+              style={{ fontSize: isDesktop ? 14.5 : 15.5, fontWeight: 600, color: INK, cursor: 'text', overflowWrap: 'anywhere' }}
+            >
+              {ingredient.name}
+              {showingCategoryTag.has(ingredient.id) && (
+                <span style={{ fontSize: 11, color: theme.textSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 9999, padding: '2px 8px', marginLeft: 8, display: 'inline-block', animation: 'fadeIn 0.2s ease-out', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                  {categories.find(c => c.id === ingredient.category)?.name || ingredient.category}
+                </span>
+              )}
+            </span>
+            {ingredient.note && (
+              <div style={{ fontSize: 12.5, color: theme.textTertiary, marginTop: 2, lineHeight: 1.35 }}>{ingredient.note}</div>
+            )}
+          </div>
+        )}
+        {isDesktop && (
+          <span className="bc-row-actions" style={{ display: 'flex' }}>
+            <button
+              onClick={() => setMovingIngredient(ingredient)}
+              className="bc-icon-btn"
+              aria-label={`Change aisle for ${ingredient.name}`}
+              title="Change aisle"
+              style={{ width: 28, height: 28, borderRadius: '50%', border: `1.5px solid ${theme.borderLight}`, background: 'none', color: theme.textTertiary, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, flexShrink: 0 }}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M7 4L3 8l4 4" /><path d="M3 8h13" /><path d="M17 20l4-4-4-4" /><path d="M21 16H8" /></svg>
+            </button>
+          </span>
+        )}
+        <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, -1)} className="bc-press" aria-label={`One fewer ${ingredient.name}`} style={stepperButtonStyle(theme)}>−</button>
+        <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: INK, width: 30, textAlign: 'center', flexShrink: 0 }}>×{ingredient.quantity || 1}</span>
+        <button onClick={() => updateRecipeIngredientQuantity(ingredient.id, 1)} className="bc-press" aria-label={`One more ${ingredient.name}`} style={stepperButtonStyle(theme)}>+</button>
+        <button onClick={() => removeRecipeIngredient(ingredient.id)} aria-label={`Remove ${ingredient.name}`} style={{ width: 28, height: 28, color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, fontWeight: 300, padding: 0, flexShrink: 0 }}>×</button>
       </div>
     );
   };
 
-  const recipeIngredientCategoryCount = new Set(newRecipeIngredients.map(i => i.category)).size;
+  const recipeEditorGroups = recipeGroups(newRecipeIngredients);
+  const recipeIngredientCategoryCount = recipeEditorGroups.length;
   const recipeSaveReady = !!newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe;
-  // Aisles already carrying ingredients float to the top of the desktop picker.
-  const recipeCategoriesWithIngredients = visibleCategories.filter(c => newRecipeIngredients.some(i => i.category === c.id));
-  const recipeCategoriesEmpty = visibleCategories.filter(c => !newRecipeIngredients.some(i => i.category === c.id));
+  const recipeAddReady = !!newRecipeItemText.trim();
+
+  const recipeAdder = (
+    <div>
+      <div className="flex items-center gap-3">
+        <input
+          ref={recipeInputRef}
+          type="text"
+          value={newRecipeItemText}
+          onChange={(e) => { setNewRecipeItemText(e.target.value); setRecipeNoMatch(null); }}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleRecipeAdd(); if (e.key === 'Escape') setRecipeNoMatch(null); }}
+          placeholder="Add an ingredient — e.g. 400g chicken thighs"
+          aria-label="Add an ingredient"
+          className="flex-1 py-2 focus:outline-none bg-transparent"
+          style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 15, fontWeight: 600, minWidth: 0 }}
+        />
+        <button
+          onClick={handleRecipeAdd}
+          disabled={!recipeAddReady}
+          className="bc-press bc-cta"
+          style={{ padding: '8px 18px', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: recipeAddReady ? YELLOW : theme.bgTertiary, color: recipeAddReady ? '#1c1917' : theme.textTertiary, cursor: recipeAddReady ? 'pointer' : 'default', flexShrink: 0 }}
+        >
+          Add
+        </button>
+      </div>
+
+      {recipeNoMatch && (isDesktop ? (
+        <div
+          className="fade-in"
+          style={{ marginTop: 12, backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 18, boxShadow: theme.cardShadow, padding: 14 }}
+        >
+          <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textTertiary, margin: '0 0 10px' }}>Which aisle?</p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+            {visibleCategories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => handleRecipeChipSelect(cat.id)}
+                className="bc-press bc-cta"
+                style={{ backgroundColor: 'transparent', color: INK, fontSize: 12.5, fontWeight: 700, borderRadius: 9999, padding: '7px 14px', border: `2px solid ${INK}`, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="fade-in" style={{ marginTop: 12 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textTertiary, margin: '0 0 8px' }}>Which aisle?</p>
+          <div style={{ overflowX: 'auto', whiteSpace: 'nowrap', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
+            {visibleCategories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => handleRecipeChipSelect(cat.id)}
+                className="bc-press"
+                style={{ display: 'inline-block', backgroundColor: theme.bgSecondary, color: INK, fontSize: 12.5, fontWeight: 700, borderRadius: 9999, padding: '8px 16px', border: `2px solid ${INK}`, marginRight: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {newRecipeIngredients.length === 0 && !recipeNoMatch && (
+        <p style={{ fontSize: 13, color: theme.textTertiary, margin: '10px 0 0' }}>Type anything — it'll find its aisle.</p>
+      )}
+    </div>
+  );
+
+  const recipeFieldLabelStyle = isDesktop
+    ? { fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textTertiary }
+    : { fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary };
+
+  const recipeServesStepper = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span id="bc-recipe-serves" style={{ ...recipeFieldLabelStyle, flex: 1 }}>Serves</span>
+      <button
+        onClick={() => stepRecipeServings(-1)}
+        disabled={newRecipeServings === null}
+        className="bc-press"
+        aria-label="Fewer servings"
+        style={{ ...stepperButtonStyle(theme), opacity: newRecipeServings === null ? 0.4 : 1 }}
+      >
+        −
+      </button>
+      <span aria-labelledby="bc-recipe-serves" aria-live="polite" style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: newRecipeServings === null ? theme.textTertiary : INK, width: 30, textAlign: 'center' }}>
+        {newRecipeServings === null ? '—' : newRecipeServings}
+      </span>
+      <button
+        onClick={() => stepRecipeServings(1)}
+        disabled={newRecipeServings === 50}
+        className="bc-press"
+        aria-label="More servings"
+        style={{ ...stepperButtonStyle(theme), opacity: newRecipeServings === 50 ? 0.4 : 1 }}
+      >
+        +
+      </button>
+    </div>
+  );
+
+  // ── Recipe list ──
+  const RECIPE_FILTERS = [['all', 'All'], ['favourites', 'Favourites'], ['wantToCook', 'Want to cook']];
+  const filteredRecipes = recipeFilter === 'favourites'
+    ? recipes.filter(r => r.favourite === true)
+    : recipeFilter === 'wantToCook'
+      ? recipes.filter(r => r.wantToCook === true)
+      : recipes;
+  const viewingRecipe = viewingRecipeId ? recipes.find(r => r.id === viewingRecipeId) : null;
+  const openRecipe = (recipe) => { triggerHaptic('light'); setViewingRecipeId(recipe.id); };
+  // Buttons inside a tappable recipe row or card do only their own job.
+  const stopThen = (fn) => (e) => { e.stopPropagation(); fn(); };
+  const openOnKey = (recipe) => (e) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openRecipe(recipe); }
+  };
+
+  const recipeFilterPills = recipes.length > 0 && (
+    <div role="group" aria-label="Filter recipes" style={{ display: 'flex', gap: 6, paddingTop: isDesktop ? 22 : 8, paddingBottom: isDesktop ? 0 : 4, maxWidth: isDesktop ? 440 : 'none' }}>
+      {RECIPE_FILTERS.map(([id, label]) => {
+        const active = recipeFilter === id;
+        return (
+          <button
+            key={id}
+            aria-pressed={active}
+            onClick={() => { triggerHaptic('light'); setRecipeFilter(id); }}
+            className="bc-press"
+            style={{
+              flex: 1, minWidth: 0, height: 40, borderRadius: 9999, cursor: 'pointer', whiteSpace: 'nowrap',
+              fontSize: 13, fontWeight: 700,
+              backgroundColor: active ? YELLOW : 'transparent',
+              color: active ? '#1c1917' : theme.textSecondary,
+              border: active ? '2px solid transparent' : `2px solid ${theme.border}`,
+              transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease'
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const recipeFilterEmpty = recipes.length > 0 && filteredRecipes.length === 0 && (
+    <p style={{ fontSize: 14, color: theme.textTertiary, margin: 0, padding: isDesktop ? '22px 0 0' : '18px 0 4px' }}>
+      {recipeFilter === 'favourites' ? 'No favourites yet — tap the ☆ on a recipe.' : 'Nothing on your want-to-cook list yet.'}
+    </p>
+  );
 
   // ════════════════ Recipes Screen ════════════════
   if (activeTab === 'recipes' && listId) {
@@ -4042,9 +4724,6 @@ export default function App() {
       <div
         className="min-h-screen"
         style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? SIDEBAR_WIDTH : 0 }}
-        onClick={(e) => {
-          if (recipeAddingTo && !e.target.closest('.recipe-input-area')) cancelRecipeAdding();
-        }}
       >
         <style>{styles}</style>
         {desktopSidebar}
@@ -4075,7 +4754,7 @@ export default function App() {
             ) : (
             <div className="flex items-center justify-between">
               <button
-                onClick={() => { setShowCreateRecipe(false); setEditingRecipeId(null); setNewRecipeName(''); setNewRecipeNotes(''); setNewRecipeIngredients([]); }}
+                onClick={resetRecipeEditor}
                 className="bc-press"
                 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 700, color: theme.textSecondary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               >
@@ -4120,9 +4799,8 @@ export default function App() {
           {showCreateRecipe ? (
             isDesktop ? (
               /* Desktop editor: a sticky panel holds the recipe's identity and
-                 its Save/Cancel, while the aisle picker spreads across a wide
-                 right column — filled aisles as cards, the rest as a compact
-                 "add to another aisle" row so all 20 stay reachable. */
+                 its Save/Cancel. The right column is the ingredient input,
+                 with the filled aisles as cards underneath it. */
               <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: isWide ? '340px 1fr' : '300px 1fr', gap: 28, alignItems: 'start', paddingTop: 22 }}>
                 <div style={{ position: 'sticky', top: 24 }}>
                   <div style={{ backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 20, padding: 20, boxShadow: theme.cardShadow }}>
@@ -4149,6 +4827,8 @@ export default function App() {
                       style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 14, fontWeight: 500, marginBottom: 20 }}
                     />
 
+                    <div style={{ marginBottom: 22 }}>{recipeServesStepper}</div>
+
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
                       <span className="bc-num" key={newRecipeIngredients.length} style={{ fontSize: 34, fontWeight: 800, fontFamily: MONO, letterSpacing: '-0.03em', color: newRecipeIngredients.length ? INK : theme.textTertiary, lineHeight: 1 }}>
                         {newRecipeIngredients.length}
@@ -4159,7 +4839,7 @@ export default function App() {
                     </div>
                     <p style={{ fontSize: 12, color: theme.textTertiary, margin: '0 0 18px', lineHeight: 1.5 }}>
                       {recipeIngredientCategoryCount === 0
-                        ? 'Pick an aisle on the right to start adding.'
+                        ? 'Add ingredients on the right to start.'
                         : `across ${recipeIngredientCategoryCount} ${recipeIngredientCategoryCount === 1 ? 'aisle' : 'aisles'}`}
                     </p>
 
@@ -4190,22 +4870,24 @@ export default function App() {
                   </div>
                 </div>
 
-                <div>
-                  {recipeCategoriesWithIngredients.length > 0 && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, alignItems: 'start', marginBottom: 26 }}>
-                      {recipeCategoriesWithIngredients.map(category => renderRecipeCategoryBlock(category, false))}
-                    </div>
-                  )}
+                <div style={{ paddingBottom: 40 }}>
+                  <div style={{ backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 20, padding: '14px 18px 16px', boxShadow: theme.cardShadow, marginBottom: 22 }}>
+                    {recipeAdder}
+                  </div>
 
-                  {recipeCategoriesEmpty.length > 0 && (
-                    <>
-                      <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textTertiary, margin: '0 0 12px' }}>
-                        {recipeCategoriesWithIngredients.length > 0 ? 'Add to another aisle' : 'Pick an aisle'}
-                      </p>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(216px, 1fr))', gap: 10, alignItems: 'start', paddingBottom: 40 }}>
-                        {recipeCategoriesEmpty.map(category => renderRecipeCategoryBlock(category, true))}
-                      </div>
-                    </>
+                  {recipeEditorGroups.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, alignItems: 'start' }}>
+                      {recipeEditorGroups.map(group => (
+                        <div
+                          key={group.id}
+                          className="bc-card"
+                          style={{ backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 18, padding: '14px 16px', boxShadow: theme.cardShadow }}
+                        >
+                          {renderAisleHeading(group.name, group.ingredients.length)}
+                          <div style={{ marginTop: 6 }}>{group.ingredients.map(renderRecipeIngredientRow)}</div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -4238,12 +4920,24 @@ export default function App() {
                 />
               </div>
 
-              {/* Category-based ingredient adding */}
-              {visibleCategories.map(category => renderRecipeCategoryBlock(category, false))}
+              {/* Serves */}
+              <div style={{ marginBottom: 26 }}>{recipeServesStepper}</div>
+
+              {/* One input — each ingredient finds its own aisle */}
+              <div style={{ marginBottom: 22 }}>{recipeAdder}</div>
+
+              {recipeEditorGroups.map(group => (
+                <div key={group.id} style={{ marginBottom: 14 }}>
+                  {renderAisleHeading(group.name, group.ingredients.length)}
+                  {group.ingredients.map(renderRecipeIngredientRow)}
+                </div>
+              ))}
             </div>
             )
           ) : (
             <>
+              {recipeFilterPills}
+              {recipeFilterEmpty}
               {recipes.length === 0 ? (
                 <div className="text-center" style={{ paddingTop: 60, paddingBottom: 40 }}>
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
@@ -4258,24 +4952,34 @@ export default function App() {
                 </div>
               ) : isDesktop ? (
                 /* Card grid. Ingredients read as chips, and Edit/Delete stay
-                   out of the way until the pointer is on the card. */
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(288px, 1fr))', gap: 18, alignItems: 'start', paddingTop: 22, paddingBottom: 12 }}>
-                  {recipes.map((recipe) => {
+                   out of the way until the pointer is on the card. Clicking
+                   the card opens the recipe sheet. */
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(288px, 1fr))', gap: 18, alignItems: 'start', paddingTop: 18, paddingBottom: 12 }}>
+                  {filteredRecipes.map((recipe) => {
                     const isAdded = addingRecipeId === recipe.id;
-                    const shownIngredients = recipe.ingredients.slice(0, 5);
-                    const overflowCount = recipe.ingredients.length - shownIngredients.length;
+                    const ingredients = recipe.ingredients || [];
+                    const shownIngredients = ingredients.slice(0, 5);
+                    const overflowCount = ingredients.length - shownIngredients.length;
                     return (
                       <div
                         key={recipe.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open ${recipe.name}`}
+                        onClick={() => openRecipe(recipe)}
+                        onKeyDown={openOnKey(recipe)}
                         className="bc-card bc-recipe-card"
                         style={{ position: 'relative', display: 'flex', flexDirection: 'column', backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 20, boxShadow: theme.cardShadow, overflow: 'hidden', minHeight: 196 }}
                       >
                         <div style={{ padding: '17px 16px 0 16px', flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                            <h3 className="flex-1" style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.015em', margin: 0, color: INK, lineHeight: 1.25, minWidth: 0 }}>{recipe.name}</h3>
+                            <h3 className="flex-1" style={{ fontSize: 17, fontWeight: 700, letterSpacing: '-0.015em', margin: 0, color: INK, lineHeight: 1.25, minWidth: 0 }}>
+                              {recipe.name}
+                              <span style={{ display: 'inline-flex', marginLeft: 7, verticalAlign: '-1px' }}><RecipeFlagMarks recipe={recipe} /></span>
+                            </h3>
                             <div className="bc-row-actions" style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                               <button
-                                onClick={() => startEditRecipe(recipe)}
+                                onClick={stopThen(() => startEditRecipe(recipe))}
                                 className="bc-icon-btn"
                                 aria-label={`Edit ${recipe.name}`}
                                 title="Edit"
@@ -4284,7 +4988,7 @@ export default function App() {
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
                               </button>
                               <button
-                                onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }}
+                                onClick={stopThen(() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); })}
                                 className="bc-icon-btn"
                                 aria-label={`Delete ${recipe.name}`}
                                 title="Delete"
@@ -4296,7 +5000,8 @@ export default function App() {
                           </div>
 
                           <p style={{ fontSize: 11, fontWeight: 700, fontFamily: MONO, letterSpacing: '0.06em', color: theme.textTertiary, margin: '7px 0 12px' }}>
-                            {recipe.ingredients.length} {recipe.ingredients.length === 1 ? 'INGREDIENT' : 'INGREDIENTS'}
+                            {ingredients.length} {ingredients.length === 1 ? 'INGREDIENT' : 'INGREDIENTS'}
+                            {recipeServings(recipe) && ` · SERVES ${recipeServings(recipe)}`}
                           </p>
 
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -4319,7 +5024,7 @@ export default function App() {
 
                         <div style={{ padding: '14px 16px 16px 16px', display: 'flex', justifyContent: 'flex-end' }}>
                           <button
-                            onClick={() => addRecipeToList(recipe)}
+                            onClick={stopThen(() => addRecipeToList(recipe))}
                             className="bc-press bc-cta"
                             style={{ width: 84, padding: '10px 0', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: isAdded ? INK : YELLOW, color: isAdded ? theme.accentOnInk : '#1c1917', cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
                           >
@@ -4350,16 +5055,27 @@ export default function App() {
                 </div>
               ) : (
                 <div>
-                  {recipes.map((recipe) => {
-                    const ingredientNames = recipe.ingredients.map(i => i.name);
+                  {filteredRecipes.map((recipe) => {
+                    const ingredientNames = (recipe.ingredients || []).map(i => i.name);
                     const preview = ingredientNames.slice(0, 4).join(', ') + (ingredientNames.length > 4 ? '…' : '');
                     const isAdded = addingRecipeId === recipe.id;
                     return (
-                      <div key={recipe.id} style={{ padding: '18px 0', borderBottom: `1.5px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div
+                        key={recipe.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open ${recipe.name}`}
+                        onClick={() => openRecipe(recipe)}
+                        onKeyDown={openOnKey(recipe)}
+                        style={{ padding: '18px 0', borderBottom: `1.5px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: 16 }}
+                      >
                         <div className="flex-1 min-w-0">
-                          <h3 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.015em', margin: 0, color: INK }}>{recipe.name}</h3>
+                          <h3 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.015em', margin: 0, color: INK }}>
+                            {recipe.name}
+                            <span style={{ display: 'inline-flex', marginLeft: 7, verticalAlign: '-1px' }}><RecipeFlagMarks recipe={recipe} size={14} /></span>
+                          </h3>
                           <div style={{ fontSize: 12.5, color: theme.textTertiary, margin: '6px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 7 }}>
-                            <span style={{ fontFamily: MONO, fontWeight: 700, color: INK, flexShrink: 0 }}>{recipe.ingredients.length}</span>
+                            <span style={{ fontFamily: MONO, fontWeight: 700, color: INK, flexShrink: 0 }}>{ingredientNames.length}</span>
                             {preview && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>· {preview}</span>}
                           </div>
                           {recipe.notes && (
@@ -4368,12 +5084,12 @@ export default function App() {
                             </p>
                           )}
                           <div style={{ display: 'flex', gap: 14, marginTop: 6 }}>
-                            <button onClick={() => startEditRecipe(recipe)} style={{ fontSize: 13, fontWeight: 600, color: theme.textSecondary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Edit</button>
-                            <button onClick={() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); }} style={{ fontSize: 13, fontWeight: 600, color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete</button>
+                            <button onClick={stopThen(() => startEditRecipe(recipe))} style={{ fontSize: 13, fontWeight: 600, color: theme.textSecondary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Edit</button>
+                            <button onClick={stopThen(() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); })} style={{ fontSize: 13, fontWeight: 600, color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete</button>
                           </div>
                         </div>
                         <button
-                          onClick={() => addRecipeToList(recipe)}
+                          onClick={stopThen(() => addRecipeToList(recipe))}
                           className="bc-press"
                           style={{ padding: '11px 0', width: 80, fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: isAdded ? INK : YELLOW, color: isAdded ? theme.accentOnInk : '#1c1917', cursor: 'pointer', flexShrink: 0, transition: 'background-color 0.22s ease, color 0.22s ease' }}
                         >
@@ -4428,6 +5144,27 @@ export default function App() {
               </button>
             </div>
           </div>
+        )}
+
+        {viewingRecipe && (
+          <RecipeSheet
+            key={viewingRecipe.id}
+            recipe={viewingRecipe}
+            groups={recipeGroups(viewingRecipe.ingredients)}
+            t={theme}
+            added={addingRecipeId === viewingRecipe.id}
+            onClose={() => setViewingRecipeId(null)}
+            onToggleFlag={toggleRecipeFlag}
+            onAdd={addRecipeToList}
+            onEdit={startEditRecipe}
+          />
+        )}
+
+        {movingIngredient && renderMoveSheet(
+          movingIngredient.name,
+          movingIngredient.category,
+          (categoryId) => moveRecipeIngredient(movingIngredient, categoryId),
+          () => setMovingIngredient(null)
         )}
 
         {/* Delete Recipe Confirmation */}
@@ -5541,35 +6278,11 @@ export default function App() {
       )}
 
       {/* ── Long-press reassign sheet ── */}
-      {longPressItem && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }} onClick={() => setLongPressItem(null)}>
-          <div className="w-full max-h-[75vh] flex flex-col" style={{ backgroundColor: PAPER, borderRadius: '28px 28px 0 0', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-center" style={{ marginTop: 12, marginBottom: 4 }}>
-              <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: theme.border }} />
-            </div>
-            <div className="px-6 py-3" style={{ borderBottom: `1.5px solid ${theme.border}` }}>
-              <h2 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.015em', color: INK, margin: 0 }}>Move "{longPressItem.name}" to…</h2>
-            </div>
-            <div className="overflow-y-auto px-6 py-2" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
-              {visibleCategories.map((cat) => {
-                const isCurrent = cat.id === longPressItem.category;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => handleLongPressReassign(longPressItem, cat.id)}
-                    className="w-full flex items-center justify-between bc-press"
-                    style={{ padding: '14px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.borderLight}`, cursor: 'pointer' }}
-                  >
-                    <span style={{ fontSize: 15, fontWeight: isCurrent ? 700 : 600, color: INK }}>{cat.name}</span>
-                    {isCurrent && (
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={YELLOW} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12l6 6L20 6"/></svg>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+      {longPressItem && renderMoveSheet(
+        longPressItem.name,
+        longPressItem.category,
+        (categoryId) => handleLongPressReassign(longPressItem, categoryId),
+        () => setLongPressItem(null)
       )}
 
       {/* Bottom Navigation */}
@@ -5595,3 +6308,6 @@ export default function App() {
   );
 }
 
+
+// Pure helpers, exported for the tests.
+export { parseIngredientLine, findCategoryForItem, scaleIngredientQuantity, scaleIngredientNote };
