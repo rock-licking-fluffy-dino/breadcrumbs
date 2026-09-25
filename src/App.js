@@ -648,6 +648,75 @@ const recipeServings = (recipe) => {
   return Number.isInteger(servings) && servings >= 1 && servings <= 50 ? servings : null;
 };
 
+// Adds a parsed line to a list of recipe ingredients. The same name already
+// in that aisle takes the extra quantity and keeps its own note. Returns the
+// new list and the id of the ingredient that took the line.
+const mergeRecipeIngredient = (list, parsed, categoryId) => {
+  const existing = list.find(i =>
+    i.name.toLowerCase() === parsed.name.toLowerCase() && i.category === categoryId
+  );
+  if (existing) {
+    return {
+      list: list.map(i => (i.id === existing.id ? { ...i, quantity: (i.quantity || 1) + parsed.quantity } : i)),
+      id: existing.id
+    };
+  }
+  const ingredient = { id: generateId(), name: parsed.name, category: categoryId, quantity: parsed.quantity };
+  if (parsed.note) ingredient.note = parsed.note;
+  return { list: [...list, ingredient], id: ingredient.id };
+};
+
+// ── Recipe links ──────────────────────────────────────────────────────────
+// A recipe's sourceUrl, parsed, or null unless it is a real http(s) link —
+// it becomes an href, so nothing else gets through.
+const parseRecipeLink = (text) => {
+  try {
+    const url = new URL(String(text || ''));
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const recipeLinkHost = (text) => parseRecipeLink(text)?.hostname.replace(/^www\./i, '') || '';
+
+// For spotting the same page twice: no hash, no trailing slash, no utm_*.
+const comparableRecipeLink = (text) => {
+  const url = parseRecipeLink(text);
+  if (!url) return '';
+  url.hash = '';
+  [...url.searchParams.keys()].filter(k => /^utm_/i.test(k)).forEach(k => url.searchParams.delete(k));
+  const path = url.pathname.replace(/\/+$/, '');
+  return `${url.hostname.replace(/^www\./i, '')}${path}${url.search}`.toLowerCase();
+};
+
+// What the user typed into the import sheet, as a URL string, or null when
+// it doesn't look like a web link. No scheme gets https://.
+const importLinkFromInput = (text) => {
+  const trimmed = String(text || '').trim();
+  if (!trimmed) return null;
+  const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const url = parseRecipeLink(withScheme);
+  if (!url || /\s/.test(trimmed)) return null;
+  const host = url.hostname;
+  if (!host.includes('.') && host !== 'localhost' && !host.startsWith('[')) return null;
+  url.hash = '';
+  return url.toString();
+};
+
+const MAX_RECIPES = 100;
+
+const IMPORT_MESSAGES = {
+  'invalid-url': "That doesn't look like a web link.",
+  blocked: "That link can't be imported.",
+  timeout: "Couldn't reach that page. Check the link or try again.",
+  'fetch-failed': "Couldn't reach that page. Check the link or try again.",
+  'not-a-recipe': "Couldn't find a recipe on that page.",
+  offline: "You're offline. Importing needs a connection.",
+  duplicate: "You've already saved this one.",
+  limit: `You've reached ${MAX_RECIPES} recipes. Delete one to import another.`
+};
+
 // ─────────────────────────────────────────────────────────────
 // Morning Paper theme — light and dark variants of the same
 // stone palette. Yellow keeps its three jobs in both: signal,
@@ -2552,6 +2621,13 @@ const RecipeFlagMarks = ({ recipe, size = 13 }) => (
   ) : null
 );
 
+const LinkIcon = ({ size = 16, color = 'currentColor', strokeWidth = 2.4 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
+    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+  </svg>
+);
+
 // A 28px round stepper button, the same as the ingredient steppers.
 const stepperButtonStyle = (t) => ({
   width: 28, height: 28, borderRadius: '50%', backgroundColor: t.bgTertiary, color: t.ink,
@@ -2590,6 +2666,16 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, margin: '4px 0 18px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h2 id="bc-recipe-heading" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.015em', color: t.ink, margin: 0, lineHeight: 1.2 }}>{recipe.name}</h2>
+          {parseRecipeLink(recipe.sourceUrl) && (
+            <a
+              href={parseRecipeLink(recipe.sourceUrl).toString()}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'inline-block', fontSize: 13.5, fontWeight: 700, color: t.textSecondary, margin: '6px 0 0', textDecoration: 'underline', textUnderlineOffset: 3, overflowWrap: 'anywhere' }}
+            >
+              {recipeLinkHost(recipe.sourceUrl)} ↗
+            </a>
+          )}
           {recipe.notes && (
             <p style={{ fontSize: 13.5, fontStyle: 'italic', color: t.textTertiary, margin: '6px 0 0', lineHeight: 1.4 }}>{recipe.notes}</p>
           )}
@@ -2649,8 +2735,127 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
   );
 };
 
+// ── Import from a link ────────────────────────────────────────────────────
+// Asks /api/import-recipe (a Vercel function; a browser can't read another
+// site's page itself) for the recipe on a page. It must be a POST: the
+// service worker serves same-origin GETs cache-first. Nothing is saved here —
+// a found recipe goes to the editor, and only its Save writes.
+const RecipeImportSheet = ({ recipes, t, onClose, onImported, onByHand, onOpenRecipe }) => {
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(false);
+  // { reason, link, recipeId } — link is what was asked for, recipeId the
+  // saved recipe that already has it.
+  const [error, setError] = useState(null);
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
+  const savedWithLink = (link) => {
+    const key = comparableRecipeLink(link);
+    return key ? recipes.find(r => comparableRecipeLink(r.sourceUrl) === key) : null;
+  };
+
+  const submit = async (force = false) => {
+    if (loading || !text.trim()) return;
+    const link = importLinkFromInput(text);
+    if (!link) { setError({ reason: 'invalid-url' }); return; }
+    const duplicate = !force && savedWithLink(link);
+    if (duplicate) { setError({ reason: 'duplicate', link, recipeId: duplicate.id }); return; }
+    if (recipes.length >= MAX_RECIPES) { setError({ reason: 'limit', link }); return; }
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) { setError({ reason: 'offline', link }); return; }
+
+    setLoading(true);
+    setError(null);
+    let data;
+    try {
+      const response = await fetch('/api/import-recipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: link })
+      });
+      try {
+        data = await response.json();
+      } catch (e) {
+        data = { ok: false, reason: 'fetch-failed' };
+      }
+    } catch (e) {
+      data = { ok: false, reason: 'offline' };
+    }
+    if (!mountedRef.current) return;
+    setLoading(false);
+
+    if (data && data.ok && data.recipe && Array.isArray(data.recipe.ingredients)) {
+      // The page may have redirected to one that's already saved.
+      const redirectedDuplicate = !force && savedWithLink(data.recipe.sourceUrl);
+      if (redirectedDuplicate) { setError({ reason: 'duplicate', link, recipeId: redirectedDuplicate.id }); return; }
+      triggerHaptic('success');
+      onImported(data.recipe);
+      return;
+    }
+    const reason = data && IMPORT_MESSAGES[data.reason] ? data.reason : 'fetch-failed';
+    setError({ reason, link });
+  };
+
+  const ready = !!text.trim() && !loading;
+  const textButtonStyle = { background: 'none', border: 'none', padding: '6px 0', cursor: 'pointer', fontSize: 13.5, fontWeight: 700, color: t.ink, textDecoration: 'underline', textUnderlineOffset: 3 };
+
+  return (
+    <BottomSheet onClose={onClose} t={t} labelledBy="bc-import-heading">
+      <h2 id="bc-import-heading" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.015em', color: t.ink, margin: '4px 0 0', lineHeight: 1.2 }}>Import a recipe</h2>
+      <p style={{ fontSize: 14, color: t.textSecondary, margin: '6px 0 20px' }}>Paste a link from a recipe website.</p>
+
+      <form
+        noValidate
+        onSubmit={(e) => { e.preventDefault(); submit(); }}
+        style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+      >
+        <input
+          type="url"
+          inputMode="url"
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          value={text}
+          onChange={(e) => { setText(e.target.value); setError(null); }}
+          disabled={loading}
+          placeholder="https://"
+          aria-label="Recipe link"
+          aria-invalid={!!error}
+          aria-describedby={error ? 'bc-import-error' : undefined}
+          className="flex-1 py-2 focus:outline-none bg-transparent"
+          style={{ borderBottom: `1.5px solid ${error ? t.ink : t.border}`, color: t.ink, fontSize: 16, fontWeight: 600, minWidth: 0, opacity: loading ? 0.6 : 1 }}
+          autoFocus
+        />
+        <button
+          type="submit"
+          disabled={!ready}
+          className="bc-press bc-cta"
+          style={{ padding: '10px 20px', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: ready ? YELLOW : t.bgTertiary, color: ready ? INK : t.textTertiary, cursor: ready ? 'pointer' : 'default', flexShrink: 0 }}
+        >
+          {loading ? 'Reading…' : 'Import'}
+        </button>
+      </form>
+
+      {error && (
+        <div id="bc-import-error" role="alert" className="fade-in" style={{ marginTop: 12 }}>
+          <p style={{ fontSize: 13.5, fontWeight: 600, color: t.ink, margin: 0, lineHeight: 1.45 }}>{IMPORT_MESSAGES[error.reason]}</p>
+          {error.reason === 'duplicate' && (
+            <div style={{ display: 'flex', gap: 18, marginTop: 4 }}>
+              <button type="button" onClick={() => onOpenRecipe(error.recipeId)} className="bc-press" style={textButtonStyle}>Open it</button>
+              <button type="button" onClick={() => submit(true)} className="bc-press" style={textButtonStyle}>Import anyway</button>
+            </div>
+          )}
+          {error.reason === 'not-a-recipe' && (
+            <button type="button" onClick={() => onByHand(error.link)} className="bc-press" style={{ ...textButtonStyle, marginTop: 4 }}>Add it by hand instead</button>
+          )}
+        </div>
+      )}
+    </BottomSheet>
+  );
+};
+
 // ── The year trail ────────────────────────────────────────────────────────
-const YearTrailSheet = ({ trips, t, onClose, onOpenTrip }) => {
+const YearTrailSheet =({ trips, t, onClose, onOpenTrip }) => {
   const [snapshot] = useState(() => trips);
   const year = new Date().getFullYear();
   const thisYear = snapshot.filter((trip) => new Date(trip.ts).getFullYear() === year);
@@ -2810,6 +3015,11 @@ export default function App() {
   const [newRecipeItemText, setNewRecipeItemText] = useState('');
   const [recipeNoMatch, setRecipeNoMatch] = useState(null);
   const [newRecipeServings, setNewRecipeServings] = useState(null);
+  // The page a recipe came from, kept apart from notes / "Source (optional)".
+  const [newRecipeSourceUrl, setNewRecipeSourceUrl] = useState('');
+  // The site name while the editor holds a fresh import, for its banner.
+  const [importedFrom, setImportedFrom] = useState(null);
+  const [showImportRecipe, setShowImportRecipe] = useState(false);
   const [editingIngredientId, setEditingIngredientId] = useState(null);
   const [editingIngredientName, setEditingIngredientName] = useState('');
   const [editingIngredientNote, setEditingIngredientNote] = useState('');
@@ -3811,21 +4021,8 @@ export default function App() {
   // that aisle takes the extra quantity and keeps its own note.
   const addParsedIngredient = (parsed, categoryId) => {
     triggerHaptic('success');
-    const existing = newRecipeIngredients.find(i =>
-      i.name.toLowerCase() === parsed.name.toLowerCase() && i.category === categoryId
-    );
-    let ingredientId;
-    if (existing) {
-      ingredientId = existing.id;
-      setNewRecipeIngredients(newRecipeIngredients.map(i =>
-        i.id === existing.id ? { ...i, quantity: (i.quantity || 1) + parsed.quantity } : i
-      ));
-    } else {
-      ingredientId = generateId();
-      const ingredient = { id: ingredientId, name: parsed.name, category: categoryId, quantity: parsed.quantity };
-      if (parsed.note) ingredient.note = parsed.note;
-      setNewRecipeIngredients([...newRecipeIngredients, ingredient]);
-    }
+    const { list, id: ingredientId } = mergeRecipeIngredient(newRecipeIngredients, parsed, categoryId);
+    setNewRecipeIngredients(list);
     setNewRecipeItemText('');
     setRecipeNoMatch(null);
     flashCategoryTag(ingredientId);
@@ -3923,6 +4120,8 @@ export default function App() {
     setNewRecipeIngredients([]);
     setNewRecipeItemText('');
     setNewRecipeServings(null);
+    setNewRecipeSourceUrl('');
+    setImportedFrom(null);
     setRecipeNoMatch(null);
     setEditingIngredientId(null);
     setMovingIngredient(null);
@@ -3934,21 +4133,26 @@ export default function App() {
     if (!newRecipeName.trim() || newRecipeIngredients.length === 0 || savingRecipe) return;
     setSavingRecipe(true);
     triggerHaptic('success');
-    // `servings` is left off entirely when unset — never null or 0.
-    const withServings = (recipe) => {
-      const { servings: _previousServings, ...rest } = recipe;
-      return newRecipeServings === null ? rest : { ...rest, servings: newRecipeServings };
+    // `servings` and `sourceUrl` are left off entirely when unset — never
+    // null, 0 or ''.
+    const withOptionalFields = (recipe) => {
+      const { servings: _previousServings, sourceUrl: _previousSourceUrl, ...rest } = recipe;
+      const result = newRecipeServings === null ? rest : { ...rest, servings: newRecipeServings };
+      return newRecipeSourceUrl ? { ...result, sourceUrl: newRecipeSourceUrl } : result;
     };
+    // An imported ingredient still under "Needs an aisle" is saved in Other.
+    // A category is never saved as null.
+    const ingredients = newRecipeIngredients.map(i => (i.category ? i : { ...i, category: 'other' }));
     const current = recipesRef.current;
     let newRecipes;
     if (editingRecipeId) {
       newRecipes = current.map(r =>
         r.id === editingRecipeId
-          ? withServings({ ...r, name: newRecipeName.trim(), ingredients: newRecipeIngredients, notes: newRecipeNotes.trim() })
+          ? withOptionalFields({ ...r, name: newRecipeName.trim(), ingredients, notes: newRecipeNotes.trim() })
           : r
       );
     } else {
-      newRecipes = [...current, withServings({ id: generateId(), name: newRecipeName.trim(), ingredients: newRecipeIngredients, createdAt: Date.now(), notes: newRecipeNotes.trim() })];
+      newRecipes = [...current, withOptionalFields({ id: generateId(), name: newRecipeName.trim(), ingredients, createdAt: Date.now(), notes: newRecipeNotes.trim() })];
     }
     // Not awaited: offline the write stays pending until the device
     // reconnects (Firestore replays it then), and the editor would sit on
@@ -3972,10 +4176,47 @@ export default function App() {
     setNewRecipeNotes(recipe.notes || '');
     setNewRecipeIngredients([...(recipe.ingredients || [])]);
     setNewRecipeServings(recipeServings(recipe));
+    setNewRecipeSourceUrl(parseRecipeLink(recipe.sourceUrl) ? recipe.sourceUrl : '');
+    setImportedFrom(null);
     setNewRecipeItemText('');
     setRecipeNoMatch(null);
     setEditingIngredientId(null);
     setShowCreateRecipe(true);
+  };
+
+  // A recipe found by the import sheet opens in the editor, unsaved. Each
+  // line is parsed and sorted here on the device, so this phone's own aisle
+  // corrections apply; a line that matches no aisle waits under "Needs an
+  // aisle" with category null until it is given one (or saved as Other).
+  const openImportedRecipe = (imported) => {
+    let ingredients = [];
+    imported.ingredients.forEach(line => {
+      const parsed = parseIngredientLine(line);
+      if (!parsed.name) return;
+      const result = findCategoryForItem(parsed.name);
+      ingredients = mergeRecipeIngredient(ingredients, parsed, result ? result.categoryId : null).list;
+    });
+    resetRecipeEditor();
+    setShowImportRecipe(false);
+    setNewRecipeName(String(imported.name || '').slice(0, 100));
+    setNewRecipeServings(recipeServings(imported));
+    setNewRecipeIngredients(ingredients);
+    setNewRecipeSourceUrl(parseRecipeLink(imported.sourceUrl) ? imported.sourceUrl : '');
+    setImportedFrom(imported.siteName || recipeLinkHost(imported.sourceUrl));
+    setShowCreateRecipe(true);
+  };
+
+  // "Add it by hand instead": a blank new recipe with the link attached.
+  const startRecipeByHand = (link) => {
+    resetRecipeEditor();
+    setShowImportRecipe(false);
+    setNewRecipeSourceUrl(parseRecipeLink(link) ? link : '');
+    setShowCreateRecipe(true);
+  };
+
+  const openImportRecipe = () => {
+    triggerHaptic('light');
+    setShowImportRecipe(true);
   };
 
   // Favourite and want-to-cook. Missing means false, so switching one off
@@ -4442,7 +4683,9 @@ export default function App() {
           <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: theme.border }} />
         </div>
         <div className="px-6 py-3" style={{ borderBottom: `1.5px solid ${theme.border}` }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.015em', color: INK, margin: 0 }}>Move "{name}" to…</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.015em', color: INK, margin: 0 }}>
+            {currentCategoryId === null ? `Which aisle for "${name}"?` : `Move "${name}" to…`}
+          </h2>
         </div>
         <div className="overflow-y-auto px-6 py-2" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
           {visibleCategories.map((cat) => {
@@ -4470,16 +4713,20 @@ export default function App() {
   // One input finds each ingredient's aisle; the filled aisles are listed
   // below it in store order. Shared by both layouts: phone keeps the
   // underlined-row treatment, desktop puts each aisle on a card.
-  const renderAisleHeading = (name, count) => (
+  // `muted` is the grey badge on "Needs an aisle".
+  const renderAisleHeading = (name, count, muted = false) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <span className={isDesktop ? 'truncate' : undefined} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, whiteSpace: 'nowrap', flexShrink: isDesktop ? 1 : 0 }}>{name}</span>
-      <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{count}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: muted ? theme.bgTertiary : YELLOW, color: muted ? theme.textSecondary : '#1c1917', border: muted ? `1px solid ${theme.border}` : 'none', borderRadius: 9999, padding: muted ? '0 7px' : '1px 8px', flexShrink: 0 }}>{count}</span>
       <div style={{ flex: 1, height: 1.5, backgroundColor: theme.borderLight, minWidth: 8 }} />
     </div>
   );
 
   const renderRecipeIngredientRow = (ingredient) => {
     const isEditing = editingIngredientId === ingredient.id;
+    // Under "Needs an aisle", tapping the name asks for the aisle first.
+    const needsAisle = ingredient.category === null;
+    const tapName = () => (needsAisle ? setMovingIngredient(ingredient) : startEditIngredient(ingredient));
     const cancelLongPress = () => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); };
     const fieldStyle = { backgroundColor: theme.bgTertiary, color: INK, border: 'none', borderRadius: 8, padding: '5px 8px', width: '100%' };
     return (
@@ -4529,10 +4776,10 @@ export default function App() {
             <span
               role="button"
               tabIndex={0}
-              onClick={() => startEditIngredient(ingredient)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEditIngredient(ingredient); } }}
-              aria-label={`Edit ${ingredient.name}`}
-              style={{ fontSize: isDesktop ? 14.5 : 15.5, fontWeight: 600, color: INK, cursor: 'text', overflowWrap: 'anywhere' }}
+              onClick={tapName}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tapName(); } }}
+              aria-label={needsAisle ? `Choose an aisle for ${ingredient.name}` : `Edit ${ingredient.name}`}
+              style={{ fontSize: isDesktop ? 14.5 : 15.5, fontWeight: 600, color: INK, cursor: needsAisle ? 'pointer' : 'text', overflowWrap: 'anywhere' }}
             >
               {ingredient.name}
               {showingCategoryTag.has(ingredient.id) && (
@@ -4567,8 +4814,38 @@ export default function App() {
     );
   };
 
-  const recipeEditorGroups = recipeGroups(newRecipeIngredients);
-  const recipeIngredientCategoryCount = recipeEditorGroups.length;
+  // Imported lines that matched no aisle (category null) are pinned above
+  // the aisles as "Needs an aisle".
+  const needsAisleIngredients = newRecipeIngredients.filter(i => i.category === null);
+  const recipeEditorGroups = [
+    ...(needsAisleIngredients.length ? [{ id: 'bc-needs-aisle', name: 'Needs an aisle', ingredients: needsAisleIngredients, muted: true }] : []),
+    ...recipeGroups(newRecipeIngredients.filter(i => i.category !== null))
+  ];
+  const recipeIngredientCategoryCount = recipeEditorGroups.filter(g => !g.muted).length;
+
+  const recipeImportBanner = importedFrom && !editingRecipeId && (
+    <div role="status" style={{ fontSize: 13, lineHeight: 1.45, color: theme.textSecondary, backgroundColor: theme.bgTertiary, borderRadius: 14, padding: '10px 14px' }}>
+      Imported from {importedFrom} — check it over before saving.
+      {needsAisleIngredients.length > 0 && ` ${needsAisleIngredients.length} ${needsAisleIngredients.length === 1 ? 'needs' : 'need'} an aisle.`}
+    </div>
+  );
+
+  // The attached page: not editable as text — remove it and re-import.
+  const recipeSourceLinkRow = newRecipeSourceUrl && (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, color: theme.textSecondary }}>
+      <LinkIcon size={14} />
+      <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={newRecipeSourceUrl}>
+        {recipeLinkHost(newRecipeSourceUrl)}
+      </span>
+      <button
+        onClick={() => { triggerHaptic('light'); setNewRecipeSourceUrl(''); }}
+        aria-label="Remove the recipe link"
+        style={{ width: 28, height: 28, color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, fontWeight: 300, padding: 0, flexShrink: 0 }}
+      >
+        ×
+      </button>
+    </div>
+  );
   const recipeSaveReady = !!newRecipeName.trim() && newRecipeIngredients.length > 0 && !savingRecipe;
   const recipeAddReady = !!newRecipeItemText.trim();
 
@@ -4777,14 +5054,24 @@ export default function App() {
                     : `${recipes.length} saved · a whole meal, dropped on the list at once.`}
                 </p>
               </div>
-              <button
-                onClick={() => setShowCreateRecipe(true)}
-                className="bc-press bc-cta"
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 20px', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer', flexShrink: 0 }}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-                New recipe
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                <button
+                  onClick={openImportRecipe}
+                  className="bc-press bc-icon-btn"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}
+                >
+                  <LinkIcon size={15} strokeWidth={2.6} />
+                  Import from link
+                </button>
+                <button
+                  onClick={() => setShowCreateRecipe(true)}
+                  className="bc-press bc-cta"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 20px', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer' }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                  New recipe
+                </button>
+              </div>
             </div>
           ) : (
             <>
@@ -4801,7 +5088,9 @@ export default function App() {
               /* Desktop editor: a sticky panel holds the recipe's identity and
                  its Save/Cancel. The right column is the ingredient input,
                  with the filled aisles as cards underneath it. */
-              <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: isWide ? '340px 1fr' : '300px 1fr', gap: 28, alignItems: 'start', paddingTop: 22 }}>
+              <div className="fade-in" style={{ paddingTop: 22 }}>
+              {recipeImportBanner && <div style={{ marginBottom: 18 }}>{recipeImportBanner}</div>}
+              <div style={{ display: 'grid', gridTemplateColumns: isWide ? '340px 1fr' : '300px 1fr', gap: 28, alignItems: 'start' }}>
                 <div style={{ position: 'sticky', top: 24 }}>
                   <div style={{ backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 20, padding: 20, boxShadow: theme.cardShadow }}>
                     <label htmlFor="bc-recipe-name" style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textTertiary, display: 'block', marginBottom: 7 }}>Recipe name</label>
@@ -4824,8 +5113,9 @@ export default function App() {
                       onChange={(e) => setNewRecipeNotes(e.target.value)}
                       placeholder="e.g. pg 74, yellow cookbook"
                       className="w-full py-2 focus:outline-none bg-transparent"
-                      style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 14, fontWeight: 500, marginBottom: 20 }}
+                      style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 14, fontWeight: 500, marginBottom: newRecipeSourceUrl ? 0 : 20 }}
                     />
+                    {newRecipeSourceUrl && <div style={{ marginBottom: 14 }}>{recipeSourceLinkRow}</div>}
 
                     <div style={{ marginBottom: 22 }}>{recipeServesStepper}</div>
 
@@ -4883,7 +5173,7 @@ export default function App() {
                           className="bc-card"
                           style={{ backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 18, padding: '14px 16px', boxShadow: theme.cardShadow }}
                         >
-                          {renderAisleHeading(group.name, group.ingredients.length)}
+                          {renderAisleHeading(group.name, group.ingredients.length, group.muted)}
                           <div style={{ marginTop: 6 }}>{group.ingredients.map(renderRecipeIngredientRow)}</div>
                         </div>
                       ))}
@@ -4891,8 +5181,11 @@ export default function App() {
                   )}
                 </div>
               </div>
+              </div>
             ) : (
             <div className="fade-in" style={{ paddingBottom: 90 }}>
+              {recipeImportBanner && <div style={{ margin: '10px 0 20px' }}>{recipeImportBanner}</div>}
+
               {/* Recipe name */}
               <div style={{ marginBottom: 22 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, display: 'block', marginBottom: 6 }}>Recipe name</label>
@@ -4918,6 +5211,7 @@ export default function App() {
                   className="w-full py-2 focus:outline-none bg-transparent"
                   style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 16, fontWeight: 500 }}
                 />
+                {recipeSourceLinkRow}
               </div>
 
               {/* Serves */}
@@ -4928,7 +5222,7 @@ export default function App() {
 
               {recipeEditorGroups.map(group => (
                 <div key={group.id} style={{ marginBottom: 14 }}>
-                  {renderAisleHeading(group.name, group.ingredients.length)}
+                  {renderAisleHeading(group.name, group.ingredients.length, group.muted)}
                   {group.ingredients.map(renderRecipeIngredientRow)}
                 </div>
               ))}
@@ -4949,6 +5243,24 @@ export default function App() {
                   <p style={{ fontSize: 14, color: theme.textSecondary, maxWidth: 260, margin: '0 auto', lineHeight: 1.55 }}>
                     Save your favourite meals and add every ingredient to your list in one tap.
                   </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 26 }}>
+                    <button
+                      onClick={() => setShowCreateRecipe(true)}
+                      className="bc-press bc-cta"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: 220, padding: '12px 0', fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer' }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+                      New recipe
+                    </button>
+                    <button
+                      onClick={openImportRecipe}
+                      className="bc-press bc-icon-btn"
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: 220, padding: '10px 0', fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}
+                    >
+                      <LinkIcon size={15} strokeWidth={2.6} />
+                      Import from a link
+                    </button>
+                  </div>
                 </div>
               ) : isDesktop ? (
                 /* Card grid. Ingredients read as chips, and Edit/Delete stay
@@ -5101,16 +5413,27 @@ export default function App() {
                 </div>
               )}
 
-              {/* New recipe — desktop puts this CTA in the header instead */}
-              {!isDesktop && (
-                <button
-                  onClick={() => setShowCreateRecipe(true)}
-                  className="bc-press"
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0', background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14"/></svg>
-                  <span style={{ fontSize: 16, fontWeight: 600, color: theme.textSecondary }}>New recipe</span>
-                </button>
+              {/* New recipe and Import — desktop puts these in the header
+                  instead, and the empty state carries its own. */}
+              {!isDesktop && recipes.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setShowCreateRecipe(true)}
+                    className="bc-press"
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0 10px', background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14"/></svg>
+                    <span style={{ fontSize: 16, fontWeight: 600, color: theme.textSecondary }}>New recipe</span>
+                  </button>
+                  <button
+                    onClick={openImportRecipe}
+                    className="bc-press"
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0 20px', background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}
+                  >
+                    <LinkIcon size={16} color={theme.textSecondary} strokeWidth={2.5} />
+                    <span style={{ fontSize: 16, fontWeight: 600, color: theme.textSecondary }}>Import from a link</span>
+                  </button>
+                </>
               )}
             </>
           )}
@@ -5157,6 +5480,17 @@ export default function App() {
             onToggleFlag={toggleRecipeFlag}
             onAdd={addRecipeToList}
             onEdit={startEditRecipe}
+          />
+        )}
+
+        {showImportRecipe && (
+          <RecipeImportSheet
+            recipes={recipes}
+            t={theme}
+            onClose={() => setShowImportRecipe(false)}
+            onImported={openImportedRecipe}
+            onByHand={startRecipeByHand}
+            onOpenRecipe={(id) => { setShowImportRecipe(false); setViewingRecipeId(id); }}
           />
         )}
 
