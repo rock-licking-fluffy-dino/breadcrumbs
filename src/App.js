@@ -1105,14 +1105,12 @@ const OB_WEEKDAY_SHADES = [1, 2, 1, 0, 1, 2, 1];
 
 const ObSpecimenFor = ({ index, t, listCode }) => {
   switch (index) {
-    // 1. The logo alone, still breathing.
+    // 1. The app icon alone, still breathing.
     case 0:
       return (
         <ObSpecimen>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div className="breathe-1" style={{ width: 76, height: 76, borderRadius: '50%', backgroundColor: YELLOW }} />
-            <div className="breathe-2" style={{ width: 54, height: 54, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
-            <div className="breathe-3" style={{ width: 38, height: 38, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
+          <div className="breathe-1" style={{ borderRadius: 30, overflow: 'hidden', boxShadow: '0 18px 40px rgba(21,20,19,0.16)' }}>
+            <img src="/breadcrumbs-icon.svg" alt="" width={132} height={132} style={{ display: 'block' }} />
           </div>
         </ObSpecimen>
       );
@@ -1497,13 +1495,8 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
       `}</style>
 
       <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 'max(14px, env(safe-area-inset-top, 0px)) 22px 8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span aria-hidden="true" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW }} />
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW }} />
-            <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW }} />
-          </span>
-          <span style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 400, lineHeight: 1, color: t.ink }}>Breadcrumbs</span>
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <Wordmark size={20} color={t.ink} />
         </div>
         <button
           onClick={skip}
@@ -1536,7 +1529,12 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
                     <span className="bc-ob-num">{String(i + 1).padStart(2, '0')}</span>
                     <span className="bc-ob-kicker-name">{card.kicker}</span>
                   </p>
-                  <h2 className={card.hero ? 'bc-ob-title bc-ob-title-hero' : 'bc-ob-title'}>{card.title}</h2>
+                  {card.hero ? (
+                    // size={null} leaves the size to the hero title classes.
+                    <Wordmark as="h1" className="bc-ob-title bc-ob-title-hero" size={null} color={t.ink} />
+                  ) : (
+                    <h2 className="bc-ob-title">{card.title}</h2>
+                  )}
                   {card.lede && <p className="bc-ob-lede">{card.lede}</p>}
                   {card.body && <p className="bc-ob-body">{card.body}</p>}
                   {card.note && <p className="bc-ob-note">{card.note}</p>}
@@ -1730,14 +1728,9 @@ const DesktopSidebar = ({
         display: 'flex', flexDirection: 'column', zIndex: 50, overflowY: 'auto',
       }}
     >
-      {/* Wordmark — the three crumbs finally have something to label */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '24px 20px 18px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <div className="breathe-1" style={{ width: 11, height: 11, borderRadius: '50%', backgroundColor: YELLOW }} />
-          <div className="breathe-2" style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
-          <div className="breathe-3" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
-        </div>
-        <span style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 400, lineHeight: 1, color: ink }}>Breadcrumbs</span>
+      {/* Wordmark */}
+      <div style={{ display: 'flex', alignItems: 'center', padding: '24px 20px 18px' }}>
+        <Wordmark size={24} color={ink} />
       </div>
 
       {/* The list you're on, and the code that shares it */}
@@ -1965,6 +1958,23 @@ const TrailHome = ({ lit, t, size = 17 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={lit ? 'rgba(250,204,21,0.22)' : 'none'} stroke={lit ? YELLOW : t.textTertiary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'stroke 0.3s ease, fill 0.3s ease' }}>
     <path d="M4 11l8-7 8 7" /><path d="M6 9.5V20h12V9.5" />
   </svg>
+);
+
+// The Breadcrumbs wordmark: the word in the serif, and a crumb for a full stop.
+// nowrap keeps the crumb on the word's line; an inline-block is otherwise a
+// break opportunity.
+const Wordmark = ({ size = 24, color, as: Tag = 'span', className, style }) => (
+  <Tag className={className} style={{ fontFamily: SERIF, fontSize: size, fontWeight: 400, lineHeight: 1, letterSpacing: '-0.015em', color, margin: 0, whiteSpace: 'nowrap', ...style }}>
+    Breadcrumbs
+    <span
+      aria-hidden="true"
+      style={{
+        display: 'inline-block', width: '0.2em', height: '0.2em', marginLeft: '0.045em',
+        borderRadius: '50%', backgroundColor: YELLOW,
+        boxShadow: `0 0 0 max(1px, 0.02em) #1c1917`,
+      }}
+    />
+  </Tag>
 );
 
 // The house and the count beside it close the trail, so the width they
@@ -4460,8 +4470,6 @@ export default function App() {
     .bc-press { transition: transform 0.12s ease; }
     .bc-press:active { transform: scale(0.96); }
     .breathe-1 { animation: breathe 2.8s ease-in-out infinite; }
-    .breathe-2 { animation: breathe 3.2s ease-in-out infinite; animation-delay: 0.35s; }
-    .breathe-3 { animation: breathe 3.6s ease-in-out infinite; animation-delay: 0.7s; }
     .btn-pop { animation: buttonPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     .sync-pulse { animation: pulse 1.5s ease-in-out infinite; }
     input { font-size: 16px !important; }
@@ -6394,14 +6402,7 @@ export default function App() {
 
         {/* Top block — black */}
         <div style={{ padding: '64px 32px 0', flex: 1 }}>
-          <div className="bc-fu1 flex items-center" style={{ gap: 8 }}>
-            <div className="breathe-1" style={{ width: 40, height: 40, borderRadius: '50%', backgroundColor: YELLOW }} />
-            <div className="breathe-2" style={{ width: 29, height: 29, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
-            <div className="breathe-3" style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
-          </div>
-          <h1 className="bc-fu2" style={{ fontFamily: SERIF, fontSize: 'clamp(56px, 16vw, 72px)', fontWeight: 400, letterSpacing: '-0.015em', lineHeight: 1, margin: '28px 0 0', color: '#fafaf9' }}>
-            Breadcrumbs
-          </h1>
+          <Wordmark as="h1" className="bc-fu2" size="clamp(56px, 16vw, 72px)" color="#fafaf9" />
           <p className="bc-fu3" style={{ fontSize: 15, color: 'rgba(250,250,249,0.55)', margin: '16px 0 0', lineHeight: 1.5, maxWidth: 280 }}>
             The smartest path to a stocked home.
           </p>
@@ -6621,10 +6622,8 @@ export default function App() {
 
         {totalItems === 0 && usuals ? null : totalItems === 0 ? (
           <div className="text-center" style={{ paddingTop: isDesktop ? 96 : 70 }}>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 24 }}>
-              <div className={isDesktop ? 'breathe-1' : ''} style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: YELLOW }} />
-              <div className={isDesktop ? 'breathe-2' : ''} style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
-              <div className={isDesktop ? 'breathe-3' : ''} style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
+              <div className={isDesktop ? 'breathe-1' : ''} style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: YELLOW, boxShadow: `0 0 0 1.5px ${INK}` }} />
             </div>
             <h3 style={{ fontFamily: SERIF, fontSize: isDesktop ? 42 : 34, fontWeight: 400, lineHeight: 1.05, color: INK, marginBottom: 10 }}>Nothing on the list</h3>
             <p style={{ fontSize: 14, color: theme.textSecondary, maxWidth: isDesktop ? 340 : 240, margin: '0 auto', lineHeight: 1.55 }}>

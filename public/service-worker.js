@@ -1,7 +1,7 @@
 // Breadcrumbs Service Worker
 // Strategy: cache-first for static assets, network-first for Firebase
 
-const CACHE_NAME = 'breadcrumbs-v1';
+const CACHE_NAME = 'breadcrumbs-v2';
 
 // Static assets to pre-cache on install
 const PRECACHE_URLS = [
@@ -10,6 +10,10 @@ const PRECACHE_URLS = [
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
+  '/apple-touch-icon.png',
+  '/icon-maskable-512.png',
+  '/favicon.ico',
+  '/favicon.svg',
 ];
 
 // ─── Install ────────────────────────────────────────────────────────────────
