@@ -718,47 +718,100 @@ const IMPORT_MESSAGES = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// Morning Paper theme — light and dark variants of the same
-// stone palette. Yellow keeps its three jobs in both: signal,
-// primary action, progress. `ink` is the strong foreground and
-// flips to near-paper in dark; anything sitting ON yellow stays
-// literal #1c1917 (yellow is a light surface in both themes).
+// Index theme (direction C): warm paper, ink rules, one serif for
+// titles. Light and dark share every key. Yellow has four jobs in
+// both: the + button, crumbs still to get, a ticked checkbox and the
+// primary button. `ink` is the strong foreground and flips to
+// near-paper in dark; anything sitting ON yellow stays literal
+// #1c1917 (yellow is a light surface in both themes).
 // ─────────────────────────────────────────────────────────────
-const INK = '#1c1917';
-const PAPER = '#fafaf9';
+const INK = '#151413';
+const PAPER = '#efebe2';
 const MONO = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
+// Instrument Serif ships in one weight: always 400, never bold.
+const SERIF = "'Instrument Serif', Georgia, serif";
+const SANS = "Archivo, system-ui, sans-serif";
 const THEMES = {
   light: {
     bg: PAPER,
-    bgSecondary: '#fff',
-    bgTertiary: '#f5f5f4',
+    bgSecondary: '#f7f4ee',
+    bgTertiary: '#e6e1d6',
     ink: INK,
-    text: '#292524',
-    textSecondary: '#78716c',
-    textTertiary: '#a8a29e',
-    border: '#e7e5e4',
-    borderLight: '#f5f5f4',
+    text: '#26221f',
+    textSecondary: '#5e5852',
+    textTertiary: '#8a847d',
+    textTicked: '#6a645d',
+    border: 'rgba(21,20,19,0.16)',
+    borderLight: 'rgba(21,20,19,0.14)',
+    field: '#ffffff',
+    glass: 'rgba(239,235,226,0.72)',
+    glassEdge: 'rgba(21,20,19,0.14)',
+    capsule: 'rgba(255,255,255,0.88)',
     accentOnInk: '#FACC15',
-    overlay: 'rgba(28,25,23,0.5)',
-    cardShadow: '0 2px 12px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04)',
-    yellowGlow: '0 4px 20px rgba(250,204,21,0.35)',
+    overlay: 'rgba(21,20,19,0.32)',
+    cardShadow: 'none',
+    yellowGlow: '0 6px 18px rgba(21,20,19,0.14)',
+    shadowFloat: '0 8px 26px rgba(21,20,19,0.10)',
+    shadowCapsule: '0 1px 4px rgba(21,20,19,0.10), inset 0 0 0 1px rgba(21,20,19,0.06)',
   },
   dark: {
-    bg: '#161312',
-    bgSecondary: '#221e1c',
-    bgTertiary: '#2b2624',
-    ink: '#f5f4f2',
-    text: '#d6d3d1',
-    textSecondary: '#a8a29e',
-    textTertiary: '#78716c',
-    border: '#352f2c',
-    borderLight: '#2b2624',
+    bg: '#161412',
+    bgSecondary: '#1f1c19',
+    bgTertiary: '#2a2622',
+    ink: '#f2eee6',
+    text: '#dcd6cc',
+    textSecondary: '#a8a198',
+    textTertiary: '#6f6962',
+    textTicked: '#8f887f',
+    border: 'rgba(242,238,230,0.16)',
+    borderLight: 'rgba(242,238,230,0.14)',
+    field: '#262320',
+    glass: 'rgba(22,20,18,0.72)',
+    glassEdge: 'rgba(242,238,230,0.14)',
+    capsule: 'rgba(255,255,255,0.12)',
     accentOnInk: '#1c1917',
     overlay: 'rgba(0,0,0,0.6)',
-    cardShadow: '0 2px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3)',
-    yellowGlow: '0 4px 20px rgba(250,204,21,0.2)',
+    cardShadow: 'none',
+    yellowGlow: '0 6px 18px rgba(0,0,0,0.5)',
+    shadowFloat: '0 8px 26px rgba(0,0,0,0.45)',
+    shadowCapsule: '0 1px 4px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(242,238,230,0.08)',
   },
 };
+
+// The floating nav: a 58px pill sitting this far above the bottom edge.
+// Every phone page pads its foot by the pill, the offset and 24px so the
+// last row clears it.
+const NAV_BOTTOM = 'max(28px, calc(env(safe-area-inset-bottom, 0px) + 12px))';
+const NAV_CLEARANCE = `calc(82px + ${NAV_BOTTOM})`;
+
+// ── The numbered section header ───────────────────────────────────────────
+// Direction C's signature: a two digit number, an uppercase name and an ink
+// rule under both. `right` is optional trailing text (a count, A-Z).
+const SectionHeader = ({ n, name, right, t, style, id, as: Tag = 'h2' }) => (
+  <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, padding: '20px 0 8px', borderBottom: `1.5px solid ${t.ink}`, ...style }}>
+    <span aria-hidden="true" style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: t.textSecondary, flexShrink: 0 }}>
+      {String(n).padStart(2, '0')}
+    </span>
+    <Tag id={id} style={{ flex: 1, minWidth: 0, margin: 0, fontFamily: SANS, fontSize: 11.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.14em', color: t.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      {name}
+    </Tag>
+    {right != null && (
+      <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: t.textSecondary, flexShrink: 0 }}>{right}</span>
+    )}
+  </div>
+);
+
+// The line above every page title: store and sync on the list, the count on
+// Recipes, the list name on Settings.
+const contextLineStyle = (t) => ({
+  fontFamily: SANS, fontSize: 11, fontWeight: 700, textTransform: 'uppercase',
+  letterSpacing: '0.14em', color: t.ink, margin: 0
+});
+
+const pageTitleStyle = (t) => ({
+  fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(44px, 14vw, 60px)',
+  lineHeight: 1, letterSpacing: '-0.015em', color: t.ink, margin: 0
+});
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 // Math.random().toString(36).substr(2, 6) can return fewer than 6 characters
@@ -894,13 +947,13 @@ const ObSpecimen = ({ children }) => (
   </div>
 );
 
-// The app's own card: secondary paper, hairline border, soft shadow.
+// The app's own frame: secondary paper, a 1px border, no shadow.
 const ObCard = ({ t, children, style }) => (
   <div
     style={{
       width: 300, maxWidth: '100%', boxSizing: 'border-box', textAlign: 'left',
-      backgroundColor: t.bgSecondary, border: `1.5px solid ${t.border}`,
-      borderRadius: 20, boxShadow: t.cardShadow, padding: 18,
+      backgroundColor: t.bgSecondary, border: `1px solid ${t.border}`,
+      borderRadius: 18, padding: 18,
       ...style
     }}
   >
@@ -921,52 +974,49 @@ const ObCaption = ({ t, weight = 600, children }) => (
 );
 
 const obEyebrow = (t) => ({
-  fontSize: 11, fontWeight: 700, letterSpacing: '0.13em',
-  textTransform: 'uppercase', color: t.textSecondary
+  fontSize: 11, fontWeight: 800, letterSpacing: '0.14em',
+  textTransform: 'uppercase', color: t.ink
 });
 
 // An unticked item ring, at the size the aisle list draws it.
-const ObRing = ({ t, size = 18 }) => (
-  <span style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box', border: `2px solid ${t.ink}` }} />
+const ObRing = ({ t, size = 22 }) => (
+  <span style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box', border: `1.5px solid ${t.ink}` }} />
 );
 
-// Crumbs plus the house that closes them. The house is unlit here on
-// purpose: an unfinished trail has an unlit house, which is what TrailHome
-// draws when lit is false.
-const ObTrail = ({ t, dots, size = 13, houseSize = 30 }) => (
-  <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-    {dots.map((filled, i) => (
-      <span
-        key={i}
-        style={{
-          width: size, height: size, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box',
-          backgroundColor: filled ? YELLOW : 'transparent',
-          border: filled ? '2px solid transparent' : `2px solid ${t.textTertiary}`
-        }}
-      />
-    ))}
-    <span style={{ display: 'flex', marginLeft: 4 }}><TrailHome lit={false} t={t} size={houseSize} /></span>
+// One crumb, drawn the way CrumbTrail draws it: yellow while still to get,
+// paper once picked up, an ink ring either way.
+const ObCrumb = ({ t, toGet, size }) => (
+  <span
+    style={{
+      position: 'relative', width: size, height: size, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box',
+      backgroundColor: toGet ? YELLOW : t.bg, border: `1px solid ${t.ink}`
+    }}
+  />
+);
+
+// Crumbs joined by the hairline, then the house that closes them. `dots`
+// lists each crumb as still to get (true) or picked up (false).
+const ObTrail = ({ t, dots, size = 13, houseSize = 30, lit = false }) => (
+  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 7 }}>
+      <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 1, backgroundColor: t.borderLight }} />
+      {dots.map((toGet, i) => <ObCrumb key={i} t={t} toGet={toGet} size={size} />)}
+    </span>
+    <span style={{ display: 'flex', marginLeft: 2 }}><TrailHome lit={lit} t={t} size={houseSize} /></span>
   </span>
 );
 
-// Card 19 is the one place the opposite theme's tokens are used
-// deliberately, because it has to show both palettes at once.
-const ObPaletteSnapshot = ({ palette, label }) => (
-  <div style={{ width: 130, borderRadius: 18, padding: 14, backgroundColor: palette.bg, border: `1.5px solid ${palette.border}`, boxSizing: 'border-box' }}>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW }} />
-      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
-      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
-      <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '-0.01em', color: palette.ink, marginLeft: 3 }}>Breadcrumbs</span>
-    </div>
-    <div style={{ height: 7, borderRadius: 9999, backgroundColor: palette.bgTertiary, marginBottom: 7 }} />
-    <div style={{ height: 7, width: '70%', borderRadius: 9999, backgroundColor: palette.bgTertiary, marginBottom: 14 }} />
-    <div style={{ height: 24, borderRadius: 9999, backgroundColor: YELLOW }} />
-    <div style={{ ...obEyebrow(palette), textAlign: 'center', marginTop: 12 }}>{label}</div>
+// A radio row as Settings draws it.
+const ObRadioRow = ({ t, label, on, last }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 46, borderBottom: last ? 'none' : `1px solid ${t.borderLight}` }}>
+    <span style={{ width: 20, height: 20, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0, border: `1.5px solid ${t.ink}`, backgroundColor: on ? YELLOW : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {on && <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#1c1917' }} />}
+    </span>
+    <span style={{ fontSize: 15, fontWeight: 500, color: t.ink }}>{label}</span>
   </div>
 );
 
-// The twenty cards. Copy only: the picture beside each one is chosen by
+// The fifteen cards. Copy only: the picture beside each one is chosen by
 // index in ObSpecimenFor below.
 const OB_CARDS = [
   {
@@ -984,12 +1034,7 @@ const OB_CARDS = [
   {
     kicker: 'The list',
     title: 'Every item finds its aisle',
-    body: 'Breadcrumbs recognises around nine hundred grocery words, so milk goes to Dairy and coriander goes to Fruits and Vegetables without you saying so. Twenty aisles, in the order a supermarket actually runs.'
-  },
-  {
-    kicker: 'The list',
-    title: 'Correct it once and it stays corrected',
-    body: 'Something in the wrong aisle? Hold your finger on it and choose where it belongs. Breadcrumbs remembers that choice, so the next time you add it the fix is already in place.'
+    body: 'Breadcrumbs recognises around nine hundred grocery words, so milk goes to Dairy and coriander goes to Fruits and Vegetables without you saying so. Something in the wrong aisle? Hold your finger on it and choose where it belongs. The fix sticks for next time.'
   },
   {
     kicker: 'The list',
@@ -1004,12 +1049,7 @@ const OB_CARDS = [
   {
     kicker: 'Together',
     title: 'One list, everyone in the house',
-    body: 'Every list has a six character code. Share it with whoever shops with you and they are in, with no account and no sign up. Add bread at home and it appears in their hand in the shop.'
-  },
-  {
-    kicker: 'Together',
-    title: 'No signal, no problem',
-    body: 'Breadcrumbs keeps working in the far corner of the shop where your phone gives up. Tick things off, add things, carry on. The pill at the top reads Live or Offline, and everything you did syncs the moment you are back.'
+    body: 'Every list has a six character code. Share it with whoever shops with you and they are in, with no account and no sign up. It keeps working where your phone has no signal, and everything syncs the moment you are back.'
   },
   {
     kicker: 'Your shops',
@@ -1019,7 +1059,7 @@ const OB_CARDS = [
   {
     kicker: 'Your shops',
     title: 'Meals, not ingredients',
-    body: 'Save a recipe once with everything it needs, then send the lot to your list in a single tap. There is a notes field too, for where the recipe actually lives, like page 74 of the yellow cookbook.'
+    body: 'On the Recipes tab, the yellow button adds a recipe. Paste a link and the ingredients arrive sorted into aisles, or write it yourself. Then send the lot to your list in a single tap.'
   },
   {
     kicker: 'The trail',
@@ -1034,22 +1074,12 @@ const OB_CARDS = [
   {
     kicker: 'Finishing',
     title: 'Finish the shop, not just the list',
-    body: 'Once you are past halfway, the add button becomes Finish shop. Press it on the way to the car and Breadcrumbs writes that shop down: what you carried home, how many aisles, and how long you were in there.'
-  },
-  {
-    kicker: 'Finishing',
-    title: 'Home stocked',
-    body: 'Every finished shop gets a screen of its own. Items, aisles, minutes in store, and one plain line comparing it with last time. Three seconds and it steps out of your way.'
+    body: 'Once you are past halfway, the add button on your list becomes Finish shop. Press it on the way to the car and Breadcrumbs writes that shop down: what you carried home, how many aisles, and how long you were in there. One plain line compares it with last time.'
   },
   {
     kicker: 'Your history',
     title: 'Where it all goes',
-    body: 'Choose a week, a month or a year and Breadcrumbs says it in plain English. Three shops last month, and a hundred and twelve items carried home. Under that, the aisles you feed most and the day your shop really happens.'
-  },
-  {
-    kicker: 'Your history',
-    title: 'Every shop this year, in dots',
-    body: 'Twelve columns, one for each month, and a crumb for every shop you finished. Tap any dot to open that shop again and see exactly what came home.'
+    body: 'Choose a week, a month or a year and Breadcrumbs says it in plain English. Three shops last month, and a hundred and twelve items carried home. Every shop this year sits in a grid of dots, and any one of them opens again with a tap.'
   },
   {
     kicker: 'Your history',
@@ -1062,11 +1092,6 @@ const OB_CARDS = [
     body: 'After a handful of shops, Breadcrumbs starts offering your usuals when the list is nearly empty. It leans on what you bought on this day of the week, because Thursday you and Saturday you buy different things.'
   },
   {
-    kicker: 'Settings',
-    title: 'Light, dark, or whatever your phone is doing',
-    body: 'There is a full dark version of everything here. Choose light, choose dark, or let it follow your phone.'
-  },
-  {
     kicker: 'Ready',
     title: 'That is everything',
     lede: 'Start with one thing you need and let the trail take care of the rest.',
@@ -1075,9 +1100,8 @@ const OB_CARDS = [
   }
 ];
 
-const OB_STORES = ["Tesco", "Sainsbury's", 'Aldi', 'Waitrose', 'Lidl', 'Co-op'];
+const OB_STORES = ["Tesco", "Sainsbury's", 'Aldi', 'Waitrose'];
 const OB_WEEKDAY_SHADES = [1, 2, 1, 0, 1, 2, 1];
-const OB_YEAR_COUNTS = [2, 1, 3, 2, 4, 2, 1, 3, 2, 2, 1, 3];
 
 const ObSpecimenFor = ({ index, t, listCode }) => {
   switch (index) {
@@ -1098,16 +1122,16 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
       return (
         <ObSpecimen>
           <div style={{ width: 300, maxWidth: '100%' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 7px 7px 15px', borderRadius: 9999, border: `1.5px solid ${t.border}`, backgroundColor: t.bgSecondary }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 6px 6px 16px', borderRadius: 9999, border: `1px solid ${t.border}`, backgroundColor: t.field }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textSecondary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 5v14M5 12h14" />
               </svg>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, color: t.ink }}>oat milk</span>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 500, color: t.ink }}>oat milk</span>
               <span style={{ padding: '9px 17px', borderRadius: 9999, backgroundColor: YELLOW, color: '#1c1917', fontSize: 13, fontWeight: 700 }}>Add</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, marginTop: 16 }}>
               <span style={obEyebrow(t)}>Dairy &amp; Eggs</span>
-              <ObTick color={YELLOW} size={13} />
+              <ObTick color={t.ink} size={13} />
             </div>
           </div>
         </ObSpecimen>
@@ -1122,17 +1146,14 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
       ];
       return (
         <ObSpecimen>
-          <ObCard t={t}>
+          <ObCard t={t} style={{ padding: '0 16px 6px' }}>
             {aisles.map(([name, entries], i) => (
-              <div key={name} style={{ marginTop: i === 0 ? 0 : 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ ...obEyebrow(t), whiteSpace: 'nowrap' }}>{name}</span>
-                  <span style={{ flex: 1, height: 1.5, backgroundColor: t.borderLight }} />
-                </div>
-                {entries.map((entry) => (
-                  <div key={entry} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 0 0' }}>
-                    <ObRing t={t} />
-                    <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', color: t.ink }}>{entry}</span>
+              <div key={name}>
+                <SectionHeader as="div" n={i + 1} name={name} t={t} style={{ padding: i === 0 ? '14px 0 7px' : '16px 0 7px' }} />
+                {entries.map((entry, j) => (
+                  <div key={entry} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 42, borderBottom: j === entries.length - 1 ? 'none' : `1px solid ${t.borderLight}` }}>
+                    <ObRing t={t} size={20} />
+                    <span style={{ fontSize: 15, fontWeight: 500, color: t.ink }}>{entry}</span>
                   </div>
                 ))}
               </div>
@@ -1142,43 +1163,17 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
       );
     }
 
-    // 4. The long press sheet, top portion only.
-    case 3: {
-      const rows = [
-        ['Sauces & Condiments', false],
-        ['Spices & Seasonings', true],
-        ['Snacks & Confectionery', false]
-      ];
-      return (
-        <ObSpecimen>
-          <ObCard t={t} style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 18px', borderBottom: `1.5px solid ${t.border}` }}>
-              <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.015em', color: t.ink }}>Move "bay leaves" to</span>
-            </div>
-            <div style={{ padding: '2px 18px 14px' }}>
-              {rows.map(([name, current]) => (
-                <div key={name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: `1.5px solid ${t.borderLight}` }}>
-                  <span style={{ fontSize: 15, fontWeight: current ? 700 : 600, color: t.ink }}>{name}</span>
-                  {current && <ObTick color={YELLOW} size={17} />}
-                </div>
-              ))}
-            </div>
-          </ObCard>
-        </ObSpecimen>
-      );
-    }
-
-    // 5. The quantity editor, open, exactly as the aisle row draws it.
-    case 4:
+    // 4. The quantity editor, open, exactly as the aisle row draws it.
+    case 3:
       return (
         <ObSpecimen>
           <ObCard t={t}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box', border: `2.5px solid ${t.ink}` }} />
-              <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em', whiteSpace: 'nowrap', color: t.ink }}>Tinned soup</span>
+              <ObRing t={t} />
+              <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500, whiteSpace: 'nowrap', color: t.ink }}>Tinned soup</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: t.bgTertiary, color: t.ink, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</span>
-                <span style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, width: 24, textAlign: 'center', color: t.ink }}>3</span>
+                <span style={{ fontSize: 14, fontWeight: 600, fontFamily: MONO, width: 24, textAlign: 'center', color: t.ink }}>3</span>
                 <span style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: t.bgTertiary, color: t.ink, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</span>
                 <span style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: YELLOW, marginLeft: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <ObTick color="#1c1917" size={13} width={3.4} />
@@ -1186,16 +1181,16 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
               </span>
             </div>
           </ObCard>
-          <ObCaption t={t}>At rest it is just <span style={{ fontFamily: MONO, fontWeight: 700 }}>&times;3</span></ObCaption>
+          <ObCaption t={t}>At rest it is just <span style={{ fontFamily: MONO, fontWeight: 600 }}>&times;3</span></ObCaption>
         </ObSpecimen>
       );
 
-    // 6. Hide done: off, then on.
-    case 5:
+    // 5. Hide done: off, then on.
+    case 4:
       return (
         <ObSpecimen>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: t.bgTertiary, color: t.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 48, height: 48, borderRadius: '50%', boxSizing: 'border-box', border: `1px solid ${t.border}`, color: t.ink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
               </svg>
@@ -1203,7 +1198,7 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
-            <span style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: t.ink, color: t.accentOnInk, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: t.capsule, boxShadow: t.shadowCapsule, color: t.ink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
                 <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
@@ -1214,60 +1209,41 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
         </ObSpecimen>
       );
 
-    // 7. The share code.
-    case 6:
+    // 6. The share code, as Settings shows it.
+    case 5:
       return (
         <ObSpecimen>
-          <div style={{ padding: '12px 26px', borderRadius: 9999, border: `2px solid ${t.ink}`, color: t.ink, fontFamily: MONO, fontSize: 24, fontWeight: 700, letterSpacing: '0.16em' }}>
-            {listCode || 'ABC123'}
-          </div>
+          <ObCard t={t} style={{ padding: '14px 16px' }}>
+            <p style={{ ...obEyebrow(t), fontSize: 10, color: t.textSecondary, margin: '0 0 4px' }}>Share code</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+              <span style={{ fontFamily: MONO, fontSize: 28, fontWeight: 600, letterSpacing: '0.16em', color: t.ink }}>{listCode || 'ABC123'}</span>
+              <span style={{ padding: '8px 16px', borderRadius: 9999, border: `1px solid ${t.border}`, fontSize: 12, fontWeight: 700, color: t.ink }}>Copy</span>
+            </div>
+          </ObCard>
           <ObCaption t={t}>Two people on this list</ObCaption>
         </ObSpecimen>
       );
 
-    // 8. The real sync pill, both states.
+    // 7. Store layouts, as the radio rows in Settings.
+    case 6:
+      return (
+        <ObSpecimen>
+          <ObCard t={t} style={{ padding: '2px 16px' }}>
+            {OB_STORES.map((store, i) => (
+              <ObRadioRow key={store} t={t} label={store} on={i === 0} last={i === OB_STORES.length - 1} />
+            ))}
+          </ObCard>
+        </ObSpecimen>
+      );
+
+    // 8. A saved recipe.
     case 7:
       return (
         <ObSpecimen>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <SyncPill isOnline t={t} />
-            <SyncPill isOnline={false} t={t} />
-          </div>
-        </ObSpecimen>
-      );
-
-    // 9. Store layouts.
-    case 8:
-      return (
-        <ObSpecimen>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', maxWidth: 300 }}>
-            {OB_STORES.map((store, i) => (
-              <span
-                key={store}
-                style={{
-                  padding: '10px 16px', borderRadius: 9999, fontSize: 13, fontWeight: 700,
-                  backgroundColor: i === 0 ? YELLOW : t.bgTertiary,
-                  color: i === 0 ? '#1c1917' : t.textSecondary,
-                  boxShadow: i === 0 ? t.yellowGlow : 'none'
-                }}
-              >
-                {store}
-              </span>
-            ))}
-          </div>
-        </ObSpecimen>
-      );
-
-    // 10. A saved recipe.
-    case 9:
-      return (
-        <ObSpecimen>
           <ObCard t={t}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 700, letterSpacing: '-0.01em', color: t.ink }}>Sunday Roast</span>
-              <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: t.ink }}>11</span>
-            </div>
-            <p style={{ fontSize: 13, fontWeight: 500, color: t.textSecondary, margin: '6px 0 14px' }}>pg 74, yellow cookbook</p>
+            <span style={{ display: 'block', fontFamily: SERIF, fontSize: 30, fontWeight: 400, lineHeight: 1.05, color: t.ink }}>Sunday Roast</span>
+            <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.textSecondary, margin: '6px 0 4px' }}>Serves 6 · 11 ingredients</p>
+            <p style={{ fontSize: 13, fontWeight: 500, color: t.textSecondary, margin: '0 0 14px' }}>pg 74, yellow cookbook</p>
             <div style={{ height: 44, borderRadius: 9999, backgroundColor: YELLOW, color: '#1c1917', fontSize: 13.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               Add all to list
             </div>
@@ -1275,22 +1251,22 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
         </ObSpecimen>
       );
 
-    // 11. The trail itself, four ticked off.
-    case 10:
+    // 9. The trail itself, four ticked off.
+    case 8:
       return (
         <ObSpecimen>
-          <ObTrail t={t} dots={[false, false, false, false, true, true, true, true, true]} />
+          <ObTrail t={t} dots={[true, true, true, true, true, false, false, false, false]} />
           <ObCaption t={t}>Five of nine still to get</ObCaption>
         </ObSpecimen>
       );
 
-    // 12. The same trail as a door.
-    case 11:
+    // 10. The same trail as a door.
+    case 9:
       return (
         <ObSpecimen>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 20, backgroundColor: t.bgSecondary, border: `1.5px solid ${YELLOW}`, boxShadow: t.yellowGlow }}>
-            <ObTrail t={t} dots={[false, false, true, true, true, true]} />
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 18, backgroundColor: t.bgSecondary, border: `1px solid ${t.border}` }}>
+            <ObTrail t={t} dots={[true, true, false, false, false, false]} />
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.ink} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 18l6-6-6-6" />
             </svg>
           </div>
@@ -1298,8 +1274,8 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
         </ObSpecimen>
       );
 
-    // 13. The add button once it has become Finish shop.
-    case 12:
+    // 11. The add button once it has become Finish shop.
+    case 10:
       return (
         <ObSpecimen>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, height: 54, padding: '0 26px', borderRadius: 9999, backgroundColor: YELLOW, color: '#1c1917', boxShadow: t.yellowGlow }}>
@@ -1310,22 +1286,8 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
         </ObSpecimen>
       );
 
-    // 14. The house lit, and the shop written down.
-    case 13:
-      return (
-        <ObSpecimen>
-          <TrailHome lit t={t} size={62} />
-          <div style={{ display: 'flex', gap: 8, width: 300, maxWidth: '100%', marginTop: 18 }}>
-            <StatCard value="24" label="items" t={t} />
-            <StatCard value="7" label="aisles" t={t} />
-            <StatCard value="38m" label="in store" t={t} />
-          </div>
-          <ObCaption t={t}>Three fewer items than last shop, and six minutes quicker.</ObCaption>
-        </ObSpecimen>
-      );
-
-    // 15. The two figures from the stats sheet.
-    case 14: {
+    // 12. The two figures from the stats sheet.
+    case 11: {
       const leaders = [['Dairy & Eggs', 10, 34], ['Fruits & Veg', 7, 24], ['Bakery', 4, 12]];
       return (
         <ObSpecimen>
@@ -1333,7 +1295,7 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
             <h3 style={{ ...obEyebrow(t), fontSize: 11.5, margin: '0 0 10px' }}>Where it goes</h3>
             {leaders.map(([name, filled, count]) => (
               <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
-                <span style={{ width: 96, flexShrink: 0, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', color: t.ink }}>{name}</span>
+                <span style={{ width: 96, flexShrink: 0, fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', color: t.ink }}>{name}</span>
                 <span style={{ display: 'flex', gap: 3, flex: 1, minWidth: 0 }}>
                   {Array.from({ length: 10 }).map((_, i) => (
                     <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', flexShrink: 0, backgroundColor: i < filled ? YELLOW : t.border }} />
@@ -1363,29 +1325,8 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
       );
     }
 
-    // 16. The year, one crumb per shop.
-    case 15:
-      return (
-        <ObSpecimen>
-          <div style={{ display: 'flex', gap: 3, width: 300, maxWidth: '100%' }}>
-            {MONTH_INITIALS.map((initial, m) => (
-              <div key={m} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: t.textTertiary, marginBottom: 8 }}>{initial}</span>
-                {Array.from({ length: 4 }).map((_, r) => (
-                  <span
-                    key={r}
-                    style={{ width: 8, height: 8, borderRadius: '50%', marginBottom: 9, backgroundColor: r < OB_YEAR_COUNTS[m] ? YELLOW : t.bgTertiary }}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-          <ObCaption t={t}>Twenty six shops so far. Tap a dot to open that one.</ObCaption>
-        </ObSpecimen>
-      );
-
-    // 17. Two rungs of the milestone ladder.
-    case 16: {
+    // 13. Two rungs of the milestone ladder.
+    case 12: {
       const rungs = [
         { threshold: 100, achieved: true, detail: '14 March 2026' },
         { threshold: 250, achieved: false, detail: 'Sixty one items to go' }
@@ -1397,17 +1338,18 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
               <div key={rung.threshold} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '9px 0' }}>
                 <span
                   style={{
-                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                    width: 44, height: 44, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontFamily: MONO, fontSize: 13, fontWeight: 600,
-                    backgroundColor: rung.achieved ? YELLOW : t.bgTertiary,
+                    backgroundColor: rung.achieved ? YELLOW : 'transparent',
+                    border: `1px solid ${rung.achieved ? t.ink : t.border}`,
                     color: rung.achieved ? '#1c1917' : t.textSecondary
                   }}
                 >
                   {rung.threshold}
                 </span>
                 <span style={{ minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: rung.achieved ? t.ink : t.textSecondary }}>
+                  <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: rung.achieved ? t.ink : t.textSecondary }}>
                     {milestoneName('items', rung.threshold)}
                   </span>
                   <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: t.textSecondary, marginTop: 2 }}>{rung.detail}</span>
@@ -1419,18 +1361,18 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
       );
     }
 
-    // 18. Your usuals, offered back.
-    case 17:
+    // 14. Your usuals, offered back.
+    case 13:
       return (
         <ObSpecimen>
           <ObCard t={t}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em', color: t.ink, margin: 0 }}>You usually buy these</h3>
+            <h3 style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 400, lineHeight: 1.1, color: t.ink, margin: 0 }}>You usually buy these</h3>
             <p style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.5, color: t.textSecondary, margin: '6px 0 14px' }}>
               Milk has been on three of your last four Thursday shops.
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
               {['Milk', 'Bananas', 'Coffee', 'Bin bags', 'Cheddar'].map((name) => (
-                <span key={name} style={{ padding: '8px 14px', borderRadius: 9999, border: `2px dashed ${t.textTertiary}`, fontSize: 13, fontWeight: 600, color: t.text }}>
+                <span key={name} style={{ padding: '8px 14px', borderRadius: 9999, border: `1px dashed ${t.ink}`, fontSize: 13, fontWeight: 600, color: t.ink }}>
                   {name}
                 </span>
               ))}
@@ -1439,26 +1381,12 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
         </ObSpecimen>
       );
 
-    // 19. Both palettes at once.
-    case 18:
-      return (
-        <ObSpecimen>
-          <div style={{ display: 'flex', gap: 14 }}>
-            <ObPaletteSnapshot palette={THEMES.light} label="Light" />
-            <ObPaletteSnapshot palette={THEMES.dark} label="Dark" />
-          </div>
-        </ObSpecimen>
-      );
-
-    // 20. Done. Not the house: a lit house means a finished shop.
+    // 15. Done: every crumb picked up and the house lit.
     default:
       return (
         <ObSpecimen>
-          <div style={{ width: 118, height: 118, borderRadius: '50%', backgroundColor: 'rgba(250,204,21,0.18)', border: `1.5px solid ${YELLOW}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="58" height="58" viewBox="0 0 24 24" fill="none" stroke={YELLOW} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 12.5l5.5 5.5L20 6" />
-            </svg>
-          </div>
+          <ObTrail t={t} dots={[false, false, false, false, false, false]} size={14} houseSize={34} lit />
+          <ObCaption t={t}>Every crumb picked up, and the house lit</ObCaption>
         </ObSpecimen>
       );
   }
@@ -1517,7 +1445,7 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
       className="select-none"
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
-        backgroundColor: t.bg, fontFamily: 'Inter, system-ui, sans-serif',
+        backgroundColor: t.bg, fontFamily: SANS,
         display: 'flex', flexDirection: 'column'
       }}
     >
@@ -1525,24 +1453,25 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
         .bc-ob-viewport { flex: 1 1 auto; min-height: 0; overflow: hidden; }
         .bc-ob-track { display: flex; height: 100%; width: 100%; transition: transform 320ms cubic-bezier(.2,.7,.3,1); }
         .bc-ob-screen { flex: 0 0 100%; min-width: 0; height: 100%; box-sizing: border-box; display: flex; align-items: center; justify-content: center; overflow-y: auto; padding: 12px 22px; }
-        .bc-ob-inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; width: 100%; max-width: 1000px; margin: auto; text-align: center; }
+        .bc-ob-inner { display: flex; flex-direction: column; align-items: stretch; justify-content: center; gap: 30px; width: 100%; max-width: 1000px; margin: auto; text-align: left; }
         .bc-ob-text { flex: 0 0 auto; min-width: 0; }
-        .bc-ob-kicker { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.13em; color: ${t.textSecondary}; margin: 0 0 10px; }
-        .bc-ob-title { font-size: clamp(28px, 7vw, 30px); font-weight: 800; line-height: 1.05; letter-spacing: -0.035em; color: ${t.ink}; margin: 0; }
-        .bc-ob-title-hero { font-size: 40px; line-height: 1.02; letter-spacing: -0.02em; }
-        .bc-ob-lede { font-size: 15px; font-weight: 700; color: ${t.text}; margin: 14px 0 0; }
-        .bc-ob-body { font-size: 15px; font-weight: 500; line-height: 1.6; color: ${t.text}; max-width: 40ch; margin: 14px auto 0; }
-        .bc-ob-note { font-size: 12.5px; font-weight: 500; line-height: 1.5; color: ${t.textSecondary}; max-width: 40ch; margin: 16px auto 0; }
+        .bc-ob-kicker { display: flex; align-items: baseline; gap: 10px; padding-bottom: 8px; border-bottom: 1.5px solid ${t.ink}; margin: 0 0 16px; }
+        .bc-ob-num { font-family: ${MONO}; font-size: 11px; font-weight: 600; color: ${t.textSecondary}; }
+        .bc-ob-kicker-name { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: ${t.ink}; }
+        .bc-ob-title { font-family: ${SERIF}; font-size: clamp(34px, 9vw, 40px); font-weight: 400; line-height: 1.04; letter-spacing: -0.01em; color: ${t.ink}; margin: 0; }
+        .bc-ob-title-hero { font-size: 60px; line-height: 1; }
+        .bc-ob-lede { font-size: 15.5px; font-weight: 700; line-height: 1.45; color: ${t.text}; margin: 14px 0 0; }
+        .bc-ob-body { font-size: 15.5px; font-weight: 400; line-height: 1.55; color: ${t.text}; max-width: 42ch; margin: 14px 0 0; }
+        .bc-ob-note { font-size: 12.5px; font-weight: 500; line-height: 1.5; color: ${t.textSecondary}; max-width: 42ch; margin: 16px 0 0; }
         @media (min-width: 768px) {
-          .bc-ob-inner { flex-direction: row; flex-wrap: wrap; gap: clamp(26px, 4vw, 60px); text-align: left; }
+          .bc-ob-inner { flex-direction: row; flex-wrap: wrap; align-items: center; gap: clamp(26px, 4vw, 60px); }
           /* Only once the columns sit side by side does the basis apply
              to the width; in the phone's column it would set a height. */
           .bc-ob-text { flex: 1 1 340px; }
-          .bc-ob-title { font-size: clamp(30px, 5vw, 46px); }
-          .bc-ob-title-hero { font-size: clamp(40px, 6vw, 56px); }
+          .bc-ob-title { font-size: clamp(40px, 5vw, 52px); }
+          .bc-ob-title-hero { font-size: clamp(52px, 6vw, 60px); }
           .bc-ob-lede { font-size: 17px; }
-          .bc-ob-body { font-size: 18px; max-width: 52ch; margin-left: 0; margin-right: 0; }
-          .bc-ob-note { margin-left: 0; margin-right: 0; }
+          .bc-ob-body { font-size: 17px; max-width: 52ch; }
         }
         /* A phone on its side has no vertical room, so the ramp and the
            specimen come down rather than the screen scrolling. The shrink is
@@ -1551,8 +1480,8 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
         @media (max-height: 520px) {
           .bc-ob-screen { padding: 10px 20px; }
           .bc-ob-inner { gap: 16px; }
-          .bc-ob-kicker { margin-bottom: 6px; }
-          .bc-ob-title, .bc-ob-title-hero { font-size: clamp(24px, 5vw, 30px); }
+          .bc-ob-kicker { margin-bottom: 8px; padding-bottom: 5px; }
+          .bc-ob-title, .bc-ob-title-hero { font-size: clamp(26px, 5vw, 32px); }
           .bc-ob-lede { font-size: 14px; margin-top: 8px; }
           .bc-ob-body { font-size: 13.5px; line-height: 1.5; margin-top: 8px; }
           .bc-ob-note { margin-top: 10px; }
@@ -1574,7 +1503,7 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
             <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW }} />
             <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW }} />
           </span>
-          <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '-0.01em', color: t.ink }}>Breadcrumbs</span>
+          <span style={{ fontFamily: SERIF, fontSize: 20, fontWeight: 400, lineHeight: 1, color: t.ink }}>Breadcrumbs</span>
         </div>
         <button
           onClick={skip}
@@ -1603,7 +1532,10 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
               <div className="bc-ob-inner">
                 <ObSpecimenFor index={i} t={t} listCode={listCode} />
                 <div className="bc-ob-text">
-                  <p className="bc-ob-kicker">{card.kicker}</p>
+                  <p className="bc-ob-kicker">
+                    <span className="bc-ob-num">{String(i + 1).padStart(2, '0')}</span>
+                    <span className="bc-ob-kicker-name">{card.kicker}</span>
+                  </p>
                   <h2 className={card.hero ? 'bc-ob-title bc-ob-title-hero' : 'bc-ob-title'}>{card.title}</h2>
                   {card.lede && <p className="bc-ob-lede">{card.lede}</p>}
                   {card.body && <p className="bc-ob-body">{card.body}</p>}
@@ -1622,14 +1554,14 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
               <span
                 key={card.title}
                 style={{
-                  height: 6, width: i === index ? 22 : 8, borderRadius: 9999, flexShrink: 0,
-                  backgroundColor: i === index ? YELLOW : t.border,
+                  height: 6, width: i === index ? 22 : 7, borderRadius: 9999, flexShrink: 0,
+                  backgroundColor: i === index ? YELLOW : t.borderLight,
                   transition: 'width 200ms ease, background-color 200ms ease'
                 }}
               />
             ))}
           </div>
-          <span aria-live="polite" style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: t.textTertiary, flexShrink: 0 }}>
+          <span aria-live="polite" style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: t.textSecondary, flexShrink: 0 }}>
             {index + 1} of {total}
           </span>
         </div>
@@ -1641,8 +1573,8 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
             className="bc-press"
             style={{
               flex: '0 1 112px', height: 54, borderRadius: 9999,
-              border: `1.5px solid ${t.border}`, backgroundColor: 'transparent',
-              fontSize: 13.5, fontWeight: 700, color: t.textSecondary,
+              border: `1px solid ${t.border}`, backgroundColor: 'transparent',
+              fontSize: 13.5, fontWeight: 700, color: t.ink,
               opacity: index === 0 ? 0.45 : 1
             }}
           >
@@ -1676,67 +1608,98 @@ const Toast = ({ message, visible, t }) => {
   );
 };
 
-// Bottom Navigation — full-width paper bar, a crumb above the active label
-const BottomNav = ({ activeTab, onTabChange, t }) => {
-  const tabs = [
-    { id: 'list', label: 'List' },
-    { id: 'recipes', label: 'Recipes' },
-    { id: 'settings', label: 'Settings' },
-  ];
+// Bottom navigation: a floating glass pill of three serif words, with the
+// + beside it. One capsule slides behind the active word. The + belongs to
+// the page it sits on: `onPlus` is what it does there, `plusLabel` names it,
+// and `finishing` turns its glyph into the flag. Without `onPlus` the pill
+// takes the full width and no + is drawn.
+const NAV_TABS = [
+  { id: 'list', label: 'List' },
+  { id: 'recipes', label: 'Recipes' },
+  { id: 'settings', label: 'Settings' },
+];
+
+const BottomNav = ({ activeTab, onTabChange, t, onPlus = null, plusLabel = 'Add item', finishing = false }) => {
+  const activeIndex = Math.max(0, NAV_TABS.findIndex(tab => tab.id === activeTab));
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50"
-      style={{ backgroundColor: t.bg, borderTop: `1.5px solid ${t.border}` }}
+      className="bc-nav"
+      style={{ position: 'fixed', left: 20, right: 20, bottom: NAV_BOTTOM, zIndex: 50, display: 'flex', alignItems: 'center', gap: 10 }}
     >
-      <div style={{ display: 'flex', paddingTop: 11, paddingBottom: 'max(34px, calc(env(safe-area-inset-bottom, 0px) + 8px))' }}>
-        {tabs.map(tab => {
+      <nav
+        aria-label="Main"
+        style={{
+          position: 'relative', flex: 1, minWidth: 0, height: 58, padding: 5, boxSizing: 'border-box',
+          display: 'flex', borderRadius: 9999,
+          background: t.glass, backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          border: `1px solid ${t.glassEdge}`, boxShadow: t.shadowFloat
+        }}
+      >
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute', top: 5, bottom: 5, left: 5, width: 'calc((100% - 10px) / 3)', borderRadius: 9999,
+            background: t.capsule, boxShadow: t.shadowCapsule,
+            transform: `translateX(${activeIndex * 100}%)`, transition: 'transform 200ms cubic-bezier(0.22,1,0.36,1)'
+          }}
+        />
+        {NAV_TABS.map(tab => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => { triggerHaptic('light'); onTabChange(tab.id); }}
-              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+              aria-current={isActive ? 'page' : undefined}
+              style={{
+                position: 'relative', zIndex: 1, flex: 1, minWidth: 0, height: '100%', borderRadius: 9999,
+                background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontFamily: SERIF, fontSize: 22, fontWeight: 400, lineHeight: 1,
+                color: isActive ? t.ink : t.textTicked, transition: 'color 0.2s ease'
+              }}
             >
-              <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: isActive ? YELLOW : 'transparent', transition: 'background-color 0.2s ease' }} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: isActive ? t.ink : t.textTertiary, transition: 'color 0.2s ease' }}>{tab.label}</span>
+              {tab.label}
             </button>
           );
         })}
-      </div>
+      </nav>
+      {onPlus && (
+        <button
+          onClick={() => { triggerHaptic('light'); onPlus(); }}
+          className="bc-fab"
+          aria-label={finishing ? 'Finish shop' : plusLabel}
+          style={{
+            width: 58, height: 58, borderRadius: '50%', flexShrink: 0,
+            backgroundColor: YELLOW, border: 'none', boxShadow: t.yellowGlow,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', padding: 0, lineHeight: 1,
+            transition: 'transform 0.15s cubic-bezier(0.175,0.885,0.32,1.275)',
+          }}
+          onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.92)'; }}
+          onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+        >
+          <FinishGlyph finishing={finishing} color="#1c1917" />
+        </button>
+      )}
     </div>
   );
 };
 
-// Nav glyphs — desktop only. The bottom bar keeps its crumb-and-label
-// treatment untouched; a 264px rail has room for icons, the phone bar doesn't.
-const NAV_ICON_PATHS = {
-  list: <><path d="M9 6h11M9 12h11M9 18h11" /><path d="M3.5 6l1.4 1.4L7.5 4.8" /><path d="M3.5 12l1.4 1.4 2.6-2.6" /><path d="M3.5 18l1.4 1.4 2.6-2.6" /></>,
-  recipes: <><path d="M4 4.5A1.5 1.5 0 015.5 3H20v15.5H5.5A1.5 1.5 0 004 20V4.5z" /><path d="M4 17.5h16" /><path d="M9 7.5h6" /></>,
-  settings: <><path d="M4 21v-6M4 11V3M12 21v-9M12 8V3M20 21v-4M20 13V3" /><path d="M1.5 15h5M9.5 8h5M17.5 17h5" /></>,
-};
-
-const NavIcon = ({ id, size = 18, color }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'stroke 0.2s ease' }}>
-    {NAV_ICON_PATHS[id]}
-  </svg>
-);
-
-// Sync status — this is where the loose yellow dot from the old header ends
-// up: a live indicator sitting next to the word it explains.
+// Sync status: a live dot sitting next to the word it explains.
 const SyncPill = ({ isOnline, t }) => (
   <div
     className="bc-sync-pill"
     style={{
       display: 'inline-flex', alignItems: 'center', gap: 8,
       padding: '7px 12px', borderRadius: 9999,
-      border: `1.5px solid ${t.border}`, backgroundColor: t.bgSecondary,
+      border: `1px solid ${t.border}`, backgroundColor: t.bgSecondary,
     }}
   >
     <span
       className={isOnline ? 'sync-pulse' : ''}
-      style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: isOnline ? YELLOW : t.textTertiary, flexShrink: 0 }}
+      style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: isOnline ? t.ink : t.textTertiary, flexShrink: 0 }}
     />
-    <span style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.04em', color: isOnline ? t.text : t.textSecondary }}>
+    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: isOnline ? t.ink : t.textSecondary }}>
       {isOnline ? 'Live' : 'Offline'}
     </span>
   </div>
@@ -1774,12 +1737,12 @@ const DesktopSidebar = ({
           <div className="breathe-2" style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
           <div className="breathe-3" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
         </div>
-        <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.025em', color: ink }}>Breadcrumbs</span>
+        <span style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 400, lineHeight: 1, color: ink }}>Breadcrumbs</span>
       </div>
 
       {/* The list you're on, and the code that shares it */}
       <div style={{ padding: '0 16px 16px' }}>
-        <div style={{ borderRadius: 16, border: `1.5px solid ${t.border}`, backgroundColor: t.bgSecondary, padding: '13px 14px', boxShadow: t.cardShadow }}>
+        <div style={{ borderRadius: 16, border: `1px solid ${t.border}`, backgroundColor: t.bgSecondary, padding: '13px 14px' }}>
           <p style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.textTertiary, margin: '0 0 5px' }}>Current list</p>
           <p className="truncate" style={{ fontSize: 14.5, fontWeight: 700, letterSpacing: '-0.015em', color: ink, margin: '0 0 11px' }}>
             {listName || 'Breadcrumbs'}
@@ -1814,17 +1777,16 @@ const DesktopSidebar = ({
               aria-current={isActive ? 'page' : undefined}
               style={{
                 display: 'flex', alignItems: 'center', gap: 11, width: '100%',
-                padding: '11px 12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                padding: '9px 14px', borderRadius: 9999, border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', textAlign: 'left',
-                backgroundColor: isActive ? t.bgTertiary : 'transparent',
-                transition: 'background-color 0.18s ease',
+                backgroundColor: isActive ? t.capsule : 'transparent',
+                boxShadow: isActive ? t.shadowCapsule : 'none',
+                transition: 'background-color 0.18s ease, box-shadow 0.18s ease',
               }}
             >
-              <span style={{ width: 5, height: 5, borderRadius: '50%', flexShrink: 0, backgroundColor: isActive ? YELLOW : 'transparent', transition: 'background-color 0.2s ease' }} />
-              <NavIcon id={tab.id} color={isActive ? ink : t.textTertiary} />
-              <span style={{ flex: 1, fontSize: 14, fontWeight: isActive ? 700 : 600, color: isActive ? ink : t.textSecondary, transition: 'color 0.2s ease' }}>{tab.label}</span>
+              <span style={{ flex: 1, fontFamily: SERIF, fontSize: 20, fontWeight: 400, lineHeight: 1.2, color: isActive ? ink : t.textTicked, transition: 'color 0.2s ease' }}>{tab.label}</span>
               {tab.badge != null && (
-                <span style={{ fontSize: 11, fontWeight: 700, fontFamily: MONO, color: isActive ? ink : t.textTertiary, backgroundColor: isActive ? YELLOW : t.bgTertiary, borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, fontFamily: MONO, color: t.textSecondary, flexShrink: 0 }}>
                   {tab.badge}
                 </span>
               )}
@@ -1867,7 +1829,7 @@ const DesktopSidebar = ({
                     backgroundColor: isActive ? t.bgTertiary : 'transparent',
                   }}
                 >
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, backgroundColor: isActive ? YELLOW : t.border }} />
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, backgroundColor: isActive ? ink : t.border }} />
                   <span className="truncate" style={{ fontSize: 13, fontWeight: isActive ? 700 : 600, color: isActive ? ink : t.textSecondary }}>{layout.name}</span>
                 </button>
               );
@@ -1997,7 +1959,7 @@ const useElementWidth = () => {
   return [ref, width];
 };
 
-// Crumb-trail home — accent stroke over a soft accent fill once the last
+// Crumb-trail home: accent stroke over a soft accent fill once the last
 // item is ticked, text-tertiary until then.
 const TrailHome = ({ lit, t, size = 17 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={lit ? 'rgba(250,204,21,0.22)' : 'none'} stroke={lit ? YELLOW : t.textTertiary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transition: 'stroke 0.3s ease, fill 0.3s ease' }}>
@@ -2005,16 +1967,17 @@ const TrailHome = ({ lit, t, size = 17 }) => (
   </svg>
 );
 
-// The house closes the trail, so the width it occupies comes out of the
-// space the dots are laid into.
+// The house and the count beside it close the trail, so the width they
+// occupy comes out of the space the dots are laid into.
 const HOUSE_SLOT = 48;
+const COUNT_SLOT = 64;
 
 const CrumbTrail = ({ items, t, onOpen }) => {
   const [ref, width] = useElementWidth();
   const total = items.length;
   const remaining = items.filter((i) => !i.checked).length;
   const complete = total > 0 && remaining === 0;
-  const { dot, gap, rows, perRow } = trailMetrics((width || 300) - HOUSE_SLOT, total);
+  const { dot, gap, rows, perRow } = trailMetrics((width || 300) - HOUSE_SLOT - COUNT_SLOT, total);
   const rowItems = rows === 2 ? [items.slice(0, perRow), items.slice(perRow)] : [items];
 
   return (
@@ -2025,17 +1988,19 @@ const CrumbTrail = ({ items, t, onOpen }) => {
       aria-label={`${remaining} of ${total} ${plural(total, 'item', 'items')} still to get. Open your trail.`}
       style={{ display: 'flex', alignItems: 'center', width: '100%', minHeight: 44, background: 'none', border: 'none', padding: '8px 0', cursor: 'pointer' }}
     >
-      <div aria-hidden="true" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
+      <div aria-hidden="true" style={{ flex: '0 1 auto', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
         {rowItems.map((row, rowIndex) => (
-          <div key={rowIndex} style={{ display: 'flex', alignItems: 'center', gap }}>
+          <div key={rowIndex} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap, alignSelf: 'flex-start' }}>
+            {/* The hairline that joins one row of crumbs. */}
+            <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 1, marginTop: -0.5, backgroundColor: t.borderLight }} />
             {row.map((item) => (
               <span
                 key={item.id}
                 style={{
-                  width: dot, height: dot, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0,
-                  backgroundColor: item.checked ? 'transparent' : YELLOW,
-                  border: `1.5px solid ${item.checked ? t.border : 'transparent'}`,
-                  transition: 'background-color 0.25s ease, border-color 0.25s ease'
+                  position: 'relative', width: dot, height: dot, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0,
+                  backgroundColor: item.checked ? t.bg : YELLOW,
+                  border: `1px solid ${t.ink}`,
+                  transition: 'background-color 0.25s ease'
                 }}
               />
             ))}
@@ -2043,7 +2008,10 @@ const CrumbTrail = ({ items, t, onOpen }) => {
         ))}
       </div>
       <span aria-hidden="true" style={{ display: 'flex', marginLeft: 10, flexShrink: 0 }}>
-        <TrailHome lit={complete} t={t} size={26} />
+        <TrailHome lit={complete} t={t} size={20} />
+      </span>
+      <span aria-hidden="true" style={{ fontFamily: MONO, fontSize: 12, fontWeight: 600, color: t.textSecondary, marginLeft: 10, flexShrink: 0, whiteSpace: 'nowrap', fontFeatureSettings: '"tnum"' }}>
+        {remaining} LEFT
       </span>
     </button>
   );
@@ -2198,7 +2166,7 @@ const rhythmSentence = (weekdays, shops) => {
   if (!shops) return '';
   const best = weekdays.indexOf(Math.max(...weekdays));
   const share = weekdays[best] / shops;
-  if (share < 0.28) return 'No day really owns it — you shop when you need to.';
+  if (share < 0.28) return 'No day really owns it. You shop when you need to.';
   return `${WEEKDAY_NAMES[best]} is your shop. ${sharePhrase(share)} lands then.`;
 };
 
@@ -2284,12 +2252,11 @@ const StatCard = ({ value, label, t, quiet }) => (
     style={{
       flex: 1, minWidth: 0, textAlign: 'center', borderRadius: 20, padding: quiet ? '15px 8px' : '17px 10px',
       backgroundColor: quiet ? t.bgTertiary : t.bgSecondary,
-      border: quiet ? 'none' : `1.5px solid ${t.border}`,
-      boxShadow: quiet ? 'none' : t.cardShadow
+      border: quiet ? 'none' : `1px solid ${t.border}`
     }}
   >
-    <div style={{ fontFamily: MONO, fontSize: quiet ? 24 : 26, fontWeight: 700, letterSpacing: '-0.02em', color: t.ink, fontFeatureSettings: '"tnum"' }}>{value}</div>
-    <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary, marginTop: 6 }}>{label}</div>
+    <div style={{ fontFamily: MONO, fontSize: quiet ? 24 : 26, fontWeight: 600, letterSpacing: '-0.02em', color: t.ink, fontFeatureSettings: '"tnum"' }}>{value}</div>
+    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.textSecondary, marginTop: 6 }}>{label}</div>
   </div>
 );
 
@@ -2320,8 +2287,8 @@ const BottomSheet = ({ onClose, t, children, labelledBy }) => {
         aria-labelledby={labelledBy}
         style={{
           width: '100%', marginTop: 54, maxHeight: 'calc(100% - 54px)', display: 'flex', flexDirection: 'column',
-          backgroundColor: t.bgSecondary, border: `1.5px solid ${t.border}`, borderBottom: 'none',
-          borderRadius: '28px 28px 0 0', boxShadow: '0 24px 64px rgba(0,0,0,0.35)',
+          backgroundColor: t.bgSecondary, border: `1px solid ${t.border}`, borderBottom: 'none',
+          borderRadius: '28px 28px 0 0',
           transform: `translateY(${dragY}px)`, transition: dragY ? 'none' : 'transform 0.25s cubic-bezier(0.22,1,0.36,1)',
           animation: 'bcSheetUp 0.32s cubic-bezier(0.22,1,0.36,1)'
         }}
@@ -2389,10 +2356,9 @@ const ShopCompleteScreen = ({ trip, previousTrip, milestone, t, onDismiss, onOpe
       {milestone && (
         <div
           className="bc-fu1"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999, backgroundColor: t.ink, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', marginBottom: 26 }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 9999, border: `1px solid ${t.ink}`, marginBottom: 26 }}
         >
-          <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: YELLOW }} />
-          <span style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.bg }}>Milestone</span>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: t.ink }}>Milestone</span>
         </div>
       )}
 
@@ -2418,7 +2384,7 @@ const ShopCompleteScreen = ({ trip, previousTrip, milestone, t, onDismiss, onOpe
 
       {milestone ? (
         <>
-          <div className="bc-fu2" style={{ fontFamily: MONO, fontSize: 72, fontWeight: 700, letterSpacing: '-0.04em', lineHeight: 1, color: t.ink, marginTop: 6 }}>
+          <div className="bc-fu2" style={{ fontFamily: MONO, fontSize: 72, fontWeight: 600, letterSpacing: '-0.04em', lineHeight: 1, color: t.ink, marginTop: 6 }}>
             {milestone.threshold}
           </div>
           <p className="bc-fu2" style={{ fontSize: 16, fontWeight: 500, color: t.textSecondary, margin: '14px 0 0', textAlign: 'center' }}>
@@ -2429,7 +2395,7 @@ const ShopCompleteScreen = ({ trip, previousTrip, milestone, t, onDismiss, onOpe
         </>
       ) : (
         <>
-          <h1 className="bc-fu2" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', color: t.ink, margin: '6px 0 0' }}>
+          <h1 className="bc-fu2" style={{ fontFamily: SERIF, fontSize: 52, fontWeight: 400, lineHeight: 1, letterSpacing: '-0.015em', color: t.ink, margin: '6px 0 0' }}>
             Home stocked
           </h1>
           <p className="bc-fu2" style={{ fontSize: 14, fontWeight: 500, color: t.textSecondary, margin: '10px 0 0' }}>{subtitle}</p>
@@ -2453,7 +2419,7 @@ const ShopCompleteScreen = ({ trip, previousTrip, milestone, t, onDismiss, onOpe
           <button
             onClick={(e) => { e.stopPropagation(); onOpenStats(); }}
             className="bc-press bc-cta bc-fu4"
-            style={{ marginTop: 30, height: 54, width: '100%', maxWidth: 330, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: INK, fontSize: 13.5, fontWeight: 700, letterSpacing: '0.01em', cursor: 'pointer' }}
+            style={{ marginTop: 30, height: 54, width: '100%', maxWidth: 330, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', fontSize: 13.5, fontWeight: 700, letterSpacing: '0.01em', cursor: 'pointer' }}
           >
             See the trail
           </button>
@@ -2495,7 +2461,7 @@ const StatsSheet = ({ trips, t, onClose, onOpenYear }) => {
 
   return (
     <BottomSheet onClose={onClose} t={t} labelledBy="bc-stats-heading">
-      <h2 id="bc-stats-heading" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.015em', color: t.ink, margin: '4px 0 16px' }}>Your trail</h2>
+      <h2 id="bc-stats-heading" style={{ fontFamily: SERIF, fontSize: 42, fontWeight: 400, lineHeight: 1, letterSpacing: '-0.015em', color: t.ink, margin: '4px 0 18px' }}>Your trail</h2>
 
       {snapshot.length === 0 ? (
         <p style={{ fontSize: 16, fontWeight: 500, color: t.textSecondary, margin: '0 0 12px', lineHeight: 1.55 }}>
@@ -2514,10 +2480,11 @@ const StatsSheet = ({ trips, t, onClose, onOpenYear }) => {
                   className="bc-press"
                   style={{
                     flex: 1, minWidth: 0, height: 44, borderRadius: 9999, cursor: 'pointer',
-                    fontSize: 13.5, fontWeight: 700, fontFamily: MONO,
-                    backgroundColor: active ? YELLOW : 'transparent',
-                    color: active ? INK : t.textSecondary,
-                    border: active ? '2px solid transparent' : `2px solid ${t.border}`,
+                    fontSize: 13.5, fontWeight: 600, fontFamily: MONO,
+                    backgroundColor: active ? t.capsule : 'transparent',
+                    boxShadow: active ? t.shadowCapsule : 'none',
+                    color: active ? t.ink : t.textSecondary,
+                    border: active ? '1px solid transparent' : `1px solid ${t.border}`,
                     transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease'
                   }}
                 >
@@ -2545,12 +2512,12 @@ const StatsSheet = ({ trips, t, onClose, onOpenYear }) => {
               aisles or rhythm yet — so nothing is said. */}
           {!thin && stats.leaderboard.length > 0 && (
             <div style={{ marginBottom: 26 }}>
-              <h3 style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary, margin: '0 0 14px' }}>Where it goes</h3>
+              <SectionHeader as="h3" n={1} name="Where it goes" t={t} style={{ padding: '0 0 8px', marginBottom: 10 }} />
               {stats.leaderboard.map((row) => {
                 const filled = leader ? Math.max(1, Math.round((row.count / leader) * 10)) : 0;
                 return (
                   <div key={row.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0' }}>
-                    <span className="truncate" style={{ width: 96, flexShrink: 0, fontSize: 13.5, fontWeight: 700, color: t.ink }}>{row.name}</span>
+                    <span className="truncate" style={{ width: 96, flexShrink: 0, fontSize: 13.5, fontWeight: 600, color: t.ink }}>{row.name}</span>
                     <span aria-hidden="true" style={{ display: 'flex', gap: 4, flex: 1, minWidth: 0 }}>
                       {Array.from({ length: 10 }).map((_, i) => (
                         <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, backgroundColor: i < filled ? YELLOW : t.border }} />
@@ -2565,7 +2532,7 @@ const StatsSheet = ({ trips, t, onClose, onOpenYear }) => {
 
           {!thin && stats.shops > 0 && (
             <div style={{ marginBottom: 26 }}>
-              <h3 style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary, margin: '0 0 14px' }}>When you shop</h3>
+              <SectionHeader as="h3" n={stats.leaderboard.length > 0 ? 2 : 1} name="When you shop" t={t} style={{ padding: '0 0 8px', marginBottom: 14 }} />
               <div aria-hidden="true" style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
                 {stats.weekdays.map((count, i) => {
                   const shade = count === 0
@@ -2588,7 +2555,7 @@ const StatsSheet = ({ trips, t, onClose, onOpenYear }) => {
           <button
             onClick={onOpenYear}
             className="bc-press bc-cta"
-            style={{ width: '100%', height: 54, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: INK, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}
+            style={{ width: '100%', height: 54, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}
           >
             Every shop this year
           </button>
@@ -2599,15 +2566,16 @@ const StatsSheet = ({ trips, t, onClose, onOpenYear }) => {
 };
 
 // ── Recipe flags ──────────────────────────────────────────────────────────
-// Outline when off, filled yellow when on. Used as the sheet's toggles and,
-// small and always filled, as the read-only marks beside a recipe's name.
+// Outline when off, filled yellow with an ink stroke when on. Used as the
+// sheet's toggles, as the star on a recipe row, and small and always filled
+// as the read-only marks beside a recipe's name.
 const RECIPE_FLAG_PATHS = {
   favourite: 'M12 2.8l2.85 5.95 6.55.8-4.83 4.5 1.24 6.5L12 17.4l-5.81 3.15 1.24-6.5-4.83-4.5 6.55-.8L12 2.8z',
   wantToCook: 'M6.5 3h11a.5.5 0 01.5.5V21l-6-4.3L6 21V3.5a.5.5 0 01.5-.5z'
 };
 
-const RecipeFlagIcon = ({ flag, on, size = 18, color }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill={on ? YELLOW : 'none'} stroke={on ? YELLOW : color} strokeWidth="2" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
+const RecipeFlagIcon = ({ flag, on, size = 18, color, ink = '#1c1917' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={on ? YELLOW : 'none'} stroke={on ? ink : color} strokeWidth={on ? 1.6 : 1.8} strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
     <path d={RECIPE_FLAG_PATHS[flag]} />
   </svg>
 );
@@ -2637,7 +2605,7 @@ const stepperButtonStyle = (t) => ({
 // ── The recipe sheet ──────────────────────────────────────────────────────
 // Read-only. The serving scaler is view-only too: it starts at the saved
 // servings every time the sheet opens and never writes to the recipe.
-const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, onEdit }) => {
+const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, onEdit, onDelete = null }) => {
   const servings = recipeServings(recipe);
   const [target, setTarget] = useState(servings);
   const factor = servings && target ? target / servings : 1;
@@ -2654,9 +2622,9 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
         aria-pressed={on}
         title={label}
         className="bc-press bc-icon-btn"
-        style={{ width: 40, height: 40, borderRadius: '50%', border: `1.5px solid ${on ? YELLOW : t.border}`, background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer', flexShrink: 0 }}
+        style={{ width: 44, height: 44, borderRadius: '50%', border: `1px solid ${t.border}`, background: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer', flexShrink: 0 }}
       >
-        <RecipeFlagIcon flag={flag} on={on} size={19} color={t.textSecondary} />
+        <RecipeFlagIcon flag={flag} on={on} size={19} color={t.ink} ink={t.ink} />
       </button>
     );
   };
@@ -2665,7 +2633,7 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
     <BottomSheet onClose={onClose} t={t} labelledBy="bc-recipe-heading">
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, margin: '4px 0 18px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 id="bc-recipe-heading" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.015em', color: t.ink, margin: 0, lineHeight: 1.2 }}>{recipe.name}</h2>
+          <h2 id="bc-recipe-heading" style={{ fontFamily: SERIF, fontSize: 36, fontWeight: 400, letterSpacing: '-0.01em', color: t.ink, margin: 0, lineHeight: 1.05, overflowWrap: 'anywhere' }}>{recipe.name}</h2>
           {parseRecipeLink(recipe.sourceUrl) && (
             <a
               href={parseRecipeLink(recipe.sourceUrl).toString()}
@@ -2673,7 +2641,7 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
               rel="noopener noreferrer"
               style={{ display: 'inline-block', fontSize: 13.5, fontWeight: 700, color: t.textSecondary, margin: '6px 0 0', textDecoration: 'underline', textUnderlineOffset: 3, overflowWrap: 'anywhere' }}
             >
-              {recipeLinkHost(recipe.sourceUrl)} ↗
+              {recipeLinkHost(recipe.sourceUrl)}
             </a>
           )}
           {recipe.notes && (
@@ -2687,30 +2655,26 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
       </div>
 
       {servings && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 16, backgroundColor: t.bgTertiary, marginBottom: 20 }}>
-          <span style={{ flex: 1, fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary }}>Serves</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 16, backgroundColor: t.bgTertiary, marginBottom: 4 }}>
+          <span style={{ flex: 1, fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: t.ink }}>Serves</span>
           <button onClick={() => step(-1)} disabled={target <= 1} aria-label="Fewer servings" className="bc-press" style={{ ...stepperButtonStyle(t), backgroundColor: t.bgSecondary, opacity: target <= 1 ? 0.4 : 1 }}>−</button>
-          <span aria-live="polite" style={{ fontSize: 15, fontWeight: 700, fontFamily: MONO, color: t.ink, width: 30, textAlign: 'center' }}>{target}</span>
+          <span aria-live="polite" style={{ fontSize: 15, fontWeight: 600, fontFamily: MONO, color: t.ink, width: 30, textAlign: 'center' }}>{target}</span>
           <button onClick={() => step(1)} disabled={target >= 50} aria-label="More servings" className="bc-press" style={{ ...stepperButtonStyle(t), backgroundColor: t.bgSecondary, opacity: target >= 50 ? 0.4 : 1 }}>+</button>
         </div>
       )}
 
-      {groups.map((group) => (
-        <div key={group.id} style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 2 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>{group.name}</span>
-            <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{group.ingredients.length}</span>
-            <div style={{ flex: 1, height: 1.5, backgroundColor: t.borderLight }} />
-          </div>
-          {group.ingredients.map((ingredient) => {
+      {groups.map((group, groupIndex) => (
+        <div key={group.id} style={{ marginBottom: 10 }}>
+          <SectionHeader as="h3" n={groupIndex + 1} name={group.name} right={group.ingredients.length} t={t} />
+          {group.ingredients.map((ingredient, i) => {
             const note = scaleIngredientNote(ingredient.note, factor);
             return (
-              <div key={ingredient.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0' }}>
+              <div key={ingredient.id} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 50, padding: '8px 0', borderBottom: i === group.ingredients.length - 1 ? 'none' : `1px solid ${t.borderLight}` }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 15.5, fontWeight: 600, color: t.ink }}>{ingredient.name}</div>
-                  {note && <div style={{ fontSize: 12.5, color: t.textTertiary, marginTop: 2 }}>{note}</div>}
+                  <div style={{ fontSize: 16, fontWeight: 500, color: t.ink }}>{ingredient.name}</div>
+                  {note && <div style={{ fontSize: 12.5, color: t.textSecondary, marginTop: 2 }}>{note}</div>}
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: t.ink, flexShrink: 0 }}>×{scaleIngredientQuantity(ingredient.quantity || 1, factor)}</span>
+                <span style={{ fontSize: 13, fontWeight: 600, fontFamily: MONO, color: t.ink, flexShrink: 0 }}>×{scaleIngredientQuantity(ingredient.quantity || 1, factor)}</span>
               </div>
             );
           })}
@@ -2720,17 +2684,28 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
       <button
         onClick={() => onAdd(recipe, factor)}
         className="bc-press bc-cta"
-        style={{ width: '100%', height: 54, marginTop: 6, borderRadius: 9999, border: 'none', backgroundColor: added ? t.ink : YELLOW, color: added ? t.accentOnInk : INK, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
+        style={{ width: '100%', height: 54, marginTop: 6, borderRadius: 9999, border: 'none', backgroundColor: added ? t.ink : YELLOW, color: added ? t.accentOnInk : '#1c1917', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
       >
-        {added ? 'Added ✓' : 'Add to list'}
+        {added ? 'Added' : 'Add to list'}
       </button>
-      <button
-        onClick={() => onEdit(recipe)}
-        className="bc-press"
-        style={{ display: 'block', margin: '14px auto 0', padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 700, color: t.textSecondary }}
-      >
-        Edit recipe
-      </button>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
+        <button
+          onClick={() => onEdit(recipe)}
+          className="bc-press"
+          style={{ minHeight: 44, padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 700, color: t.ink }}
+        >
+          Edit recipe
+        </button>
+        {onDelete && (
+          <button
+            onClick={() => onDelete(recipe)}
+            className="bc-press"
+            style={{ minHeight: 44, padding: '8px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 700, color: t.textSecondary }}
+          >
+            Delete recipe
+          </button>
+        )}
+      </div>
     </BottomSheet>
   );
 };
@@ -2800,14 +2775,19 @@ const RecipeImportSheet = ({ recipes, t, onClose, onImported, onByHand, onOpenRe
 
   return (
     <BottomSheet onClose={onClose} t={t} labelledBy="bc-import-heading">
-      <h2 id="bc-import-heading" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.015em', color: t.ink, margin: '4px 0 0', lineHeight: 1.2 }}>Import a recipe</h2>
-      <p style={{ fontSize: 14, color: t.textSecondary, margin: '6px 0 20px' }}>Paste a link from a recipe website.</p>
+      <p style={{ ...contextLineStyle(t), margin: '6px 0 8px' }}>New recipe</p>
+      <h2 id="bc-import-heading" style={{ fontFamily: SERIF, fontSize: 42, fontWeight: 400, lineHeight: 1, letterSpacing: '-0.015em', color: t.ink, margin: 0 }}>Add a recipe</h2>
 
+      <SectionHeader as="h3" n={1} name="From a link" t={t} style={{ marginBottom: 14 }} />
       <form
         noValidate
         onSubmit={(e) => { e.preventDefault(); submit(); }}
-        style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '5px 5px 5px 16px', borderRadius: 9999,
+          backgroundColor: t.field, border: `1px solid ${error ? t.ink : t.border}`, opacity: loading ? 0.7 : 1
+        }}
       >
+        <LinkIcon size={16} color={t.textSecondary} strokeWidth={2.2} />
         <input
           type="url"
           inputMode="url"
@@ -2818,25 +2798,25 @@ const RecipeImportSheet = ({ recipes, t, onClose, onImported, onByHand, onOpenRe
           value={text}
           onChange={(e) => { setText(e.target.value); setError(null); }}
           disabled={loading}
-          placeholder="https://"
+          placeholder="Paste a recipe link"
           aria-label="Recipe link"
           aria-invalid={!!error}
           aria-describedby={error ? 'bc-import-error' : undefined}
-          className="flex-1 py-2 focus:outline-none bg-transparent"
-          style={{ borderBottom: `1.5px solid ${error ? t.ink : t.border}`, color: t.ink, fontSize: 16, fontWeight: 600, minWidth: 0, opacity: loading ? 0.6 : 1 }}
+          className="flex-1 focus:outline-none bg-transparent"
+          style={{ border: 'none', color: t.ink, fontSize: 16, fontWeight: 500, minWidth: 0, padding: '8px 0' }}
           autoFocus
         />
         <button
           type="submit"
           disabled={!ready}
           className="bc-press bc-cta"
-          style={{ padding: '10px 20px', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: ready ? YELLOW : t.bgTertiary, color: ready ? INK : t.textTertiary, cursor: ready ? 'pointer' : 'default', flexShrink: 0 }}
+          style={{ height: 38, padding: '0 18px', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: ready ? YELLOW : t.bgTertiary, color: ready ? '#1c1917' : t.textTertiary, cursor: ready ? 'pointer' : 'default', flexShrink: 0 }}
         >
           {loading ? 'Reading…' : 'Import'}
         </button>
       </form>
 
-      {error && (
+      {error ? (
         <div id="bc-import-error" role="alert" className="fade-in" style={{ marginTop: 12 }}>
           <p style={{ fontSize: 13.5, fontWeight: 600, color: t.ink, margin: 0, lineHeight: 1.45 }}>{IMPORT_MESSAGES[error.reason]}</p>
           {error.reason === 'duplicate' && (
@@ -2849,7 +2829,27 @@ const RecipeImportSheet = ({ recipes, t, onClose, onImported, onByHand, onOpenRe
             <button type="button" onClick={() => onByHand(error.link)} className="bc-press" style={{ ...textButtonStyle, marginTop: 4 }}>Add it by hand instead</button>
           )}
         </div>
+      ) : (
+        <p style={{ fontSize: 13.5, lineHeight: 1.5, color: t.textSecondary, margin: '12px 4px 0' }}>
+          Ingredients come in already sorted into aisles. You check everything before it saves.
+        </p>
       )}
+
+      <SectionHeader as="h3" n={2} name="From scratch" t={t} style={{ marginTop: 14 }} />
+      <button
+        type="button"
+        onClick={() => onByHand('')}
+        className="bc-press"
+        style={{ width: '100%', minHeight: 56, display: 'flex', alignItems: 'center', gap: 12, background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left' }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={t.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
+          <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+        </svg>
+        <span style={{ flex: 1, fontSize: 17, fontWeight: 500, color: t.ink }}>Write it yourself</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={t.ink} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }} aria-hidden="true">
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </button>
     </BottomSheet>
   );
 };
@@ -2869,7 +2869,7 @@ const YearTrailSheet =({ trips, t, onClose, onOpenTrip }) => {
 
   return (
     <BottomSheet onClose={onClose} t={t} labelledBy="bc-year-heading">
-      <h2 id="bc-year-heading" style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.015em', color: t.ink, margin: '4px 0 18px' }}>Every shop, {year}</h2>
+      <h2 id="bc-year-heading" style={{ fontFamily: SERIF, fontSize: 42, fontWeight: 400, lineHeight: 1, letterSpacing: '-0.015em', color: t.ink, margin: '4px 0 20px' }}>Every shop, {year}</h2>
 
       <div style={{ display: 'flex', gap: 3 }}>
         {byMonth.map((monthTrips, m) => (
@@ -2901,24 +2901,25 @@ const YearTrailSheet =({ trips, t, onClose, onOpenTrip }) => {
           : `${capitalise(numberWord(thisYear.length))} ${plural(thisYear.length, 'shop', 'shops')} so far. Tap a dot to open that one.`}
       </p>
 
-      <h3 style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: t.textSecondary, margin: '0 0 14px' }}>Milestones</h3>
+      <SectionHeader as="h3" n={1} name="Milestones" t={t} style={{ padding: '0 0 8px', marginBottom: 8 }} />
       {ladderRows.length === 0 ? (
-        <p style={{ fontSize: 14, fontWeight: 500, color: t.textSecondary, margin: 0 }}>Nothing reached yet — the first one is fifty items.</p>
+        <p style={{ fontSize: 14, fontWeight: 500, color: t.textSecondary, margin: 0 }}>Nothing reached yet. The first one is fifty items.</p>
       ) : ladderRows.map((row) => (
         <div key={`${row.kind}-${row.threshold}`} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '9px 0' }}>
           <span
             aria-hidden="true"
             style={{
-              width: 44, height: 44, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backgroundColor: row.achieved ? YELLOW : t.bgTertiary,
+              width: 44, height: 44, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: row.achieved ? YELLOW : 'transparent',
+              border: `1px solid ${row.achieved ? t.ink : t.border}`,
               fontFamily: MONO, fontSize: 13, fontWeight: 600,
-              color: row.achieved ? INK : t.textSecondary
+              color: row.achieved ? '#1c1917' : t.textSecondary
             }}
           >
             {row.threshold}
           </span>
           <span style={{ minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: 16, fontWeight: 700, color: row.achieved ? t.ink : t.textSecondary }}>
+            <span style={{ display: 'block', fontSize: 16, fontWeight: 600, color: row.achieved ? t.ink : t.textSecondary }}>
               {milestoneName(row.kind, row.threshold)}
             </span>
             <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: t.textSecondary, marginTop: 2 }}>
@@ -2937,8 +2938,8 @@ const YearTrailSheet =({ trips, t, onClose, onOpenTrip }) => {
 // Above the list when it is nearly empty — and the empty state itself, once
 // there is enough history to draw on.
 const UsualsCard = ({ usuals, t, onAdd }) => (
-  <div style={{ backgroundColor: t.bgSecondary, border: `1.5px solid ${t.border}`, borderRadius: 20, boxShadow: t.cardShadow, padding: 20, marginBottom: 18 }}>
-    <h3 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.01em', color: t.ink, margin: 0 }}>You usually buy these</h3>
+  <div style={{ backgroundColor: t.bgSecondary, border: `1px solid ${t.border}`, borderRadius: 18, padding: 20, margin: '16px 0 4px' }}>
+    <h3 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 400, lineHeight: 1.05, color: t.ink, margin: 0 }}>You usually buy these</h3>
     <p style={{ fontSize: 14, fontWeight: 500, color: t.textSecondary, margin: '6px 0 16px', lineHeight: 1.5 }}>{usuals.context}</p>
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
       {usuals.suggestions.map((suggestion) => (
@@ -2948,8 +2949,8 @@ const UsualsCard = ({ usuals, t, onAdd }) => (
           className="bc-press bc-dashed"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 7, minHeight: 44, padding: '10px 16px',
-            borderRadius: 9999, border: `2px dashed ${t.textTertiary}`, backgroundColor: 'transparent',
-            color: t.ink, fontSize: 13.5, fontWeight: 700, cursor: 'pointer'
+            borderRadius: 9999, border: `1px dashed ${t.ink}`, backgroundColor: 'transparent',
+            color: t.ink, fontSize: 14, fontWeight: 600, cursor: 'pointer'
           }}
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14" /></svg>
@@ -3003,6 +3004,8 @@ export default function App() {
   const [editingQuantityId, setEditingQuantityId] = useState(null);
   const isDesktop = useMediaQuery(DESKTOP_QUERY);
   const isWide = useMediaQuery(WIDE_QUERY);
+  // A phone on its side has no room to pin the list header.
+  const isTall = useMediaQuery('(min-height: 600px)');
 
   // Recipe state
   const [recipes, setRecipes] = useState([]);
@@ -3029,6 +3032,10 @@ export default function App() {
   const [viewingRecipeId, setViewingRecipeId] = useState(null);
   // React state only: back to All on every visit to the tab.
   const [recipeFilter, setRecipeFilter] = useState('all');
+  // Recipe search, React state only like the filter.
+  const [recipeQuery, setRecipeQuery] = useState('');
+  const [showRecipeSearch, setShowRecipeSearch] = useState(false);
+  const recipeSearchRef = useRef(null);
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
@@ -3082,6 +3089,9 @@ export default function App() {
   const [tripDetail, setTripDetail] = useState(null);
 
   const [fabOpen, setFabOpen] = useState(false);
+  // Set by the + on Settings: switch to the list, then open quick add there.
+  // The tab change below closes the bar, so the list picks this up after it.
+  const [pendingQuickAdd, setPendingQuickAdd] = useState(false);
   const [fabInput, setFabInput] = useState('');
   const [fabNoMatchMode, setFabNoMatchMode] = useState(false);
   const [showingCategoryTag, setShowingCategoryTag] = useState(new Set());
@@ -3142,7 +3152,18 @@ export default function App() {
     setShowClearAllConfirm(false);
     setViewingRecipeId(null);
     setRecipeFilter('all');
+    setRecipeQuery('');
+    setShowRecipeSearch(false);
   }, [activeTab]);
+
+  // Runs after the effect above in the same commit, so the bar it opens is
+  // not closed again by the tab change that brought us here.
+  useEffect(() => {
+    if (pendingQuickAdd && activeTab === 'list') {
+      setPendingQuickAdd(false);
+      setFabOpen(true);
+    }
+  }, [pendingQuickAdd, activeTab]);
 
   // Load list name from localStorage when listId changes
   useEffect(() => {
@@ -3537,7 +3558,7 @@ export default function App() {
       return 'finished';
     } catch (error) {
       console.error('Error finishing shop:', error);
-      showToastMessage("Couldn't record this shop — nothing was cleared");
+      showToastMessage("Couldn't record this shop. Nothing was cleared.");
       return 'error';
     } finally {
       finishingShopRef.current = false;
@@ -4103,7 +4124,7 @@ export default function App() {
     }
   };
 
-  // Serves: unset shows —, + from unset starts at 4, − at 1 goes back to unset.
+  // Serves: unset shows –, + from unset starts at 4, − at 1 goes back to unset.
   const stepRecipeServings = (delta) => {
     triggerHaptic('light');
     setNewRecipeServings(current => {
@@ -4321,9 +4342,12 @@ export default function App() {
     await saveList(newItems);
   };
 
-  // Hide done — a 40px circular icon button beside the title. It used to be
-  // a pill in a row of its own under the trail; that row, and the counter
-  // line that shared it, are gone.
+  // The line above the list title: the store layout sorting it, and whether
+  // it is syncing with everyone else on the list.
+  const listContextLine = `${activeStoreLayout?.name || 'Default'} · ${isOnline ? 'Live' : 'Offline'}`;
+
+  // Hide done: a 44px circular icon button beside the context line. Pressed,
+  // it sits on the same capsule as the active nav word.
   const hideDoneButton = (
     <button
       onClick={toggleHideCompleted}
@@ -4331,13 +4355,15 @@ export default function App() {
       aria-pressed={hideCompleted}
       className="bc-press bc-icon-btn"
       style={{
-        width: 40, height: 40, borderRadius: '50%', flexShrink: 0, border: 'none', padding: 0,
+        width: 44, height: 44, borderRadius: '50%', flexShrink: 0, padding: 0, boxSizing: 'border-box',
         display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-        backgroundColor: hideCompleted ? INK : theme.bgTertiary,
-        color: hideCompleted ? theme.accentOnInk : theme.textSecondary
+        border: `1px solid ${hideCompleted ? 'transparent' : theme.border}`,
+        backgroundColor: hideCompleted ? theme.capsule : 'transparent',
+        boxShadow: hideCompleted ? theme.shadowCapsule : 'none',
+        color: INK
       }}
     >
-      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         {hideCompleted
           ? <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></>
           : <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></>}
@@ -4389,7 +4415,7 @@ export default function App() {
     </>
   );
 
-  // ── Bold Crumb motion vocabulary ──
+  // ── Motion vocabulary ──
   const styles = `
     * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
@@ -4439,6 +4465,7 @@ export default function App() {
     .btn-pop { animation: buttonPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
     .sync-pulse { animation: pulse 1.5s ease-in-out infinite; }
     input { font-size: 16px !important; }
+    input::placeholder, textarea::placeholder { color: ${theme.textTertiary}; opacity: 1; }
 
     /* Every clickable thing looks clickable, and can be reached by keyboard. */
     button, [role="button"] { cursor: pointer; }
@@ -4449,13 +4476,13 @@ export default function App() {
     button:focus-visible,
     [role="button"]:focus-visible,
     [role="tab"]:focus-visible,
-    a:focus-visible { outline: 2px solid ${YELLOW}; outline-offset: 2px; }
+    a:focus-visible { outline: 2px solid ${theme.ink}; outline-offset: 2px; }
     /* Desktop keyboard users still get a ring on text fields; the extra
        :focus outranks the utility class that switches the outline off. */
     @media (min-width: 1024px) {
-      input:focus-visible:focus { outline: 2px solid ${YELLOW}; outline-offset: 2px; }
+      input:focus-visible:focus { outline: 2px solid ${theme.ink}; outline-offset: 2px; }
     }
-    .bc-card { transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+    .bc-card { transition: transform 0.18s ease, border-color 0.18s ease; }
     .bc-item-row { transition: background-color 0.15s ease; }
     .bc-row-actions { transition: opacity 0.16s ease; }
     .bc-icon-btn { transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease; }
@@ -4464,7 +4491,7 @@ export default function App() {
        control visible at rest, exactly as it is today. */
     @media (hover: hover) and (pointer: fine) {
       .bc-press:hover { opacity: 0.9; }
-      .bc-card:hover { transform: translateY(-2px); box-shadow: ${theme.cardShadow}, 0 10px 28px rgba(0,0,0,${isDark ? '0.32' : '0.07'}); border-color: ${theme.textTertiary}; }
+      .bc-card:hover { transform: translateY(-2px); border-color: ${theme.textTertiary}; }
       .bc-item-row:hover { background-color: ${theme.bgTertiary}; }
       .bc-row-actions { opacity: 0; }
       .bc-item-row:hover .bc-row-actions,
@@ -4475,10 +4502,10 @@ export default function App() {
       .bc-store-card:focus-within .bc-row-actions { opacity: 1; }
       .bc-hover-row:hover { background-color: ${theme.bgTertiary}; }
       .bc-nav-item:hover { background-color: ${theme.bgTertiary}; }
-      .bc-icon-btn:hover { background-color: ${theme.bgTertiary}; color: ${theme.text}; border-color: ${theme.textTertiary}; }
+      .bc-icon-btn:hover { background-color: ${theme.bgTertiary}; color: ${theme.ink}; border-color: ${theme.textTertiary}; }
       .bc-cta:hover { filter: brightness(0.94); }
       .bc-dashed:hover { border-color: ${theme.text}; background-color: ${theme.bgTertiary}; }
-      .bc-fab:hover { transform: scale(1.05); box-shadow: 0 14px 36px rgba(250,204,21,0.5); }
+      .bc-fab:hover { transform: scale(1.05); }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
@@ -4522,7 +4549,17 @@ export default function App() {
   const shellPadX = isWide ? 44 : 32;
   const contentMax = { list: isWide ? 1560 : 1240, recipes: isWide ? 1420 : 1160, settings: isWide ? 1180 : 1020 };
 
-  // ── Aisle renderer — Bold Crumb. Only aisles with items appear. ──
+  // Section numbers count the aisles actually on screen, in store order: an
+  // empty aisle, or one folded away by hide done, takes no number.
+  const aisleNumbers = new Map();
+  visibleCategories.forEach(cat => {
+    const catItems = items.filter(item => item.category === cat.id);
+    if (catItems.length === 0) return;
+    if (hideCompleted && catItems.every(i => i.checked)) return;
+    aisleNumbers.set(cat.id, aisleNumbers.size + 1);
+  });
+
+  // ── Aisle renderer. Only aisles with items appear. ──
   const renderCategory = (category) => {
     const categoryItems = items.filter(item => item.category === category.id);
     if (categoryItems.length === 0) return null;
@@ -4541,22 +4578,19 @@ export default function App() {
           <div
             className={isDesktop ? 'bc-card' : ''}
             style={isDesktop
-              ? { backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 18, padding: '15px 16px 12px', boxShadow: theme.cardShadow }
-              : { marginBottom: 14 }}
+              ? { backgroundColor: theme.bgSecondary, border: `1px solid ${theme.border}`, borderRadius: 18, padding: '14px 16px 6px' }
+              : undefined}
           >
-            {/* Aisle label */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: isDesktop ? 6 : 2 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, whiteSpace: 'nowrap', flexShrink: 0 }}>{category.name}</span>
-              {uncheckedCount > 0 ? (
-                <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '1px 8px', flexShrink: 0 }}>{uncheckedCount}</span>
-              ) : (
-                <span aria-hidden="true" style={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: YELLOW, flexShrink: 0 }} />
-              )}
-              <div style={{ flex: 1, height: 1.5, backgroundColor: isDesktop ? theme.borderLight : theme.border }} />
-            </div>
+            <SectionHeader
+              n={aisleNumbers.get(category.id) || 0}
+              name={category.name}
+              right={`${categoryItems.length - uncheckedCount}/${categoryItems.length}`}
+              t={theme}
+              style={isDesktop ? { paddingTop: 0 } : undefined}
+            />
 
             {/* Items */}
-            {categoryItems.map(item => {
+            {categoryItems.map((item, itemIndex) => {
               const isChecking = checkingItems.has(item.id);
               const isEditingQty = editingQuantityId === item.id;
               const quantity = item.quantity || 1;
@@ -4570,9 +4604,11 @@ export default function App() {
                   <div style={{ overflow: 'hidden' }}>
                     <div
                       className={`flex items-center gap-3${isDesktop ? ' bc-item-row' : ''}`}
-                      style={isDesktop
-                        ? { padding: '8px 9px', margin: '0 -9px', borderRadius: 10 }
-                        : { padding: '10px 0' }}
+                      style={{
+                        minHeight: isDesktop ? 46 : 50,
+                        borderBottom: itemIndex === categoryItems.length - 1 ? 'none' : `1px solid ${theme.borderLight}`,
+                        ...(isDesktop ? { padding: '4px 9px', margin: '0 -9px' } : { padding: '3px 0' })
+                      }}
                       onTouchStart={() => {
                         if (!item.checked) {
                           longPressTimerRef.current = setTimeout(() => {
@@ -4584,21 +4620,29 @@ export default function App() {
                       onTouchEnd={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
                       onTouchMove={() => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); }}
                     >
+                      {/* A 22px ring inside a 44px target. */}
                       <button
                         onClick={() => toggleItem(item.id)}
-                        className={isChecking ? 'bc-pop' : ''}
+                        aria-label={item.checked ? `Untick ${item.name}` : `Tick ${item.name}`}
                         style={{
-                          width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-                          border: `2.5px solid ${item.checked ? YELLOW : INK}`,
-                          backgroundColor: item.checked ? YELLOW : 'transparent',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          cursor: 'pointer', padding: 0,
-                          transition: 'background-color 0.18s ease, border-color 0.18s ease',
+                          width: 44, height: 44, margin: '0 -11px', flexShrink: 0, background: 'none', border: 'none',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0,
                         }}
                       >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M4 12l6 6L20 6" style={{ strokeDasharray: 24, strokeDashoffset: item.checked ? 0 : 24, transition: item.checked ? 'stroke-dashoffset 0.25s ease 0.08s' : 'none' }} />
-                        </svg>
+                        <span
+                          className={isChecking ? 'bc-pop' : ''}
+                          style={{
+                            width: 22, height: 22, borderRadius: '50%', boxSizing: 'border-box',
+                            border: `1.5px solid ${INK}`,
+                            backgroundColor: item.checked ? YELLOW : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            transition: 'background-color 0.18s ease',
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M4 12l6 6L20 6" style={{ strokeDasharray: 24, strokeDashoffset: item.checked ? 0 : 24, opacity: item.checked ? 1 : 0, transition: item.checked ? 'stroke-dashoffset 0.25s ease 0.08s' : 'none' }} />
+                          </svg>
+                        </span>
                       </button>
 
                       {editingId === item.id ? (
@@ -4606,19 +4650,22 @@ export default function App() {
                           type="text" value={editText} onChange={(e) => setEditText(e.target.value)}
                           onBlur={saveEdit} onKeyDown={(e) => e.key === 'Enter' && saveEdit()}
                           className="flex-1 py-1 px-2 rounded-lg focus:outline-none"
-                          style={{ backgroundColor: theme.bgTertiary, color: theme.text, fontSize: 15, fontWeight: 600 }}
+                          style={{ backgroundColor: theme.field, color: INK, fontSize: 16, fontWeight: 500, border: `1px solid ${theme.border}` }}
                           autoFocus
                         />
                       ) : (
                         <span
                           className="flex-1"
-                          style={{ fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em', color: item.checked ? theme.textTertiary : INK, transition: 'color 0.25s ease', position: 'relative', minWidth: 0 }}
+                          style={{ fontSize: isDesktop ? 16 : 17, fontWeight: 500, color: item.checked ? theme.textTicked : INK, transition: 'color 0.25s ease', minWidth: 0 }}
                           onClick={() => !item.checked && startEdit(item)}
                         >
-                          {item.name}
-                          <span style={{ position: 'absolute', left: 0, top: '54%', height: 1.5, width: item.checked ? '100%' : '0%', maxWidth: '100%', backgroundColor: theme.textTertiary, transition: item.checked ? 'width 0.28s cubic-bezier(0.22,1,0.36,1) 0.06s' : 'width 0.18s ease', pointerEvents: 'none' }} />
+                          {/* The strike runs across the words only, not the row. */}
+                          <span style={{ position: 'relative' }}>
+                            {item.name}
+                            <span style={{ position: 'absolute', left: 0, top: '54%', height: 1.5, width: item.checked ? '100%' : '0%', maxWidth: '100%', backgroundColor: theme.textTicked, transition: item.checked ? 'width 0.28s cubic-bezier(0.22,1,0.36,1) 0.06s' : 'width 0.18s ease', pointerEvents: 'none' }} />
+                          </span>
                           {showingCategoryTag.has(item.id) && (
-                            <span style={{ fontSize: 11, color: theme.textSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 9999, padding: '2px 8px', marginLeft: 8, display: 'inline-block', animation: 'fadeIn 0.2s ease-out', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                            <span style={{ fontSize: 11, color: theme.textSecondary, border: `1px solid ${theme.border}`, borderRadius: 9999, padding: '2px 8px', marginLeft: 8, display: 'inline-block', animation: 'fadeIn 0.2s ease-out', whiteSpace: 'nowrap', fontWeight: 500 }}>
                               {categories.find(c => c.id === item.category)?.name || item.category}
                             </span>
                           )}
@@ -4628,9 +4675,11 @@ export default function App() {
                       {isEditingQty ? (
                         <div className="flex items-center gap-1 fade-in quantity-editor">
                           <button onClick={() => updateQuantity(item.id, -1)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14 }}>−</button>
-                          <span style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, width: 24, textAlign: 'center', color: INK }}>{quantity}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, fontFamily: MONO, width: 24, textAlign: 'center', color: INK }}>{quantity}</span>
                           <button onClick={() => updateQuantity(item.id, 1)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: theme.bgTertiary, color: INK, border: 'none', cursor: 'pointer', fontSize: 14 }}>+</button>
-                          <button onClick={() => setEditingQuantityId(null)} className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: YELLOW, color: '#1c1917', border: 'none', cursor: 'pointer', fontSize: 12, marginLeft: 4 }}>✓</button>
+                          <button onClick={() => setEditingQuantityId(null)} aria-label="Done" className="bc-press" style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: YELLOW, border: 'none', cursor: 'pointer', marginLeft: 4, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12l6 6L20 6" /></svg>
+                          </button>
                         </div>
                       ) : (() => {
                         // Quantity and delete. On a pointer device these fade in
@@ -4642,7 +4691,7 @@ export default function App() {
                             onClick={() => setEditingQuantityId(item.id)}
                             className="bc-press"
                             aria-label={`Change quantity of ${item.name}`}
-                            style={{ fontSize: 12, fontWeight: 700, fontFamily: MONO, color: INK, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: '4px 6px' }}
+                            style={{ fontSize: 13, fontWeight: 600, fontFamily: MONO, color: INK, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, padding: '4px 6px', textAlign: 'right' }}
                           >
                             ×{quantity}
                           </button>
@@ -4678,12 +4727,12 @@ export default function App() {
   // The list's long-press reassign sheet, shared with the recipe editor.
   const renderMoveSheet = (name, currentCategoryId, onPick, onClose) => (
     <div className="fixed inset-0 z-[60] flex items-end justify-center" style={{ backgroundColor: theme.overlay }} onClick={onClose}>
-      <div className="w-full max-h-[75vh] flex flex-col" style={{ backgroundColor: PAPER, borderRadius: '28px 28px 0 0', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-h-[75vh] flex flex-col" style={{ backgroundColor: theme.bgSecondary, borderRadius: '28px 28px 0 0', overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
         <div className="flex justify-center" style={{ marginTop: 12, marginBottom: 4 }}>
           <div style={{ width: 40, height: 4, borderRadius: 9999, backgroundColor: theme.border }} />
         </div>
-        <div className="px-6 py-3" style={{ borderBottom: `1.5px solid ${theme.border}` }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.015em', color: INK, margin: 0 }}>
+        <div className="px-6 py-3" style={{ borderBottom: `1.5px solid ${INK}` }}>
+          <h2 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 400, lineHeight: 1.1, color: INK, margin: 0 }}>
             {currentCategoryId === null ? `Which aisle for "${name}"?` : `Move "${name}" to…`}
           </h2>
         </div>
@@ -4695,11 +4744,11 @@ export default function App() {
                 key={cat.id}
                 onClick={() => onPick(cat.id)}
                 className="w-full flex items-center justify-between bc-press"
-                style={{ padding: '14px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.borderLight}`, cursor: 'pointer' }}
+                style={{ minHeight: 50, padding: '12px 0', background: 'none', border: 'none', borderBottom: `1px solid ${theme.borderLight}`, cursor: 'pointer' }}
               >
-                <span style={{ fontSize: 15, fontWeight: isCurrent ? 700 : 600, color: INK }}>{cat.name}</span>
+                <span style={{ fontSize: 16, fontWeight: isCurrent ? 700 : 500, color: INK }}>{cat.name}</span>
                 {isCurrent && (
-                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={YELLOW} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12l6 6L20 6"/></svg>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12l6 6L20 6"/></svg>
                 )}
               </button>
             );
@@ -4713,13 +4762,10 @@ export default function App() {
   // One input finds each ingredient's aisle; the filled aisles are listed
   // below it in store order. Shared by both layouts: phone keeps the
   // underlined-row treatment, desktop puts each aisle on a card.
-  // `muted` is the grey badge on "Needs an aisle".
-  const renderAisleHeading = (name, count, muted = false) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span className={isDesktop ? 'truncate' : undefined} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, whiteSpace: 'nowrap', flexShrink: isDesktop ? 1 : 0 }}>{name}</span>
-      <span style={{ fontSize: 11, fontWeight: 700, backgroundColor: muted ? theme.bgTertiary : YELLOW, color: muted ? theme.textSecondary : '#1c1917', border: muted ? `1px solid ${theme.border}` : 'none', borderRadius: 9999, padding: muted ? '0 7px' : '1px 8px', flexShrink: 0 }}>{count}</span>
-      <div style={{ flex: 1, height: 1.5, backgroundColor: theme.borderLight, minWidth: 8 }} />
-    </div>
+  // Each aisle opens with the numbered header, its ingredient count on the
+  // right. The first one sits flush on a desktop card.
+  const renderAisleHeading = (index, name, count) => (
+    <SectionHeader n={index + 1} name={name} right={count} t={theme} style={isDesktop && { paddingTop: 0 }} />
   );
 
   const renderRecipeIngredientRow = (ingredient) => {
@@ -4825,7 +4871,7 @@ export default function App() {
 
   const recipeImportBanner = importedFrom && !editingRecipeId && (
     <div role="status" style={{ fontSize: 13, lineHeight: 1.45, color: theme.textSecondary, backgroundColor: theme.bgTertiary, borderRadius: 14, padding: '10px 14px' }}>
-      Imported from {importedFrom} — check it over before saving.
+      Imported from {importedFrom}. Check it over before saving.
       {needsAisleIngredients.length > 0 && ` ${needsAisleIngredients.length} ${needsAisleIngredients.length === 1 ? 'needs' : 'need'} an aisle.`}
     </div>
   );
@@ -4858,7 +4904,7 @@ export default function App() {
           value={newRecipeItemText}
           onChange={(e) => { setNewRecipeItemText(e.target.value); setRecipeNoMatch(null); }}
           onKeyDown={(e) => { if (e.key === 'Enter') handleRecipeAdd(); if (e.key === 'Escape') setRecipeNoMatch(null); }}
-          placeholder="Add an ingredient — e.g. 400g chicken thighs"
+          placeholder="Add an ingredient, e.g. 400g chicken thighs"
           aria-label="Add an ingredient"
           className="flex-1 py-2 focus:outline-none bg-transparent"
           style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 15, fontWeight: 600, minWidth: 0 }}
@@ -4911,7 +4957,7 @@ export default function App() {
       ))}
 
       {newRecipeIngredients.length === 0 && !recipeNoMatch && (
-        <p style={{ fontSize: 13, color: theme.textTertiary, margin: '10px 0 0' }}>Type anything — it'll find its aisle.</p>
+        <p style={{ fontSize: 13, color: theme.textTertiary, margin: '10px 0 0' }}>Type anything and it'll find its aisle.</p>
       )}
     </div>
   );
@@ -4933,7 +4979,7 @@ export default function App() {
         −
       </button>
       <span aria-labelledby="bc-recipe-serves" aria-live="polite" style={{ fontSize: 14, fontWeight: 700, fontFamily: MONO, color: newRecipeServings === null ? theme.textTertiary : INK, width: 30, textAlign: 'center' }}>
-        {newRecipeServings === null ? '—' : newRecipeServings}
+        {newRecipeServings === null ? '–' : newRecipeServings}
       </span>
       <button
         onClick={() => stepRecipeServings(1)}
@@ -4948,12 +4994,20 @@ export default function App() {
   );
 
   // ── Recipe list ──
-  const RECIPE_FILTERS = [['all', 'All'], ['favourites', 'Favourites'], ['wantToCook', 'Want to cook']];
-  const filteredRecipes = recipeFilter === 'favourites'
+  const RECIPE_FILTERS = [['all', 'All'], ['wantToCook', 'Want to cook'], ['favourites', 'Favourites']];
+  const flagFilteredRecipes = recipeFilter === 'favourites'
     ? recipes.filter(r => r.favourite === true)
     : recipeFilter === 'wantToCook'
       ? recipes.filter(r => r.wantToCook === true)
       : recipes;
+  // Search matches a recipe's name or any of its ingredients.
+  const recipeNeedle = recipeQuery.trim().toLowerCase();
+  const filteredRecipes = recipeNeedle
+    ? flagFilteredRecipes.filter(r =>
+      String(r.name || '').toLowerCase().includes(recipeNeedle) ||
+      (r.ingredients || []).some(i => String(i.name || '').toLowerCase().includes(recipeNeedle)))
+    : flagFilteredRecipes;
+  const wantToCookCount = recipes.filter(r => r.wantToCook === true).length;
   const viewingRecipe = viewingRecipeId ? recipes.find(r => r.id === viewingRecipeId) : null;
   const openRecipe = (recipe) => { triggerHaptic('light'); setViewingRecipeId(recipe.id); };
   // Buttons inside a tappable recipe row or card do only their own job.
@@ -4963,8 +5017,16 @@ export default function App() {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openRecipe(recipe); }
   };
 
+  const openRecipeSearch = () => {
+    triggerHaptic('light');
+    setShowRecipeSearch(true);
+    setTimeout(() => recipeSearchRef.current?.focus(), 50);
+  };
+  const closeRecipeSearch = () => { setRecipeQuery(''); setShowRecipeSearch(false); };
+
+  // Text tabs: the active one is heavier, in ink, with an ink underline.
   const recipeFilterPills = recipes.length > 0 && (
-    <div role="group" aria-label="Filter recipes" style={{ display: 'flex', gap: 6, paddingTop: isDesktop ? 22 : 8, paddingBottom: isDesktop ? 0 : 4, maxWidth: isDesktop ? 440 : 'none' }}>
+    <div role="group" aria-label="Filter recipes" style={{ display: 'flex', gap: 24, marginTop: isDesktop ? 18 : 16, borderBottom: `1px solid ${theme.borderLight}`, overflowX: 'auto' }}>
       {RECIPE_FILTERS.map(([id, label]) => {
         const active = recipeFilter === id;
         return (
@@ -4974,12 +5036,12 @@ export default function App() {
             onClick={() => { triggerHaptic('light'); setRecipeFilter(id); }}
             className="bc-press"
             style={{
-              flex: 1, minWidth: 0, height: 40, borderRadius: 9999, cursor: 'pointer', whiteSpace: 'nowrap',
-              fontSize: 13, fontWeight: 700,
-              backgroundColor: active ? YELLOW : 'transparent',
-              color: active ? '#1c1917' : theme.textSecondary,
-              border: active ? '2px solid transparent' : `2px solid ${theme.border}`,
-              transition: 'background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease'
+              minHeight: 44, padding: 0, marginBottom: -1, background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
+              fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em',
+              fontWeight: active ? 800 : 700,
+              color: active ? INK : theme.textSecondary,
+              borderBottom: `2px solid ${active ? INK : 'transparent'}`,
+              transition: 'color 0.2s ease, border-color 0.2s ease'
             }}
           >
             {label}
@@ -4990,27 +5052,83 @@ export default function App() {
   );
 
   const recipeFilterEmpty = recipes.length > 0 && filteredRecipes.length === 0 && (
-    <p style={{ fontSize: 14, color: theme.textTertiary, margin: 0, padding: isDesktop ? '22px 0 0' : '18px 0 4px' }}>
-      {recipeFilter === 'favourites' ? 'No favourites yet — tap the ☆ on a recipe.' : 'Nothing on your want-to-cook list yet.'}
+    <p style={{ fontSize: 14, color: theme.textSecondary, margin: 0, padding: isDesktop ? '22px 0 0' : '20px 0 4px' }}>
+      {recipeNeedle
+        ? 'No recipes match that.'
+        : recipeFilter === 'favourites' ? 'No favourites yet. Tap the star on a recipe.' : 'Nothing on your want-to-cook list yet.'}
     </p>
   );
+
+  // Phone recipe rows: a serif title and a line of meta on the page, a star
+  // on the right. The whole row opens the recipe sheet.
+  const recipeMeta = (recipe) => {
+    const count = (recipe.ingredients || []).length;
+    const serves = recipeServings(recipe);
+    return [serves && `Serves ${serves}`, `${count} ${count === 1 ? 'ingredient' : 'ingredients'}`].filter(Boolean).join(' · ');
+  };
+  const renderRecipeRow = (recipe, big, last) => {
+    const favourite = recipe.favourite === true;
+    return (
+      <div
+        key={recipe.id}
+        role="button"
+        tabIndex={0}
+        aria-label={`Open ${recipe.name}`}
+        onClick={() => openRecipe(recipe)}
+        onKeyDown={openOnKey(recipe)}
+        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: big ? '14px 0 12px' : '10px 0 9px', borderBottom: last ? 'none' : `1px solid ${theme.borderLight}`, cursor: 'pointer' }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ fontFamily: SERIF, fontSize: big ? 32 : 25, fontWeight: 400, lineHeight: 1.1, letterSpacing: '-0.01em', color: INK, margin: 0, overflowWrap: 'anywhere' }}>
+            {recipe.name}
+          </h3>
+          <p style={{ fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: theme.textSecondary, margin: '5px 0 0' }}>
+            {recipeMeta(recipe)}
+          </p>
+        </div>
+        <button
+          onClick={stopThen(() => toggleRecipeFlag(recipe.id, 'favourite'))}
+          aria-label={`Favourite ${recipe.name}`}
+          aria-pressed={favourite}
+          className="bc-press"
+          style={{ width: 44, height: 44, marginRight: -10, flexShrink: 0, borderRadius: '50%', background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <RecipeFlagIcon flag="favourite" on={favourite} size={19} color={INK} ink={INK} />
+        </button>
+      </div>
+    );
+  };
+
+  // Want to cook first, then everything A to Z. A flag filter or a search
+  // narrows that to one section.
+  const recipeSections = (() => {
+    const byName = [...filteredRecipes].sort((x, y) => String(x.name || '').localeCompare(String(y.name || ''), undefined, { sensitivity: 'base' }));
+    if (recipeFilter === 'favourites') return [{ id: 'favourites', name: 'Favourites', rows: byName, big: false }];
+    if (recipeFilter === 'wantToCook') return [{ id: 'want', name: 'Want to cook', rows: filteredRecipes, big: true }];
+    const want = filteredRecipes.filter(r => r.wantToCook === true);
+    return [
+      ...(want.length ? [{ id: 'want', name: 'Want to cook', rows: want, big: true }] : []),
+      { id: 'all', name: 'All recipes', rows: byName, big: false, right: 'A–Z' }
+    ];
+  })();
 
   // ════════════════ Recipes Screen ════════════════
   if (activeTab === 'recipes' && listId) {
     return (
       <div
         className="min-h-screen"
-        style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? SIDEBAR_WIDTH : 0 }}
+        style={{ fontFamily: SANS, backgroundColor: PAPER, paddingLeft: isDesktop ? SIDEBAR_WIDTH : 0 }}
       >
         <style>{styles}</style>
         {desktopSidebar}
         <Toast message={toastMessage} visible={showToast} t={theme} />
 
-        {/* Paper header. In the desktop editor it scrolls away — the sticky
-            left panel carries the name, the count and Save/Cancel from there. */}
+        {/* Paper header. In the desktop editor it scrolls away, and the sticky
+            left panel carries the name, the count and Save/Cancel from there.
+            The phone list scrolls it away too: the title is the page. */}
         <div
-          className={isDesktop && showCreateRecipe ? '' : 'sticky top-0 z-40'}
-          style={{ backgroundColor: PAPER, borderBottom: `1.5px solid ${theme.border}`, padding: isDesktop ? `20px ${shellPadX}px 18px` : '12px 28px 18px' }}
+          className={(isDesktop && showCreateRecipe) || (!isDesktop && !showCreateRecipe) ? '' : 'sticky top-0 z-40'}
+          style={{ backgroundColor: PAPER, borderBottom: !isDesktop && !showCreateRecipe ? 'none' : `1px solid ${theme.border}`, padding: isDesktop ? `20px ${shellPadX}px 18px` : (showCreateRecipe ? '12px 20px 14px' : '28px 20px 0') }}
         >
           <div style={{ maxWidth: isDesktop ? contentMax.recipes : 'none', margin: isDesktop ? '0 auto' : undefined }}>
           {showCreateRecipe ? (
@@ -5024,7 +5142,7 @@ export default function App() {
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
                   Recipes
                 </button>
-                <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: '-0.025em', color: INK, margin: 0 }}>
+                <h1 style={{ fontFamily: SERIF, fontSize: 36, fontWeight: 400, lineHeight: 1, color: INK, margin: 0 }}>
                   {editingRecipeId ? 'Edit recipe' : 'New recipe'}
                 </h1>
               </div>
@@ -5038,7 +5156,7 @@ export default function App() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
                 Back
               </button>
-              <h1 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: INK, margin: 0 }}>
+              <h1 style={{ fontFamily: SERIF, fontSize: 28, fontWeight: 400, lineHeight: 1, color: INK, margin: 0 }}>
                 {editingRecipeId ? 'Edit recipe' : 'New recipe'}
               </h1>
               <div style={{ width: 56 }} />
@@ -5047,8 +5165,9 @@ export default function App() {
           ) : isDesktop ? (
             <div className="flex items-end justify-between" style={{ gap: 24 }}>
               <div>
-                <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', margin: 0, color: INK }}>Recipes</h1>
-                <p style={{ fontSize: 13.5, color: theme.textSecondary, margin: '7px 0 0' }}>
+                <p style={{ ...contextLineStyle(theme), marginBottom: 10 }}>{recipes.length} saved · {wantToCookCount} to cook</p>
+                <h1 style={pageTitleStyle(theme)}>Recipes</h1>
+                <p style={{ fontSize: 13.5, color: theme.textSecondary, margin: '10px 0 0' }}>
                   {recipes.length === 0
                     ? 'A whole meal, dropped on the list at once.'
                     : `${recipes.length} saved · a whole meal, dropped on the list at once.`}
@@ -5058,7 +5177,7 @@ export default function App() {
                 <button
                   onClick={openImportRecipe}
                   className="bc-press bc-icon-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: `1px solid ${theme.border}`, color: INK, background: 'none', cursor: 'pointer' }}
                 >
                   <LinkIcon size={15} strokeWidth={2.6} />
                   Import from link
@@ -5075,14 +5194,50 @@ export default function App() {
             </div>
           ) : (
             <>
-              <h1 style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', margin: 0, color: INK }}>Recipes</h1>
-              <p style={{ fontSize: 14, color: theme.textSecondary, margin: '6px 0 0' }}>A whole meal, dropped on the list at once.</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <p style={{ ...contextLineStyle(theme), flex: 1, minWidth: 0 }}>{recipes.length} saved · {wantToCookCount} to cook</p>
+                {recipes.length > 0 && (
+                  <button
+                    onClick={openRecipeSearch}
+                    aria-label="Search recipes"
+                    aria-expanded={showRecipeSearch}
+                    className="bc-press bc-icon-btn"
+                    style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, boxSizing: 'border-box', border: `1px solid ${theme.border}`, background: 'none', color: INK, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg>
+                  </button>
+                )}
+              </div>
+              <h1 style={{ ...pageTitleStyle(theme), marginTop: 10 }}>Recipes</h1>
+              {showRecipeSearch && (
+                <div className="fade-in" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, padding: '0 6px 0 16px', height: 48, borderRadius: 9999, backgroundColor: theme.field, border: `1px solid ${theme.border}` }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}><circle cx="11" cy="11" r="6.5" /><path d="M20 20l-4.2-4.2" /></svg>
+                  <input
+                    ref={recipeSearchRef}
+                    type="search"
+                    value={recipeQuery}
+                    onChange={(e) => setRecipeQuery(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Escape') closeRecipeSearch(); }}
+                    placeholder="Search recipes"
+                    aria-label="Search recipes"
+                    className="flex-1 focus:outline-none bg-transparent"
+                    style={{ border: 'none', color: INK, fontSize: 16, fontWeight: 500, minWidth: 0 }}
+                  />
+                  <button
+                    onClick={closeRecipeSearch}
+                    aria-label="Close search"
+                    style={{ width: 36, height: 36, borderRadius: '50%', background: 'none', border: 'none', cursor: 'pointer', color: theme.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              )}
             </>
           )}
           </div>
         </div>
 
-        <div style={{ padding: isDesktop ? `0 ${shellPadX}px` : '6px 28px 0', paddingBottom: isDesktop ? 40 : 110, maxWidth: isDesktop ? contentMax.recipes : 'none', margin: isDesktop ? '0 auto' : undefined }}>
+        <div style={{ padding: isDesktop ? `0 ${shellPadX}px` : '0 20px', paddingBottom: isDesktop ? 40 : (showCreateRecipe ? 110 : NAV_CLEARANCE), maxWidth: isDesktop ? contentMax.recipes : 'none', margin: isDesktop ? '0 auto' : undefined }}>
           {showCreateRecipe ? (
             isDesktop ? (
               /* Desktop editor: a sticky panel holds the recipe's identity and
@@ -5167,13 +5322,13 @@ export default function App() {
 
                   {recipeEditorGroups.length > 0 && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16, alignItems: 'start' }}>
-                      {recipeEditorGroups.map(group => (
+                      {recipeEditorGroups.map((group, groupIndex) => (
                         <div
                           key={group.id}
                           className="bc-card"
                           style={{ backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 18, padding: '14px 16px', boxShadow: theme.cardShadow }}
                         >
-                          {renderAisleHeading(group.name, group.ingredients.length, group.muted)}
+                          {renderAisleHeading(groupIndex, group.name, group.ingredients.length)}
                           <div style={{ marginTop: 6 }}>{group.ingredients.map(renderRecipeIngredientRow)}</div>
                         </div>
                       ))}
@@ -5220,9 +5375,9 @@ export default function App() {
               {/* One input — each ingredient finds its own aisle */}
               <div style={{ marginBottom: 22 }}>{recipeAdder}</div>
 
-              {recipeEditorGroups.map(group => (
+              {recipeEditorGroups.map((group, groupIndex) => (
                 <div key={group.id} style={{ marginBottom: 14 }}>
-                  {renderAisleHeading(group.name, group.ingredients.length, group.muted)}
+                  {renderAisleHeading(groupIndex, group.name, group.ingredients.length)}
                   {group.ingredients.map(renderRecipeIngredientRow)}
                 </div>
               ))}
@@ -5239,7 +5394,7 @@ export default function App() {
                     <div style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6, alignSelf: 'center' }} />
                     <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3, alignSelf: 'center' }} />
                   </div>
-                  <h3 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.015em', color: INK, marginBottom: 8 }}>No recipes yet</h3>
+                  <h3 style={{ fontFamily: SERIF, fontSize: 34, fontWeight: 400, lineHeight: 1.05, color: INK, marginBottom: 10 }}>No recipes yet</h3>
                   <p style={{ fontSize: 14, color: theme.textSecondary, maxWidth: 260, margin: '0 auto', lineHeight: 1.55 }}>
                     Save your favourite meals and add every ingredient to your list in one tap.
                   </p>
@@ -5255,7 +5410,7 @@ export default function App() {
                     <button
                       onClick={openImportRecipe}
                       className="bc-press bc-icon-btn"
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: 220, padding: '10px 0', fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: 220, padding: '11px 0', fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `1px solid ${theme.border}`, color: INK, background: 'none', cursor: 'pointer' }}
                     >
                       <LinkIcon size={15} strokeWidth={2.6} />
                       Import from a link
@@ -5340,7 +5495,7 @@ export default function App() {
                             className="bc-press bc-cta"
                             style={{ width: 84, padding: '10px 0', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: isAdded ? INK : YELLOW, color: isAdded ? theme.accentOnInk : '#1c1917', cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
                           >
-                            {isAdded ? 'Added ✓' : 'Add'}
+                            {isAdded ? 'Added' : 'Add'}
                           </button>
                         </div>
                       </div>
@@ -5367,73 +5522,19 @@ export default function App() {
                 </div>
               ) : (
                 <div>
-                  {filteredRecipes.map((recipe) => {
-                    const ingredientNames = (recipe.ingredients || []).map(i => i.name);
-                    const preview = ingredientNames.slice(0, 4).join(', ') + (ingredientNames.length > 4 ? '…' : '');
-                    const isAdded = addingRecipeId === recipe.id;
-                    return (
-                      <div
-                        key={recipe.id}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`Open ${recipe.name}`}
-                        onClick={() => openRecipe(recipe)}
-                        onKeyDown={openOnKey(recipe)}
-                        style={{ padding: '18px 0', borderBottom: `1.5px solid ${theme.border}`, display: 'flex', alignItems: 'center', gap: 16 }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <h3 style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.015em', margin: 0, color: INK }}>
-                            {recipe.name}
-                            <span style={{ display: 'inline-flex', marginLeft: 7, verticalAlign: '-1px' }}><RecipeFlagMarks recipe={recipe} size={14} /></span>
-                          </h3>
-                          <div style={{ fontSize: 12.5, color: theme.textTertiary, margin: '6px 0 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 7 }}>
-                            <span style={{ fontFamily: MONO, fontWeight: 700, color: INK, flexShrink: 0 }}>{ingredientNames.length}</span>
-                            {preview && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>· {preview}</span>}
-                          </div>
-                          {recipe.notes && (
-                            <p style={{ fontSize: 12.5, fontStyle: 'italic', color: theme.textTertiary, margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {recipe.notes}
-                            </p>
-                          )}
-                          <div style={{ display: 'flex', gap: 14, marginTop: 6 }}>
-                            <button onClick={stopThen(() => startEditRecipe(recipe))} style={{ fontSize: 13, fontWeight: 600, color: theme.textSecondary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Edit</button>
-                            <button onClick={stopThen(() => { triggerHaptic('light'); setDeletingRecipeId(recipe.id); })} style={{ fontSize: 13, fontWeight: 600, color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete</button>
-                          </div>
-                        </div>
-                        <button
-                          onClick={stopThen(() => addRecipeToList(recipe))}
-                          className="bc-press"
-                          style={{ padding: '11px 0', width: 80, fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: isAdded ? INK : YELLOW, color: isAdded ? theme.accentOnInk : '#1c1917', cursor: 'pointer', flexShrink: 0, transition: 'background-color 0.22s ease, color 0.22s ease' }}
-                        >
-                          {isAdded ? 'Added ✓' : 'Add'}
-                        </button>
-                      </div>
-                    );
-                  })}
+                  {filteredRecipes.length > 0 && recipeSections.map((section, sectionIndex) => (
+                    <div key={section.id}>
+                      <SectionHeader
+                        n={sectionIndex + 1}
+                        name={section.name}
+                        right={section.right}
+                        t={theme}
+                        style={sectionIndex === 0 ? { paddingTop: 22 } : { paddingTop: 30 }}
+                      />
+                      {section.rows.map((recipe, i) => renderRecipeRow(recipe, section.big, i === section.rows.length - 1))}
+                    </div>
+                  ))}
                 </div>
-              )}
-
-              {/* New recipe and Import — desktop puts these in the header
-                  instead, and the empty state carries its own. */}
-              {!isDesktop && recipes.length > 0 && (
-                <>
-                  <button
-                    onClick={() => setShowCreateRecipe(true)}
-                    className="bc-press"
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 0 10px', background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14"/></svg>
-                    <span style={{ fontSize: 16, fontWeight: 600, color: theme.textSecondary }}>New recipe</span>
-                  </button>
-                  <button
-                    onClick={openImportRecipe}
-                    className="bc-press"
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0 20px', background: 'none', border: 'none', cursor: 'pointer', width: '100%' }}
-                  >
-                    <LinkIcon size={16} color={theme.textSecondary} strokeWidth={2.5} />
-                    <span style={{ fontSize: 16, fontWeight: 600, color: theme.textSecondary }}>Import from a link</span>
-                  </button>
-                </>
               )}
             </>
           )}
@@ -5480,6 +5581,7 @@ export default function App() {
             onToggleFlag={toggleRecipeFlag}
             onAdd={addRecipeToList}
             onEdit={startEditRecipe}
+            onDelete={(recipe) => { triggerHaptic('light'); setViewingRecipeId(null); setDeletingRecipeId(recipe.id); }}
           />
         )}
 
@@ -5504,21 +5606,23 @@ export default function App() {
         {/* Delete Recipe Confirmation */}
         {deletingRecipeId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
-            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
-              <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Delete recipe?</h2>
+            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, border: `1px solid ${theme.border}`, borderRadius: 24, padding: 28 }}>
+              <h2 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 400, lineHeight: 1.05, color: INK, marginBottom: 10 }}>Delete recipe?</h2>
               <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6, lineHeight: 1.5 }}>
                 This permanently deletes "{recipes.find(r => r.id === deletingRecipeId)?.name}".
               </p>
               <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
               <div className="flex gap-3">
-                <button onClick={() => { triggerHaptic('light'); setDeletingRecipeId(null); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={() => { triggerHaptic('light'); setDeletingRecipeId(null); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `1px solid ${theme.border}`, color: INK, background: 'none', cursor: 'pointer' }}>Cancel</button>
                 <button onClick={confirmDeleteRecipe} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: INK, color: PAPER, cursor: 'pointer' }}>Delete</button>
               </div>
             </div>
           </div>
         )}
 
-        {!isDesktop && !showCreateRecipe && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={theme} />}
+        {!isDesktop && !showCreateRecipe && (
+          <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={theme} onPlus={() => setShowImportRecipe(true)} plusLabel="Add recipe" />
+        )}
       </div>
     );
   }
@@ -5528,23 +5632,65 @@ export default function App() {
     const inSubSection = settingsTab !== 'general';
     // Desktop settings are grouped into titled cards rather than one long
     // stack of divider rows; these keep the three parts consistent.
-    const settingsCardStyle = { backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 20, padding: '18px 20px 20px', boxShadow: theme.cardShadow };
+    const settingsCardStyle = { backgroundColor: theme.bgSecondary, border: `1px solid ${theme.border}`, borderRadius: 18, padding: '18px 20px 20px' };
     const settingsCardHeader = { display: 'flex', alignItems: 'center', gap: 9, marginBottom: 14 };
-    const settingsCardTitle = { fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, margin: 0 };
+    const settingsCardTitle = { fontSize: 11.5, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: INK, margin: 0 };
+
+    // Phone settings: framed sections, each opened by a numbered header.
+    const frameStyle = { backgroundColor: theme.bgSecondary, border: `1px solid ${theme.border}`, borderRadius: 18, padding: '4px 16px', marginTop: 14 };
+    const frameHeader = (n, name, right) => <SectionHeader n={n} name={name} right={right} t={theme} style={{ paddingTop: 14 }} />;
+    const settingsRowStyle = (last) => ({
+      width: '100%', minHeight: 50, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+      padding: '10px 0', background: 'none', border: 'none', borderBottom: last ? 'none' : `1px solid ${theme.borderLight}`,
+      cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit'
+    });
+    const settingsRowLabel = { fontSize: 16, fontWeight: 500, color: INK };
+    const settingsSmallCaps = { fontSize: 11.5, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: INK };
+    const chevron = (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={INK} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}><path d="M9 18l6-6-6-6" /></svg>
+    );
+    const radioMark = (on) => (
+      <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: '50%', boxSizing: 'border-box', flexShrink: 0, border: `1.5px solid ${INK}`, backgroundColor: on ? YELLOW : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.18s ease' }}>
+        {on && <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#1c1917' }} />}
+      </span>
+    );
+    // 50x30 with an ink edge. On is a yellow track; the knob is ink either way.
+    const toggleMark = (on) => (
+      <span aria-hidden="true" style={{ width: 50, height: 30, borderRadius: 9999, flexShrink: 0, boxSizing: 'border-box', border: `1px solid ${INK}`, backgroundColor: on ? YELLOW : 'transparent', display: 'flex', alignItems: 'center', padding: 3, transition: 'background-color 0.2s ease' }}>
+        <span style={{ width: 22, height: 22, borderRadius: '50%', backgroundColor: on ? '#1c1917' : INK, transform: `translateX(${on ? 20 : 0}px)`, transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1)' }} />
+      </span>
+    );
+    // Light, dark, system. The capsule slides behind the active word.
+    const themeSwitch = (
+      <div style={{ position: 'relative', display: 'flex', background: theme.bgTertiary, borderRadius: 9999, padding: 3 }}>
+        <div style={{ position: 'absolute', top: 3, bottom: 3, left: 3, width: 'calc(33.333% - 2px)', borderRadius: 9999, background: theme.capsule, boxShadow: theme.shadowCapsule, transform: `translateX(${['light', 'dark', 'system'].indexOf(themePref) * 100}%)`, transition: 'transform 0.28s cubic-bezier(0.22,1,0.36,1)' }} />
+        {[['light', 'Light'], ['dark', 'Dark'], ['system', 'System']].map(([value, label]) => (
+          <button
+            key={value}
+            onClick={() => { triggerHaptic('light'); setThemePref(value); }}
+            aria-pressed={themePref === value}
+            style={{ flex: 1, padding: '11px 0', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', background: 'transparent', color: themePref === value ? INK : theme.textSecondary, cursor: 'pointer', position: 'relative', zIndex: 1, transition: 'color 0.25s ease' }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+    );
+    const openLayoutEditor = (layout) => { setEditingStoreLayout(layout.id); setEditingStoreLayoutData(storeLayouts.find(l => l.id === layout.id)); };
     return (
-      <div className="min-h-screen" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? SIDEBAR_WIDTH : 0 }}>
+      <div className="min-h-screen" style={{ fontFamily: SANS, backgroundColor: PAPER, paddingLeft: isDesktop ? SIDEBAR_WIDTH : 0 }}>
         <style>{styles}</style>
         {desktopSidebar}
         <Toast message={toastMessage} visible={showToast} t={theme} />
 
-        {/* Paper header with the share code card */}
-        <div style={{ padding: isDesktop ? `20px ${shellPadX}px 0` : '12px 28px 0' }}>
+        {/* Paper header */}
+        <div style={{ padding: isDesktop ? `20px ${shellPadX}px 0` : '28px 20px 0' }}>
           <div style={{ maxWidth: isDesktop ? contentMax.settings : 'none', margin: isDesktop ? '0 auto' : undefined }}>
           {isDesktop ? (
             /* No drill-down on desktop — there is room for all three sections
                as tabs, and the share code already lives in the sidebar. */
             <>
-              <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', margin: 0, color: INK }}>Settings</h1>
+              <h1 style={pageTitleStyle(theme)}>Settings</h1>
               <div role="tablist" style={{ display: 'flex', gap: 4, marginTop: 18, borderBottom: `1.5px solid ${theme.border}` }}>
                 {[['general', 'General'], ['stores', 'Stores'], ['categories', 'Categories']].map(([id, label]) => {
                   const isActive = settingsTab === id;
@@ -5560,7 +5706,7 @@ export default function App() {
                         background: 'none', border: 'none', cursor: 'pointer',
                         color: isActive ? INK : theme.textTertiary,
                         borderTopLeftRadius: 10, borderTopRightRadius: 10,
-                        boxShadow: isActive ? `inset 0 -2.5px 0 ${YELLOW}` : 'none',
+                        boxShadow: isActive ? `inset 0 -2px 0 ${INK}` : 'none',
                         transition: 'color 0.18s ease, background-color 0.18s ease',
                       }}
                     >
@@ -5571,44 +5717,29 @@ export default function App() {
               </div>
             </>
           ) : inSubSection ? (
-            <div className="flex items-center" style={{ gap: 12 }}>
+            <>
               <button
                 onClick={() => { setSettingsTab('general'); triggerHaptic('light'); }}
                 className="bc-press flex items-center"
-                style={{ gap: 6, fontSize: 14, fontWeight: 700, color: theme.textSecondary, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                style={{ ...contextLineStyle(theme), gap: 6, minHeight: 44, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
                 Settings
               </button>
-              <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.025em', margin: 0, color: INK }}>
+              <h1 style={{ ...pageTitleStyle(theme), marginTop: 2 }}>
                 {settingsTab === 'stores' ? 'Stores' : 'Categories'}
               </h1>
-            </div>
+            </>
           ) : (
             <>
-              <h1 style={{ fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', margin: 0, color: INK }}>Settings</h1>
-              <div style={{ marginTop: 16, borderRadius: 18, border: `1.5px solid ${theme.border}`, background: theme.bgSecondary, padding: '16px 18px', boxShadow: theme.cardShadow }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: theme.textTertiary, textTransform: 'uppercase', margin: '0 0 6px' }}>Share code</p>
-                    <span style={{ fontSize: 26, fontWeight: 700, fontFamily: MONO, letterSpacing: '0.14em', color: INK }}>{listId}</span>
-                  </div>
-                  <button
-                    onClick={() => { navigator.clipboard?.writeText(listId); triggerHaptic('success'); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 1500); }}
-                    className="bc-press"
-                    style={{ padding: '11px 0', width: 86, fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: codeCopied ? INK : YELLOW, color: codeCopied ? theme.accentOnInk : '#1c1917', cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
-                  >
-                    {codeCopied ? 'Copied ✓' : 'Copy'}
-                  </button>
-                </div>
-                <p style={{ fontSize: 12, color: theme.textTertiary, margin: '10px 0 0', lineHeight: 1.45 }}>Anyone with this code follows the same trail.</p>
-              </div>
+              <p style={{ ...contextLineStyle(theme), marginBottom: 10 }}>{listName || 'Breadcrumbs'}</p>
+              <h1 style={pageTitleStyle(theme)}>Settings</h1>
             </>
           )}
           </div>
         </div>
 
-        <div style={{ padding: isDesktop ? `22px ${shellPadX}px 0` : '10px 28px 0', paddingBottom: isDesktop ? 48 : 110, maxWidth: isDesktop ? contentMax.settings : 'none', margin: isDesktop ? '0 auto' : undefined }}>
+        <div style={{ padding: isDesktop ? `22px ${shellPadX}px 0` : '10px 20px 0', paddingBottom: isDesktop ? 48 : NAV_CLEARANCE, maxWidth: isDesktop ? contentMax.settings : 'none', margin: isDesktop ? '0 auto' : undefined }}>
 
           {/* ── General — desktop splits the stack into two columns ── */}
           {settingsTab === 'general' && isDesktop && (
@@ -5628,7 +5759,7 @@ export default function App() {
                       className="bc-press bc-cta"
                       style={{ padding: '11px 0', width: 92, fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: codeCopied ? INK : YELLOW, color: codeCopied ? theme.accentOnInk : '#1c1917', cursor: 'pointer', flexShrink: 0, transition: 'background-color 0.22s ease, color 0.22s ease' }}
                     >
-                      {codeCopied ? 'Copied ✓' : 'Copy'}
+                      {codeCopied ? 'Copied' : 'Copy'}
                     </button>
                   </div>
                   <p style={{ fontSize: 12.5, color: theme.textTertiary, margin: '12px 0 0', lineHeight: 1.45 }}>Anyone with this code follows the same trail.</p>
@@ -5650,7 +5781,7 @@ export default function App() {
                     className="w-full focus:outline-none bg-transparent"
                     style={{ color: INK, fontSize: 16, fontWeight: 600, border: 'none', borderBottom: `1.5px solid ${theme.border}`, padding: '4px 0 8px' }}
                   />
-                  <p style={{ fontSize: 12.5, color: theme.textTertiary, margin: '12px 0 0', lineHeight: 1.45 }}>Saved on this device only — it isn't shared with the list.</p>
+                  <p style={{ fontSize: 12.5, color: theme.textSecondary, margin: '12px 0 0', lineHeight: 1.45 }}>Saved on this device only. It isn't shared with the list.</p>
                 </section>
 
                 <section style={settingsCardStyle}>
@@ -5699,19 +5830,7 @@ export default function App() {
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
                     <h2 style={settingsCardTitle}>Appearance</h2>
                   </div>
-                  <div style={{ position: 'relative', display: 'flex', background: theme.bgTertiary, borderRadius: 9999, padding: 3 }}>
-                    <div style={{ position: 'absolute', top: 3, bottom: 3, left: 3, width: 'calc(33.333% - 2px)', borderRadius: 9999, background: INK, transform: `translateX(${['light', 'dark', 'system'].indexOf(themePref) * 100}%)`, transition: 'transform 0.28s cubic-bezier(0.22,1,0.36,1)' }} />
-                    {[['light', 'Light'], ['dark', 'Dark'], ['system', 'System']].map(([value, label]) => (
-                      <button
-                        key={value}
-                        onClick={() => { triggerHaptic('light'); setThemePref(value); }}
-                        aria-pressed={themePref === value}
-                        style={{ flex: 1, padding: '11px 0', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', background: 'transparent', color: themePref === value ? theme.accentOnInk : theme.textSecondary, cursor: 'pointer', position: 'relative', zIndex: 1, transition: 'color 0.25s ease' }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
+                  {themeSwitch}
                 </section>
 
                 <section style={settingsCardStyle}>
@@ -5729,12 +5848,7 @@ export default function App() {
                       <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: INK }}>Hide ticked items</span>
                       <span style={{ display: 'block', fontSize: 12.5, color: theme.textTertiary, marginTop: 2 }}>Picked-up items drop out of the aisles</span>
                     </span>
-                    <span
-                      aria-hidden="true"
-                      style={{ width: 46, height: 27, borderRadius: 9999, flexShrink: 0, backgroundColor: hideCompleted ? YELLOW : theme.bgTertiary, border: `1.5px solid ${hideCompleted ? YELLOW : theme.border}`, display: 'flex', alignItems: 'center', padding: 2, transition: 'background-color 0.2s ease, border-color 0.2s ease' }}
-                    >
-                      <span style={{ width: 21, height: 21, borderRadius: '50%', backgroundColor: hideCompleted ? '#1c1917' : theme.textTertiary, transform: `translateX(${hideCompleted ? 19 : 0}px)`, transition: 'transform 0.22s cubic-bezier(0.22,1,0.36,1), background-color 0.2s ease' }} />
-                    </span>
+                    {toggleMark(hideCompleted)}
                   </button>
                 </section>
 
@@ -5757,97 +5871,123 @@ export default function App() {
           )}
 
           {/* ── General (main settings page) ── */}
-          {settingsTab === 'general' && !isDesktop && (
-            <>
-              <div style={{ padding: '15px 0', borderBottom: `1.5px solid ${theme.border}` }}>
-                <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textSecondary, display: 'block', marginBottom: 6 }}>List name</label>
-                <input
-                  type="text"
-                  value={editingListName}
-                  onChange={(e) => setEditingListName(e.target.value)}
-                  onBlur={() => saveListName(editingListName)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
-                  placeholder="Name your list…"
-                  className="w-full focus:outline-none bg-transparent"
-                  style={{ color: INK, fontSize: 16, fontWeight: 600, border: 'none', padding: '2px 0' }}
-                />
-              </div>
-
-              {/* Navigation rows */}
-              {[['stores', 'Stores', 'Switch store layout and reorder aisles'], ['categories', 'Categories', 'Show or hide aisles, add custom ones']].map(([id, label, desc]) => (
-                <button
-                  key={id}
-                  onClick={() => { setSettingsTab(id); triggerHaptic('light'); }}
-                  className="w-full flex items-center justify-between bc-press"
-                  style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer', textAlign: 'left' }}
-                >
-                  <div>
-                    <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: INK }}>{label}</span>
-                    <span style={{ display: 'block', fontSize: 12, color: theme.textTertiary, marginTop: 2 }}>{desc}</span>
+          {settingsTab === 'general' && !isDesktop && (() => {
+            const activeLayout = storeLayouts.find(l => l.id === activeStoreLayoutId) || storeLayouts[0];
+            const clearRows = [
+              checkedCount > 0 && { id: 'ticked', label: 'Clear ticked items', count: checkedCount, onClick: () => { triggerHaptic('light'); setShowClearConfirm(true); } },
+              totalItems > 0 && { id: 'all', label: 'Clear all items', count: totalItems, onClick: () => { triggerHaptic('light'); setShowClearAllConfirm(true); } }
+            ].filter(Boolean);
+            return (
+              <>
+                <section style={{ ...frameStyle, marginTop: 18 }}>
+                  {frameHeader(1, 'This list')}
+                  <div style={{ padding: '14px 0 12px', borderBottom: `1px solid ${theme.borderLight}` }}>
+                    <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textSecondary, margin: '0 0 4px' }}>Share code</p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <span style={{ fontSize: 30, fontWeight: 600, fontFamily: MONO, letterSpacing: '0.16em', color: INK, minWidth: 0 }}>{listId}</span>
+                      <button
+                        onClick={copyShareCode}
+                        className="bc-press bc-icon-btn"
+                        style={{ minWidth: 82, height: 44, padding: '0 18px', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', borderRadius: 9999, border: `1px solid ${theme.border}`, background: 'transparent', color: INK, cursor: 'pointer', flexShrink: 0 }}
+                      >
+                        {codeCopied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <p style={{ fontSize: 13, color: theme.textSecondary, margin: '8px 0 0', lineHeight: 1.45 }}>Anyone with this code follows the same trail.</p>
                   </div>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-                </button>
-              ))}
+                  <label style={{ display: 'block', padding: '12px 0 10px' }}>
+                    <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textSecondary, marginBottom: 4 }}>List name</span>
+                    <input
+                      type="text"
+                      value={editingListName}
+                      onChange={(e) => setEditingListName(e.target.value)}
+                      onBlur={() => saveListName(editingListName)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+                      placeholder="Name your list…"
+                      className="w-full focus:outline-none bg-transparent"
+                      style={{ color: INK, fontSize: 16, fontWeight: 500, border: 'none', padding: '4px 0' }}
+                    />
+                  </label>
+                </section>
 
-              {/* Theme — light / dark / system */}
-              <div style={{ padding: '16px 0', borderBottom: `1.5px solid ${theme.border}` }}>
-                <span style={{ fontSize: 15, fontWeight: 600, color: INK, display: 'block', marginBottom: 12 }}>Theme</span>
-                <div style={{ position: 'relative', display: 'flex', background: theme.bgTertiary, borderRadius: 9999, padding: 3 }}>
-                  <div style={{ position: 'absolute', top: 3, bottom: 3, left: 3, width: 'calc(33.333% - 2px)', borderRadius: 9999, background: INK, transform: `translateX(${['light', 'dark', 'system'].indexOf(themePref) * 100}%)`, transition: 'transform 0.28s cubic-bezier(0.22,1,0.36,1)' }} />
-                  {[['light', 'Light'], ['dark', 'Dark'], ['system', 'System']].map(([value, label]) => (
-                    <button
-                      key={value}
-                      onClick={() => { triggerHaptic('light'); setThemePref(value); }}
-                      style={{ flex: 1, padding: '11px 0', fontSize: 13, fontWeight: 700, borderRadius: 9999, border: 'none', background: 'transparent', color: themePref === value ? theme.accentOnInk : theme.textSecondary, cursor: 'pointer', position: 'relative', zIndex: 1, transition: 'color 0.25s ease' }}
-                    >
-                      {label}
+                <section style={frameStyle}>
+                  {frameHeader(2, 'Store layout')}
+                  {storeLayouts.map((layout) => {
+                    const isActive = layout.id === activeStoreLayoutId;
+                    return (
+                      <button
+                        key={layout.id}
+                        onClick={() => switchStoreLayout(layout.id)}
+                        aria-pressed={isActive}
+                        style={{ ...settingsRowStyle(false), justifyContent: 'flex-start' }}
+                      >
+                        {radioMark(isActive)}
+                        <span style={{ ...settingsRowLabel, flex: 1, minWidth: 0 }} className="truncate">{layout.name}</span>
+                        {!layout.isDefault && (
+                          <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.textSecondary, flexShrink: 0 }}>Custom</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                  <button onClick={() => { triggerHaptic('light'); openLayoutEditor(activeLayout); }} style={settingsRowStyle(false)}>
+                    <span style={settingsSmallCaps}>Edit aisle order</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: theme.textSecondary }}>{activeLayout?.categoryOrder.length || 0}</span>
+                      {chevron}
+                    </span>
+                  </button>
+                  <button onClick={() => { setSettingsTab('stores'); triggerHaptic('light'); }} style={settingsRowStyle(true)}>
+                    <span style={settingsSmallCaps}>Manage layouts</span>
+                    {chevron}
+                  </button>
+                </section>
+
+                <section style={frameStyle}>
+                  {frameHeader(3, 'Aisles')}
+                  <button onClick={() => { setSettingsTab('categories'); triggerHaptic('light'); }} style={settingsRowStyle(true)}>
+                    <span style={settingsRowLabel}>Show or hide aisles</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: theme.textSecondary }}>{visibleCategories.length}/{categories.length}</span>
+                      {chevron}
+                    </span>
+                  </button>
+                </section>
+
+                <section style={frameStyle}>
+                  {frameHeader(4, 'Preferences')}
+                  <div style={{ padding: '12px 0', borderBottom: `1px solid ${theme.borderLight}` }}>
+                    <span style={{ ...settingsRowLabel, display: 'block', marginBottom: 10 }}>Theme</span>
+                    {themeSwitch}
+                  </div>
+                  <button onClick={toggleHideCompleted} aria-pressed={hideCompleted} style={settingsRowStyle(false)}>
+                    <span style={settingsRowLabel}>Hide ticked items</span>
+                    {toggleMark(hideCompleted)}
+                  </button>
+                  <button
+                    onClick={() => { localStorage.removeItem('breadcrumbs-has-seen-onboarding'); setShowOnboarding(true); }}
+                    style={settingsRowStyle(true)}
+                  >
+                    <span style={settingsRowLabel}>Replay app intro</span>
+                    {chevron}
+                  </button>
+                </section>
+
+                <section style={frameStyle}>
+                  {frameHeader(5, 'Clear and leave')}
+                  {clearRows.map((row) => (
+                    <button key={row.id} onClick={row.onClick} style={settingsRowStyle(false)}>
+                      <span style={settingsRowLabel}>{row.label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, fontFamily: MONO, color: theme.textSecondary }}>{row.count}</span>
                     </button>
                   ))}
-                </div>
-              </div>
-
-              <button
-                onClick={() => { localStorage.removeItem('breadcrumbs-has-seen-onboarding'); setShowOnboarding(true); }}
-                className="w-full flex items-center justify-between bc-press"
-                style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
-              >
-                <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Replay app intro</span>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
-              </button>
-
-              {checkedCount > 0 && (
-                <button
-                  onClick={() => { triggerHaptic('light'); setShowClearConfirm(true); }}
-                  className="w-full flex items-center justify-between bc-press"
-                  style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
-                >
-                  <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Clear ticked items</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: theme.textSecondary }}>{checkedCount}</span>
-                </button>
-              )}
-
-
-              {totalItems > 0 && (
-                <button
-                  onClick={() => { triggerHaptic('light'); setShowClearAllConfirm(true); }}
-                  className="w-full flex items-center justify-between bc-press"
-                  style={{ padding: '16px 0', background: 'none', border: 'none', borderBottom: `1.5px solid ${theme.border}`, cursor: 'pointer' }}
-                >
-                  <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Clear all items</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, fontFamily: MONO, color: theme.textSecondary }}>{totalItems}</span>
-                </button>
-              )}
-
-              <button
-                onClick={() => { triggerHaptic('light'); setShowLeaveConfirm(true); }}
-                className="w-full flex items-center justify-between bc-press"
-                style={{ padding: '16px 0', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                <span style={{ fontSize: 15, fontWeight: 600, color: theme.textTertiary }}>Leave this list</span>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-              </button>
-            </>
-          )}
+                  <button onClick={() => { triggerHaptic('light'); setShowLeaveConfirm(true); }} style={settingsRowStyle(true)}>
+                    <span style={{ ...settingsRowLabel, color: theme.textSecondary }}>Leave this list</span>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+                  </button>
+                </section>
+              </>
+            );
+          })()}
 
           {/* ── Stores — desktop lays the layouts out as selectable cards ── */}
           {settingsTab === 'stores' && isDesktop && (
@@ -5876,9 +6016,8 @@ export default function App() {
                       style={{
                         position: 'relative',
                         backgroundColor: isActive ? theme.bgSecondary : 'transparent',
-                        border: `2px solid ${isActive ? YELLOW : theme.border}`,
+                        border: `1px solid ${isActive ? INK : theme.border}`,
                         borderRadius: 18, padding: '15px 16px 13px',
-                        boxShadow: isActive ? theme.yellowGlow : 'none',
                       }}
                     >
                       <button
@@ -5887,19 +6026,15 @@ export default function App() {
                         style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
-                          <div style={{ width: 24, height: 24, borderRadius: '50%', border: `2.5px solid ${isActive ? YELLOW : theme.border}`, backgroundColor: isActive ? YELLOW : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.18s ease' }}>
-                            {isActive && (
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12l6 6L20 6" /></svg>
-                            )}
-                          </div>
+                          {radioMark(isActive)}
                           {isActive ? (
-                            <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', backgroundColor: YELLOW, color: '#1c1917', borderRadius: 9999, padding: '3px 9px', flexShrink: 0 }}>Active</span>
+                            <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: INK, border: `1px solid ${INK}`, borderRadius: 9999, padding: '2px 8px', flexShrink: 0 }}>Active</span>
                           ) : !layout.isDefault && (
                             <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.textSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 9999, padding: '2px 8px', flexShrink: 0 }}>Custom</span>
                           )}
                         </div>
-                        <span className="truncate" style={{ display: 'block', fontSize: 16, fontWeight: isActive ? 800 : 700, letterSpacing: '-0.015em', color: INK }}>{layout.name}</span>
-                        <span style={{ display: 'block', fontSize: 11.5, color: theme.textTertiary, marginTop: 3 }}>
+                        <span className="truncate" style={{ display: 'block', fontFamily: SERIF, fontSize: 24, fontWeight: 400, lineHeight: 1.1, color: INK }}>{layout.name}</span>
+                        <span style={{ display: 'block', fontSize: 11.5, color: theme.textSecondary, marginTop: 3 }}>
                           {layout.categoryOrder.length} aisles in order
                         </span>
                       </button>
@@ -5936,41 +6071,40 @@ export default function App() {
           {/* ── Stores ── */}
           {settingsTab === 'stores' && !isDesktop && (
             <>
-              <p style={{ fontSize: 13.5, color: theme.textSecondary, marginBottom: 18, lineHeight: 1.55 }}>
+              <p style={{ fontSize: 14, color: theme.text, margin: '14px 0 0', lineHeight: 1.55 }}>
                 Pick a store and your aisles reorder to match how it's laid out. Your items stay the same.
               </p>
-              {storeLayouts.map((layout) => {
-                const isActive = layout.id === activeStoreLayoutId;
-                return (
-                  <div key={layout.id} className="flex items-center gap-3" style={{ padding: '13px 0', borderBottom: `1.5px solid ${theme.borderLight}` }}>
-                    <button onClick={() => switchStoreLayout(layout.id)} className="flex-1 flex items-center gap-3 text-left" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                      <div style={{ width: 24, height: 24, borderRadius: '50%', border: `2.5px solid ${isActive ? YELLOW : theme.border}`, backgroundColor: isActive ? YELLOW : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.18s ease' }}>
-                        {isActive && (
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1c1917" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12l6 6L20 6"/></svg>
+              <section style={{ ...frameStyle, marginTop: 18 }}>
+                {frameHeader(1, 'Layouts', storeLayouts.length)}
+                {storeLayouts.map((layout, i) => {
+                  const isActive = layout.id === activeStoreLayoutId;
+                  return (
+                    <div key={layout.id} className="flex items-center gap-2" style={{ minHeight: 50, borderBottom: i === storeLayouts.length - 1 ? 'none' : `1px solid ${theme.borderLight}` }}>
+                      <button onClick={() => switchStoreLayout(layout.id)} aria-pressed={isActive} className="flex-1 flex items-center gap-3 text-left" style={{ minHeight: 50, minWidth: 0, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                        {radioMark(isActive)}
+                        <span className="truncate" style={{ ...settingsRowLabel, fontWeight: isActive ? 600 : 500 }}>{layout.name}</span>
+                        {!layout.isDefault && (
+                          <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.textSecondary, flexShrink: 0 }}>Custom</span>
                         )}
-                      </div>
-                      <span style={{ fontSize: 15.5, fontWeight: isActive ? 700 : 600, color: INK }}>{layout.name}</span>
+                      </button>
+                      <button
+                        onClick={() => openLayoutEditor(layout)}
+                        className="bc-press"
+                        style={{ ...settingsSmallCaps, fontSize: 11, minHeight: 44, background: 'none', border: 'none', cursor: 'pointer', padding: '0 8px' }}
+                      >
+                        Edit
+                      </button>
                       {!layout.isDefault && (
-                        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.textSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 9999, padding: '2px 8px' }}>Custom</span>
+                        <button onClick={() => deleteStoreLayout(layout.id)} aria-label={`Delete ${layout.name}`} style={{ width: 36, height: 44, color: theme.textSecondary, background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, fontWeight: 300, padding: 0 }}>×</button>
                       )}
-                    </button>
-                    <button
-                      onClick={() => { setEditingStoreLayout(layout.id); setEditingStoreLayoutData(storeLayouts.find(s => s.id === layout.id)); }}
-                      className="bc-press"
-                      style={{ fontSize: 13, fontWeight: 700, color: theme.textSecondary, background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px' }}
-                    >
-                      Edit
-                    </button>
-                    {!layout.isDefault && (
-                      <button onClick={() => deleteStoreLayout(layout.id)} style={{ width: 28, height: 28, color: theme.textTertiary, background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, fontWeight: 300, padding: 0 }}>×</button>
-                    )}
-                  </div>
-                );
-              })}
+                    </div>
+                  );
+                })}
+              </section>
               <button
                 onClick={createLayoutFromPrompt}
                 className="w-full bc-press"
-                style={{ marginTop: 18, padding: '15px 0', fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px dashed ${theme.textTertiary}`, background: 'none', color: INK, cursor: 'pointer' }}
+                style={{ marginTop: 14, minHeight: 50, fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `1px solid ${theme.border}`, background: 'none', color: INK, cursor: 'pointer' }}
               >
                 + Create custom layout
               </button>
@@ -5999,7 +6133,7 @@ export default function App() {
                   )}
                 </div>
               ) : (
-                <p style={{ fontSize: 13.5, color: theme.textSecondary, marginBottom: 18, lineHeight: 1.55 }}>
+                <p style={{ fontSize: 14, color: theme.text, margin: '14px 0 18px', lineHeight: 1.55 }}>
                   Toggle aisles on or off. Hidden aisles won't appear in your list. Reorder them in the Stores tab.
                 </p>
               )}
@@ -6014,7 +6148,7 @@ export default function App() {
                     placeholder="Category name…"
                     aria-label="New category name"
                     className="w-full py-2 focus:outline-none bg-transparent"
-                    style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 16, fontWeight: 600, marginBottom: 12 }}
+                    style={{ borderBottom: `1.5px solid ${INK}`, color: INK, fontSize: 16, fontWeight: 500, marginBottom: 12 }}
                     autoFocus
                   />
                   <div className="flex gap-2">
@@ -6026,14 +6160,15 @@ export default function App() {
                 <button
                   onClick={() => setShowAddCategory(true)}
                   className="w-full bc-press"
-                  style={{ marginBottom: 18, padding: '14px 0', fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px dashed ${theme.textTertiary}`, background: 'none', color: INK, cursor: 'pointer' }}
+                  style={{ marginBottom: 4, minHeight: 50, fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `1px solid ${theme.border}`, background: 'none', color: INK, cursor: 'pointer' }}
                 >
                   + Add custom category
                 </button>
               )}
 
-              <div style={isDesktop ? { display: 'grid', gridTemplateColumns: isWide ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: 10, alignItems: 'start' } : undefined}>
-              {categories.map((cat) => {
+              <div style={isDesktop ? { display: 'grid', gridTemplateColumns: isWide ? 'repeat(3, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: 10, alignItems: 'start' } : { ...frameStyle, marginTop: 14 }}>
+              {!isDesktop && frameHeader(1, 'Aisles', `${visibleCategories.length}/${categories.length}`)}
+              {categories.map((cat, catIndex) => {
                 const isHidden = hiddenCategories.includes(cat.id);
                 const itemCount = items.filter(i => i.category === cat.id).length;
                 const isCustom = cat.isDefault === false;
@@ -6042,18 +6177,18 @@ export default function App() {
                     key={cat.id}
                     className={`flex items-center gap-3${isDesktop ? ' bc-hover-row' : ''}`}
                     style={isDesktop
-                      ? { padding: '10px 12px', borderRadius: 14, border: `1.5px solid ${theme.borderLight}`, backgroundColor: isHidden ? 'transparent' : theme.bgSecondary, transition: 'background-color 0.16s ease, border-color 0.16s ease' }
-                      : { padding: '12px 0', borderBottom: `1.5px solid ${theme.borderLight}` }}
+                      ? { padding: '10px 12px', borderRadius: 14, border: `1px solid ${theme.borderLight}`, backgroundColor: isHidden ? 'transparent' : theme.bgSecondary, transition: 'background-color 0.16s ease, border-color 0.16s ease' }
+                      : { minHeight: 50, padding: '6px 0', borderBottom: catIndex === categories.length - 1 ? 'none' : `1px solid ${theme.borderLight}` }}
                   >
                     <div className="flex-1 min-w-0" style={{ opacity: isHidden ? 0.4 : 1, transition: 'opacity 0.2s ease' }}>
                       <div className="flex items-center gap-2">
-                        <span className="truncate" style={{ fontSize: 15, fontWeight: 600, color: INK }}>{cat.name}</span>
+                        <span className="truncate" style={{ fontSize: isDesktop ? 15 : 16, fontWeight: 500, color: INK }}>{cat.name}</span>
                         {isCustom && (
                           <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: theme.textSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 9999, padding: '2px 8px', flexShrink: 0 }}>Custom</span>
                         )}
                       </div>
                       {itemCount > 0 && !isHidden && (
-                        <span style={{ fontSize: 12, fontFamily: MONO, color: theme.textTertiary }}>{itemCount} {itemCount === 1 ? 'item' : 'items'}</span>
+                        <span style={{ fontSize: 11, fontFamily: MONO, fontWeight: 600, color: theme.textSecondary }}>{itemCount} {itemCount === 1 ? 'item' : 'items'}</span>
                       )}
                     </div>
                     {isCustom && (
@@ -6065,7 +6200,7 @@ export default function App() {
                       title={isHidden ? 'Show aisle' : 'Hide aisle'}
                       aria-label={`${isHidden ? 'Show' : 'Hide'} ${cat.name}`}
                       aria-pressed={!isHidden}
-                      style={{ width: 36, height: 36, borderRadius: '50%', border: `1.5px solid ${theme.border}`, backgroundColor: isHidden ? 'transparent' : theme.bgTertiary, color: isHidden ? theme.textTertiary : theme.textSecondary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', transition: 'background-color 0.18s ease, color 0.18s ease', padding: 0 }}
+                      style={{ width: 40, height: 40, borderRadius: '50%', boxSizing: 'border-box', border: `1px solid ${isHidden ? theme.border : 'transparent'}`, backgroundColor: isHidden ? 'transparent' : theme.capsule, boxShadow: isHidden ? 'none' : theme.shadowCapsule, color: isHidden ? theme.textTertiary : INK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer', transition: 'background-color 0.18s ease, color 0.18s ease', padding: 0 }}
                     >
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         {isHidden
@@ -6090,10 +6225,10 @@ export default function App() {
             <div
               className="w-full flex flex-col"
               style={isDesktop
-                ? { maxWidth: 560, maxHeight: '82vh', backgroundColor: PAPER, borderRadius: 24, overflow: 'hidden', border: `1.5px solid ${theme.border}`, boxShadow: '0 24px 64px rgba(0,0,0,0.35)' }
-                : { maxHeight: '85vh', backgroundColor: PAPER, borderRadius: '28px 28px 0 0', overflow: 'hidden' }}
+                ? { maxWidth: 560, maxHeight: '82vh', backgroundColor: theme.bgSecondary, borderRadius: 24, overflow: 'hidden', border: `1px solid ${theme.border}` }
+                : { maxHeight: '85vh', backgroundColor: theme.bgSecondary, borderRadius: '28px 28px 0 0', overflow: 'hidden' }}
             >
-              <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1.5px solid ${theme.border}` }}>
+              <div className="px-6 py-4 flex items-center justify-between" style={{ gap: 12, borderBottom: `1.5px solid ${INK}` }}>
                 <button
                   onClick={async () => {
                     if (editingStoreLayoutData) {
@@ -6106,7 +6241,7 @@ export default function App() {
                 >
                   Done
                 </button>
-                <h2 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '-0.015em', color: INK, margin: 0 }}>Edit {editingStoreLayoutData?.name}</h2>
+                <h2 className="truncate" style={{ fontFamily: SERIF, fontSize: 26, fontWeight: 400, lineHeight: 1.1, color: INK, margin: 0, minWidth: 0 }}>Edit {editingStoreLayoutData?.name}</h2>
                 <button
                   onClick={() => {
                     const defaultLayout = DEFAULT_STORE_LAYOUTS.find(s => s.id === editingStoreLayout);
@@ -6116,7 +6251,7 @@ export default function App() {
                     }
                   }}
                   disabled={!editingStoreLayoutData?.isDefault}
-                  style={{ fontSize: 14, fontWeight: 700, color: editingStoreLayoutData?.isDefault ? theme.textSecondary : theme.border, background: 'none', border: 'none', cursor: editingStoreLayoutData?.isDefault ? 'pointer' : 'default', padding: 0 }}
+                  style={{ fontSize: 14, fontWeight: 700, color: editingStoreLayoutData?.isDefault ? theme.textSecondary : theme.textTertiary, background: 'none', border: 'none', cursor: editingStoreLayoutData?.isDefault ? 'pointer' : 'default', padding: 0 }}
                 >
                   Reset
                 </button>
@@ -6145,7 +6280,7 @@ export default function App() {
                       setEditingStoreLayoutData({ ...editingStoreLayoutData, categoryOrder: newOrder });
                     };
                     return (
-                      <div key={cat.id} className={`flex items-center gap-3${isDesktop ? ' bc-item-row' : ''}`} style={{ padding: isDesktop ? '8px 10px' : '10px 0', margin: isDesktop ? '0 -10px' : undefined, borderRadius: isDesktop ? 10 : undefined, borderBottom: `1.5px solid ${theme.borderLight}`, opacity: isHidden ? 0.4 : 1 }}>
+                      <div key={cat.id} className={`flex items-center gap-3${isDesktop ? ' bc-item-row' : ''}`} style={{ padding: isDesktop ? '8px 10px' : '10px 0', margin: isDesktop ? '0 -10px' : undefined, borderRadius: isDesktop ? 10 : undefined, borderBottom: `1px solid ${theme.borderLight}`, opacity: isHidden ? 0.4 : 1 }}>
                         <button
                           onClick={() => !isFirst && move(-1)}
                           disabled={isFirst}
@@ -6155,7 +6290,7 @@ export default function App() {
                         >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
                         </button>
-                        <span className="flex-1" style={{ fontSize: 14.5, fontWeight: 600, color: INK }}>{cat.name}</span>
+                        <span className="flex-1" style={{ fontSize: 15.5, fontWeight: 500, color: INK }}>{cat.name}</span>
                         <button
                           onClick={() => !isLast && move(1)}
                           disabled={isLast}
@@ -6177,12 +6312,12 @@ export default function App() {
         {/* Confirms shared with list view */}
         {showClearConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
-            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
-              <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Clear ticked items?</h2>
+            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, border: `1px solid ${theme.border}`, borderRadius: 24, padding: 28 }}>
+              <h2 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 400, lineHeight: 1.05, color: INK, marginBottom: 10 }}>Clear ticked items?</h2>
               <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>This removes {checkedCount} ticked {checkedCount === 1 ? 'item' : 'items'}.</p>
               <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
               <div className="flex gap-3">
-                <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `1px solid ${theme.border}`, color: INK, background: 'none', cursor: 'pointer' }}>Cancel</button>
                 <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); firstTickAtRef.current = null; await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer' }}>Clear</button>
               </div>
             </div>
@@ -6191,12 +6326,12 @@ export default function App() {
 
         {showClearAllConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
-            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
-              <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Clear all items?</h2>
-              <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>This removes all {totalItems} {totalItems === 1 ? 'item' : 'items'} — ticked and unticked.</p>
+            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, border: `1px solid ${theme.border}`, borderRadius: 24, padding: 28 }}>
+              <h2 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 400, lineHeight: 1.05, color: INK, marginBottom: 10 }}>Clear all items?</h2>
+              <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>This removes all {totalItems} {totalItems === 1 ? 'item' : 'items'}, ticked and unticked.</p>
               <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
               <div className="flex gap-3">
-                <button onClick={() => { triggerHaptic('light'); setShowClearAllConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={() => { triggerHaptic('light'); setShowClearAllConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `1px solid ${theme.border}`, color: INK, background: 'none', cursor: 'pointer' }}>Cancel</button>
                 <button onClick={clearAllItems} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: INK, color: PAPER, cursor: 'pointer' }}>Clear all</button>
               </div>
             </div>
@@ -6205,12 +6340,12 @@ export default function App() {
 
         {showLeaveConfirm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
-            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
-              <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Leave this list?</h2>
+            <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, border: `1px solid ${theme.border}`, borderRadius: 24, padding: 28 }}>
+              <h2 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 400, lineHeight: 1.05, color: INK, marginBottom: 10 }}>Leave this list?</h2>
               <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>You'll be removed from this list on your device.</p>
               <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>Rejoin anytime with the code <span style={{ fontFamily: MONO, fontWeight: 700, color: INK }}>{listId}</span>.</p>
               <div className="flex gap-3">
-                <button onClick={() => { triggerHaptic('light'); setShowLeaveConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Stay</button>
+                <button onClick={() => { triggerHaptic('light'); setShowLeaveConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `1px solid ${theme.border}`, color: INK, background: 'none', cursor: 'pointer' }}>Stay</button>
                 <button onClick={confirmLeaveList} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: INK, color: PAPER, cursor: 'pointer' }}>Leave</button>
               </div>
             </div>
@@ -6222,12 +6357,12 @@ export default function App() {
           const pendingItemCount = items.filter(i => i.category === pendingHideCategoryId).length;
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
-              <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
-                <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Hide {pendingCategory ? pendingCategory.name : 'this aisle'}?</h2>
+              <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, border: `1px solid ${theme.border}`, borderRadius: 24, padding: 28 }}>
+                <h2 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 400, lineHeight: 1.05, color: INK, marginBottom: 10 }}>Hide {pendingCategory ? pendingCategory.name : 'this aisle'}?</h2>
                 <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>This deletes {pendingItemCount} {pendingItemCount === 1 ? 'item' : 'items'} in this aisle from the list.</p>
                 <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
                 <div className="flex gap-3">
-                  <button onClick={() => { triggerHaptic('light'); setPendingHideCategoryId(null); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={() => { triggerHaptic('light'); setPendingHideCategoryId(null); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `1px solid ${theme.border}`, color: INK, background: 'none', cursor: 'pointer' }}>Cancel</button>
                   <button onClick={confirmHideCategory} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: INK, color: PAPER, cursor: 'pointer' }}>Hide & delete</button>
                 </div>
               </div>
@@ -6236,7 +6371,15 @@ export default function App() {
         })()}
 
         {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} />}
-        {!isDesktop && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={theme} />}
+        {!isDesktop && (
+          <BottomNav
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            t={theme}
+            onPlus={() => { setPendingQuickAdd(true); setActiveTab('list'); }}
+            plusLabel="Add item"
+          />
+        )}
       </div>
     );
   }
@@ -6246,7 +6389,7 @@ export default function App() {
     const codeChars = (joinCode + '      ').slice(0, 6).split('');
     const codeValid = joinCode.length === 6;
     return (
-      <div className="min-h-screen flex flex-col" style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: '#1c1917' }}>
+      <div className="min-h-screen flex flex-col" style={{ fontFamily: SANS, backgroundColor: '#1c1917' }}>
         <style>{styles}</style>
 
         {/* Top block — black */}
@@ -6256,7 +6399,7 @@ export default function App() {
             <div className="breathe-2" style={{ width: 29, height: 29, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
             <div className="breathe-3" style={{ width: 20, height: 20, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
           </div>
-          <h1 className="bc-fu2" style={{ fontSize: 'clamp(40px, 12vw, 52px)', fontWeight: 800, letterSpacing: '-0.035em', lineHeight: 1, margin: '28px 0 0', color: '#fafaf9' }}>
+          <h1 className="bc-fu2" style={{ fontFamily: SERIF, fontSize: 'clamp(56px, 16vw, 72px)', fontWeight: 400, letterSpacing: '-0.015em', lineHeight: 1, margin: '28px 0 0', color: '#fafaf9' }}>
             Breadcrumbs
           </h1>
           <p className="bc-fu3" style={{ fontSize: 15, color: 'rgba(250,250,249,0.55)', margin: '16px 0 0', lineHeight: 1.5, maxWidth: 280 }}>
@@ -6325,7 +6468,7 @@ export default function App() {
   return (
     <div
       className="min-h-screen"
-      style={{ fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: PAPER, paddingLeft: isDesktop ? SIDEBAR_WIDTH : 0 }}
+      style={{ fontFamily: SANS, backgroundColor: PAPER, paddingLeft: isDesktop ? SIDEBAR_WIDTH : 0 }}
       onClick={(e) => {
         if (editingQuantityId && !e.target.closest('.quantity-editor')) setEditingQuantityId(null);
         if (!e.target.closest('.fab-area')) {
@@ -6345,13 +6488,13 @@ export default function App() {
 
       {/* Offline is already spelled out by the sidebar's sync pill on desktop. */}
       {!isOnline && !isDesktop && (
-        <div className="px-4 py-2 text-center" style={{ backgroundColor: YELLOW, color: '#1c1917', fontSize: 12.5, fontWeight: 700 }}>
+        <div className="px-4 py-2 text-center" style={{ backgroundColor: theme.bgTertiary, color: INK, fontSize: 12.5, fontWeight: 600 }}>
           You're offline. Changes will sync when you reconnect.
         </div>
       )}
 
       {/* ── Paper header with the crumb trail ── */}
-      <div className="sticky top-0 z-40" style={{ backgroundColor: PAPER, borderBottom: `1.5px solid ${theme.border}`, padding: isDesktop ? `20px ${shellPadX}px 0` : '12px 26px 14px' }}>
+      <div className={isDesktop || isTall ? 'sticky top-0 z-40' : undefined} style={{ backgroundColor: PAPER, borderBottom: isDesktop ? `1px solid ${theme.border}` : 'none', padding: isDesktop ? `20px ${shellPadX}px 0` : '28px 20px 2px' }}>
         <div style={{ maxWidth: isDesktop ? contentMax.list : 'none', margin: isDesktop ? '0 auto' : undefined }}>
 
         {isDesktop ? (
@@ -6359,8 +6502,9 @@ export default function App() {
              it, so content starts immediately instead of after a gap. */
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 32 }}>
             <div style={{ minWidth: 0 }}>
+              <p style={{ ...contextLineStyle(theme), marginBottom: 10 }}>{listContextLine}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-                <h1 className="truncate" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.05, margin: 0, color: INK }}>
+                <h1 className="truncate" style={{ ...pageTitleStyle(theme), paddingBottom: 4 }}>
                   {listName || 'Breadcrumbs'}
                 </h1>
                 {hideDoneButton}
@@ -6387,7 +6531,7 @@ export default function App() {
                   Finish shop
                 </button>
               ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 5px 5px 16px', borderRadius: 9999, border: `1.5px solid ${theme.border}`, backgroundColor: theme.bgSecondary }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 5px 5px 16px', borderRadius: 9999, border: `1px solid ${theme.border}`, backgroundColor: theme.field }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textTertiary} strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14" /></svg>
                 <input
                   ref={fabInputRef}
@@ -6395,10 +6539,10 @@ export default function App() {
                   value={fabInput}
                   onChange={(e) => { setFabInput(e.target.value); setFabNoMatchMode(false); }}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleFabAdd(); if (e.key === 'Escape') { setFabInput(''); setFabNoMatchMode(false); e.currentTarget.blur(); } }}
-                  placeholder={isWide ? 'Quick add — what do you need?' : 'Quick add an item…'}
+                  placeholder={isWide ? 'Quick add: what do you need?' : 'Quick add an item…'}
                   aria-label="Quick add an item"
                   className="flex-1 focus:outline-none bg-transparent"
-                  style={{ color: INK, fontSize: 15, fontWeight: 600, border: 'none', minWidth: 0, padding: '6px 0' }}
+                  style={{ color: INK, fontSize: 15, fontWeight: 500, border: 'none', minWidth: 0, padding: '6px 0' }}
                 />
                 <button
                   onClick={handleFabAdd}
@@ -6414,7 +6558,7 @@ export default function App() {
               {!finishReady && fabNoMatchMode && (
                 <div
                   className="fade-in"
-                  style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 60, backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 18, boxShadow: theme.cardShadow, padding: 14, maxHeight: 300, overflowY: 'auto' }}
+                  style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 60, backgroundColor: theme.bgSecondary, border: `1px solid ${theme.border}`, borderRadius: 18, boxShadow: theme.shadowFloat, padding: 14, maxHeight: 300, overflowY: 'auto' }}
                 >
                   <p style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.textTertiary, margin: '0 0 10px' }}>Which aisle?</p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
@@ -6434,12 +6578,15 @@ export default function App() {
             </div>
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <h1 className="truncate" style={{ flex: 1, minWidth: 0, fontSize: 36, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, margin: 0, color: INK }}>
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <p style={{ ...contextLineStyle(theme), flex: 1, minWidth: 0 }} className="truncate">{listContextLine}</p>
+              {hideDoneButton}
+            </div>
+            <h1 className="truncate" style={{ ...pageTitleStyle(theme), marginTop: 10, paddingBottom: 4 }}>
               {listName || 'Breadcrumbs'}
             </h1>
-            {hideDoneButton}
-          </div>
+          </>
         )}
 
         {isDesktop ? (
@@ -6447,7 +6594,7 @@ export default function App() {
              old "n to go" line spelled out, and tapping them opens the
              stats sheet. */
           totalItems > 0 && (
-            <div style={{ marginTop: 12, padding: '2px 0 6px', borderTop: `1.5px solid ${theme.borderLight}` }}>
+            <div style={{ marginTop: 12, padding: '2px 0 6px', borderTop: `1px solid ${theme.borderLight}` }}>
               <CrumbTrail items={trailItems} t={theme} onOpen={openStatsSheet} />
             </div>
           )
@@ -6457,7 +6604,7 @@ export default function App() {
             It replaces the old "n to go · n picked up" line: the dots tell
             that story, and the line only repeated it. */}
         {totalItems > 0 && (
-          <div style={{ marginTop: 10 }}>
+          <div style={{ marginTop: 6 }}>
             <CrumbTrail items={trailItems} t={theme} onOpen={openStatsSheet} />
           </div>
         )}
@@ -6467,7 +6614,7 @@ export default function App() {
       </div>
 
       {/* ── Aisles ── */}
-      <div style={{ padding: isDesktop ? `18px ${shellPadX}px 0` : '16px 28px 0', paddingBottom: isDesktop ? 40 : 110, maxWidth: isDesktop ? contentMax.list : 'none', margin: isDesktop ? '0 auto' : undefined }}>
+      <div style={{ padding: isDesktop ? `18px ${shellPadX}px 0` : '0 20px', paddingBottom: isDesktop ? 40 : NAV_CLEARANCE, maxWidth: isDesktop ? contentMax.list : 'none', margin: isDesktop ? '0 auto' : undefined }}>
         {/* Usuals sit above the list while it is nearly empty, and stand in
             for the empty state once there is history to draw on. */}
         {usuals && <UsualsCard usuals={usuals} t={theme} onAdd={addUsual} />}
@@ -6479,11 +6626,11 @@ export default function App() {
               <div className={isDesktop ? 'breathe-2' : ''} style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
               <div className={isDesktop ? 'breathe-3' : ''} style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
             </div>
-            <h3 style={{ fontSize: isDesktop ? 22 : 18, fontWeight: 700, letterSpacing: '-0.015em', color: INK, marginBottom: 8 }}>Nothing on the list</h3>
+            <h3 style={{ fontFamily: SERIF, fontSize: isDesktop ? 42 : 34, fontWeight: 400, lineHeight: 1.05, color: INK, marginBottom: 10 }}>Nothing on the list</h3>
             <p style={{ fontSize: 14, color: theme.textSecondary, maxWidth: isDesktop ? 340 : 240, margin: '0 auto', lineHeight: 1.55 }}>
               {isDesktop
-                ? 'Type anything into the quick-add box above — it lands in the right aisle automatically.'
-                : 'Tap the yellow button and type anything — it lands in the right aisle automatically.'}
+                ? 'Type anything into the quick-add box above. It lands in the right aisle automatically.'
+                : 'Tap the yellow button and type anything. It lands in the right aisle automatically.'}
             </p>
           </div>
         ) : isDesktop ? (
@@ -6501,14 +6648,14 @@ export default function App() {
               <div style={{ padding: '6px 8px 16px', breakInside: 'avoid' }}>
                 <div
                   className="bc-dashed bc-card"
-                  style={{ borderRadius: 18, border: `2px dashed ${theme.border}`, padding: '26px 22px', textAlign: 'center', backgroundColor: 'transparent' }}
+                  style={{ borderRadius: 18, border: `1px dashed ${theme.border}`, padding: '26px 22px', textAlign: 'center', backgroundColor: 'transparent' }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6, marginBottom: 14 }}>
                     <div style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: YELLOW }} />
                     <div style={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.6 }} />
                     <div style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: YELLOW, opacity: 0.3 }} />
                   </div>
-                  <h4 style={{ fontSize: 14.5, fontWeight: 700, letterSpacing: '-0.01em', color: INK, margin: '0 0 6px' }}>
+                  <h4 style={{ fontFamily: SERIF, fontSize: 24, fontWeight: 400, lineHeight: 1.1, color: INK, margin: '0 0 6px' }}>
                     {activeCategoryCount === 1 ? 'One aisle so far' : 'Two aisles so far'}
                   </h4>
                   <p style={{ fontSize: 12.5, color: theme.textSecondary, lineHeight: 1.55, margin: 0 }}>
@@ -6523,83 +6670,61 @@ export default function App() {
         )}
       </div>
 
-      {/* ── Quick Add FAB — phone only; desktop adds inline from the header ── */}
-      {activeTab === 'list' && !fabOpen && !isDesktop && (
-        <button
-          onClick={() => {
-            triggerHaptic('light');
-            // Halfway through a shop the button stops adding and starts
-            // finishing. Same routine as ticking the last item.
-            if (finishReady) finishShop();
-            else setFabOpen(true);
-          }}
-          className="bc-fab"
-          aria-label={finishReady ? 'Finish shop' : 'Add item'}
-          style={{
-            position: 'fixed', bottom: 'calc(66px + max(34px, calc(env(safe-area-inset-bottom, 0px) + 8px)))', right: 24,
-            width: 62, height: 62, borderRadius: '50%',
-            backgroundColor: YELLOW, border: 'none',
-            boxShadow: '0 10px 30px rgba(250,204,21,0.45)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 50, cursor: 'pointer', padding: 0, lineHeight: 1,
-            transition: 'transform 0.15s cubic-bezier(0.175,0.885,0.32,1.275)',
-          }}
-          onMouseDown={(e) => { e.currentTarget.style.transform = 'scale(0.92)'; }}
-          onMouseUp={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
-        >
-          <FinishGlyph finishing={finishReady} color="#1c1917" />
-        </button>
-      )}
-
-      {/* ── Quick Add Input Bar ── */}
+      {/* ── Quick Add Input Bar ── phone only; desktop adds inline from the
+          header. The + beside the nav opens it, and it covers the nav. */}
       {fabOpen && !isDesktop && (
         <div
           className="fab-area"
           style={{
             position: 'fixed', bottom: 0, left: 0, right: 0,
-            backgroundColor: PAPER, borderTop: `1.5px solid ${theme.border}`,
-            padding: '12px 20px calc(16px + env(safe-area-inset-bottom, 0px))',
+            backgroundColor: theme.bgSecondary, borderTop: `1px solid ${theme.border}`,
+            borderRadius: '22px 22px 0 0',
+            padding: '14px 16px calc(16px + env(safe-area-inset-bottom, 0px))',
             zIndex: 55, animation: 'fabSlideUp 250ms cubic-bezier(0.22,1,0.36,1)',
           }}
         >
           <div>
-          <div className="flex items-center gap-3">
-            <input
-              ref={fabInputRef}
-              type="text"
-              value={fabInput}
-              onChange={(e) => { setFabInput(e.target.value); setFabNoMatchMode(false); }}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleFabAdd(); if (e.key === 'Escape') { setFabOpen(false); setFabInput(''); setFabNoMatchMode(false); } }}
-              placeholder="What do you need?"
-              className="flex-1 py-2 focus:outline-none bg-transparent"
-              style={{ borderBottom: `1.5px solid ${theme.border}`, color: INK, fontSize: 16, fontWeight: 600 }}
-            />
-            <button
-              onClick={handleFabAdd}
-              disabled={!fabInput.trim()}
-              className="bc-press"
-              style={{ padding: '11px 22px', fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: fabInput.trim() ? YELLOW : theme.bgTertiary, color: fabInput.trim() ? '#1c1917' : theme.textTertiary, cursor: fabInput.trim() ? 'pointer' : 'default', transition: 'background-color 0.2s ease, color 0.2s ease' }}
-            >
-              Add
-            </button>
+          <div className="flex items-center" style={{ gap: 8 }}>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '5px 5px 5px 16px', borderRadius: 9999, backgroundColor: theme.field, border: `1px solid ${theme.border}` }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.textSecondary} strokeWidth="2.2" strokeLinecap="round" aria-hidden="true" style={{ flexShrink: 0 }}><path d="M12 5v14M5 12h14" /></svg>
+              <input
+                ref={fabInputRef}
+                type="text"
+                value={fabInput}
+                onChange={(e) => { setFabInput(e.target.value); setFabNoMatchMode(false); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleFabAdd(); if (e.key === 'Escape') { setFabOpen(false); setFabInput(''); setFabNoMatchMode(false); } }}
+                placeholder="What do you need?"
+                aria-label="Quick add an item"
+                className="flex-1 focus:outline-none bg-transparent"
+                style={{ border: 'none', color: INK, fontSize: 16, fontWeight: 500, minWidth: 0, padding: '8px 0' }}
+              />
+              <button
+                onClick={handleFabAdd}
+                disabled={!fabInput.trim()}
+                className="bc-press"
+                style={{ height: 38, padding: '0 20px', fontSize: 13.5, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: fabInput.trim() ? YELLOW : theme.bgTertiary, color: fabInput.trim() ? '#1c1917' : theme.textTertiary, cursor: fabInput.trim() ? 'pointer' : 'default', flexShrink: 0, transition: 'background-color 0.2s ease, color 0.2s ease' }}
+              >
+                Add
+              </button>
+            </div>
             <button
               onClick={() => { setFabOpen(false); setFabInput(''); setFabNoMatchMode(false); }}
-              style={{ width: 32, height: 32, borderRadius: '50%', background: 'none', border: 'none', cursor: 'pointer', color: theme.textTertiary, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}
+              aria-label="Close quick add"
+              style={{ width: 44, height: 44, borderRadius: '50%', background: 'none', border: 'none', cursor: 'pointer', color: INK, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 0 }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           </div>
           {fabNoMatchMode && (
             <div className="fade-in" style={{ marginTop: 12 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.13em', textTransform: 'uppercase', color: theme.textTertiary, margin: '0 0 8px' }}>Which aisle?</p>
+              <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: INK, margin: '0 0 8px' }}>Which aisle?</p>
               <div style={{ overflowX: 'auto', whiteSpace: 'nowrap', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
                 {visibleCategories.map(cat => (
                   <button
                     key={cat.id}
                     onClick={() => handleChipSelect(cat.id)}
                     className="bc-press"
-                    style={{ display: 'inline-block', backgroundColor: theme.bgSecondary, color: INK, fontSize: 12.5, fontWeight: 700, borderRadius: 9999, padding: '8px 16px', border: `2px solid ${INK}`, marginRight: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    style={{ display: 'inline-block', backgroundColor: 'transparent', color: INK, fontSize: 13, fontWeight: 600, borderRadius: 9999, padding: '9px 16px', border: `1px solid ${INK}`, marginRight: 8, cursor: 'pointer', whiteSpace: 'nowrap' }}
                   >
                     {cat.name}
                   </button>
@@ -6622,17 +6747,28 @@ export default function App() {
       {/* Bottom Navigation */}
       {trailOverlays}
 
-      {!isDesktop && !fabOpen && <BottomNav activeTab={activeTab} onTabChange={setActiveTab} t={theme} />}
+      {/* Halfway through a shop the + stops adding and starts finishing.
+          Same routine as ticking the last item. */}
+      {!isDesktop && !fabOpen && (
+        <BottomNav
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          t={theme}
+          onPlus={() => { if (finishReady) finishShop(); else setFabOpen(true); }}
+          plusLabel="Add item"
+          finishing={finishReady}
+        />
+      )}
 
       {/* Clear ticked items confirmation */}
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: theme.overlay }}>
-          <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, borderRadius: 24, padding: 28 }}>
-            <h2 style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.02em', color: INK, marginBottom: 8 }}>Clear ticked items?</h2>
+          <div className="w-full max-w-xs text-center" style={{ backgroundColor: theme.bgSecondary, border: `1px solid ${theme.border}`, borderRadius: 24, padding: 28 }}>
+            <h2 style={{ fontFamily: SERIF, fontSize: 30, fontWeight: 400, lineHeight: 1.05, color: INK, marginBottom: 10 }}>Clear ticked items?</h2>
             <p style={{ fontSize: 14, color: theme.textSecondary, marginBottom: 6 }}>This removes {checkedCount} ticked {checkedCount === 1 ? 'item' : 'items'}.</p>
             <p style={{ fontSize: 12.5, color: theme.textTertiary, marginBottom: 22 }}>This affects everyone sharing this list.</p>
             <div className="flex gap-3">
-              <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `2px solid ${theme.border}`, color: theme.textSecondary, background: 'none', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { triggerHaptic('light'); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: `1px solid ${theme.border}`, color: INK, background: 'none', cursor: 'pointer' }}>Cancel</button>
               <button onClick={async () => { triggerHaptic('success'); const newItems = items.filter(i => !i.checked); setItems(newItems); firstTickAtRef.current = null; await saveList(newItems); setShowClearConfirm(false); }} className="flex-1 py-3 bc-press" style={{ fontSize: 14, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: YELLOW, color: '#1c1917', cursor: 'pointer' }}>Clear</button>
             </div>
           </div>
