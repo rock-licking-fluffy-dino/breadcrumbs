@@ -56,9 +56,10 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('gstatic.com') ||
     url.hostname.includes('recaptcha') ||
     url.hostname.includes('fonts.googleapis.com') ||
-    url.hostname.includes('fonts.gstatic.com')
+    url.hostname.includes('fonts.gstatic.com') ||
+    url.pathname.startsWith('/_vercel/')
   ) {
-    return; // Let Firebase and fonts handle themselves
+    return; // Let Firebase, fonts and Vercel Analytics handle themselves
   }
 
   // For navigation requests (HTML pages): network-first with cache fallback
