@@ -1,7 +1,7 @@
 // Breadcrumbs Service Worker
 // Strategy: cache-first for static assets, network-first for Firebase
 
-const CACHE_NAME = 'breadcrumbs-v2';
+const CACHE_NAME = 'breadcrumbs-v3';
 
 // Static assets to pre-cache on install
 const PRECACHE_URLS = [

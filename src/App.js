@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, updateDoc, onSnapshot, getDoc, collection, getDocs } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
@@ -726,7 +727,7 @@ const IMPORT_MESSAGES = {
 // #1c1917 (yellow is a light surface in both themes).
 // ─────────────────────────────────────────────────────────────
 const INK = '#151413';
-const PAPER = '#efebe2';
+const PAPER = '#f7f5ef';
 const MONO = "'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 // Instrument Serif ships in one weight: always 400, never bold.
 const SERIF = "'Instrument Serif', Georgia, serif";
@@ -734,8 +735,8 @@ const SANS = "Archivo, system-ui, sans-serif";
 const THEMES = {
   light: {
     bg: PAPER,
-    bgSecondary: '#f7f4ee',
-    bgTertiary: '#e6e1d6',
+    bgSecondary: '#ffffff',
+    bgTertiary: '#ece9e1',
     ink: INK,
     text: '#26221f',
     textSecondary: '#5e5852',
@@ -744,7 +745,7 @@ const THEMES = {
     border: 'rgba(21,20,19,0.16)',
     borderLight: 'rgba(21,20,19,0.14)',
     field: '#ffffff',
-    glass: 'rgba(239,235,226,0.72)',
+    glass: 'rgba(247,245,239,0.76)',
     glassEdge: 'rgba(21,20,19,0.14)',
     capsule: 'rgba(255,255,255,0.88)',
     accentOnInk: '#FACC15',
@@ -1102,8 +1103,10 @@ const OB_CARDS = [
 
 const OB_STORES = ["Tesco", "Sainsbury's", 'Aldi', 'Waitrose'];
 const OB_WEEKDAY_SHADES = [1, 2, 1, 0, 1, 2, 1];
+// The share code card is an illustration, so it never shows a real list's code.
+const OB_EXAMPLE_CODE = 'ABC123';
 
-const ObSpecimenFor = ({ index, t, listCode }) => {
+const ObSpecimenFor = ({ index, t }) => {
   switch (index) {
     // 1. The app icon alone, still breathing.
     case 0:
@@ -1214,7 +1217,7 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
           <ObCard t={t} style={{ padding: '14px 16px' }}>
             <p style={{ ...obEyebrow(t), fontSize: 10, color: t.textSecondary, margin: '0 0 4px' }}>Share code</p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-              <span style={{ fontFamily: MONO, fontSize: 28, fontWeight: 600, letterSpacing: '0.16em', color: t.ink }}>{listCode || 'ABC123'}</span>
+              <span style={{ fontFamily: MONO, fontSize: 28, fontWeight: 600, letterSpacing: '0.16em', color: t.ink }}>{OB_EXAMPLE_CODE}</span>
               <span style={{ padding: '8px 16px', borderRadius: 9999, border: `1px solid ${t.border}`, fontSize: 12, fontWeight: 700, color: t.ink }}>Copy</span>
             </div>
           </ObCard>
@@ -1390,7 +1393,7 @@ const ObSpecimenFor = ({ index, t, listCode }) => {
   }
 };
 
-const OnboardingModal = ({ listCode, onComplete, t }) => {
+const OnboardingModal = ({ onComplete, t }) => {
   const [index, setIndex] = useState(0);
   const touchStartX = useRef(null);
   const total = OB_CARDS.length;
@@ -1523,7 +1526,7 @@ const OnboardingModal = ({ listCode, onComplete, t }) => {
               aria-label={`${i + 1} of ${total}`}
             >
               <div className="bc-ob-inner">
-                <ObSpecimenFor index={i} t={t} listCode={listCode} />
+                <ObSpecimenFor index={i} t={t} />
                 <div className="bc-ob-text">
                   <p className="bc-ob-kicker">
                     <span className="bc-ob-num">{String(i + 1).padStart(2, '0')}</span>
@@ -1960,20 +1963,25 @@ const TrailHome = ({ lit, t, size = 17 }) => (
   </svg>
 );
 
+// The crumb: a yellow full stop, sized in em so it follows the type it ends.
+const Crumb = ({ size = '0.2em' }) => (
+  <span
+    aria-hidden="true"
+    style={{
+      display: 'inline-block', width: size, height: size, marginLeft: '0.045em',
+      borderRadius: '50%', backgroundColor: YELLOW,
+      boxShadow: `0 0 0 max(1px, 0.02em) #1c1917`,
+    }}
+  />
+);
+
 // The Breadcrumbs wordmark: the word in the serif, and a crumb for a full stop.
 // nowrap keeps the crumb on the word's line; an inline-block is otherwise a
 // break opportunity.
 const Wordmark = ({ size = 24, color, as: Tag = 'span', className, style }) => (
   <Tag className={className} style={{ fontFamily: SERIF, fontSize: size, fontWeight: 400, lineHeight: 1, letterSpacing: '-0.015em', color, margin: 0, whiteSpace: 'nowrap', ...style }}>
     Breadcrumbs
-    <span
-      aria-hidden="true"
-      style={{
-        display: 'inline-block', width: '0.2em', height: '0.2em', marginLeft: '0.045em',
-        borderRadius: '50%', backgroundColor: YELLOW,
-        boxShadow: `0 0 0 max(1px, 0.02em) #1c1917`,
-      }}
-    />
+    <Crumb />
   </Tag>
 );
 
@@ -2990,6 +2998,9 @@ export default function App() {
   const [editingListName, setEditingListName] = useState('');
   const [items, setItems] = useState([]);
   const [joinCode, setJoinCode] = useState('');
+  const [joinOpen, setJoinOpen] = useState(false);
+  // The landing's join panel starts closed each time the landing comes back.
+  useEffect(() => { if (listId) setJoinOpen(false); }, [listId]);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState('');
   const [settingsTab, setSettingsTab] = useState('general');
@@ -3116,6 +3127,7 @@ export default function App() {
   const recipesRef = useRef(recipes);
   recipesRef.current = recipes;
   const codeInputRef = useRef(null);
+  const landingActionsRef = useRef(null);
 
   // Show toast helper. Stable identity so the callbacks below (which report
   // failures through it) don't have to be rebuilt on every render.
@@ -6378,7 +6390,7 @@ export default function App() {
           );
         })()}
 
-        {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} />}
+        {showOnboarding && <OnboardingModal onComplete={completeOnboarding} t={theme} />}
         {!isDesktop && (
           <BottomNav
             activeTab={activeTab}
@@ -6396,70 +6408,121 @@ export default function App() {
   if (!listId) {
     const codeChars = (joinCode + '      ').slice(0, 6).split('');
     const codeValid = joinCode.length === 6;
+    // The keyboard rises after the input takes focus, so the actions are
+    // brought into view once it has had time to settle.
+    const revealActions = () => {
+      setTimeout(() => {
+        if (landingActionsRef.current) landingActionsRef.current.scrollIntoView({ block: 'end', behavior: 'smooth' });
+      }, 300);
+    };
+    // flushSync mounts the code input while the tap is still being handled,
+    // which iOS needs before it will raise the keyboard for a focus call.
+    const openJoin = () => {
+      flushSync(() => setJoinOpen(true));
+      if (codeInputRef.current) codeInputRef.current.focus();
+    };
+    // Keeps focus in the code input when a button in the panel is pressed,
+    // so an empty code's blur can't close the panel out from under the tap.
+    const holdFocus = (e) => e.preventDefault();
+    const pillStyle = { width: '100%', height: 56, borderRadius: 9999, fontSize: 16, fontWeight: 700, cursor: 'pointer' };
+    const textButtonStyle = { width: '100%', height: 48, background: 'none', border: 'none', color: theme.ink, fontSize: 15, fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 4, textDecorationThickness: 1, cursor: 'pointer' };
     return (
-      <div className="min-h-screen flex flex-col" style={{ fontFamily: SANS, backgroundColor: '#1c1917' }}>
+      <div style={{ fontFamily: SANS, backgroundColor: theme.bg }}>
         <style>{styles}</style>
-
-        {/* Top block — black */}
-        <div style={{ padding: '64px 32px 0', flex: 1 }}>
-          <Wordmark as="h1" className="bc-fu2" size="clamp(56px, 16vw, 72px)" color="#fafaf9" />
-          <p className="bc-fu3" style={{ fontSize: 15, color: 'rgba(250,250,249,0.55)', margin: '16px 0 0', lineHeight: 1.5, maxWidth: 280 }}>
-            The smartest path to a stocked home.
+        <style>{`
+          .bc-landing { min-height: 100vh; min-height: 100dvh; padding: calc(env(safe-area-inset-top, 0px) + 56px) 28px calc(env(safe-area-inset-bottom, 0px) + 24px); }
+          @media (max-height: 699.98px) { .bc-landing { padding-top: calc(env(safe-area-inset-top, 0px) + 36px); } }
+        `}</style>
+        <div className="bc-landing" style={{ display: 'flex', flexDirection: 'column', maxWidth: 520, margin: '0 auto' }}>
+          <p className="bc-fu1" style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.16em', color: theme.ink, margin: 0 }}>
+            Breadcrumbs
           </p>
-        </div>
 
-        {/* Bottom sheet — paper */}
-        <div className="bc-fu4" style={{ backgroundColor: '#fafaf9', borderRadius: '32px 32px 0 0', padding: '30px 28px calc(40px + env(safe-area-inset-bottom, 0px))', maxWidth: 560, width: '100%', margin: '0 auto' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.16em', color: THEMES.light.textTertiary, textTransform: 'uppercase', margin: '0 0 14px' }}>Join with a code</p>
+          <div style={{ flex: 2 }} />
 
-          <div style={{ position: 'relative', marginBottom: 18 }}>
-            <div style={{ display: 'flex', gap: 7 }} onClick={() => codeInputRef.current && codeInputRef.current.focus()}>
-              {codeChars.map((ch, i) => {
-                const filled = !!ch.trim();
-                const isCursor = !codeValid && i === joinCode.length;
-                return (
-                  <div
-                    key={filled ? `f${i}${ch}` : `e${i}`}
-                    className={filled ? 'bc-charpop' : ''}
-                    style={{ flex: 1, height: 56, borderRadius: 14, backgroundColor: filled ? '#fff' : THEMES.light.bgTertiary, border: `2px solid ${filled ? '#1c1917' : isCursor ? YELLOW : 'transparent'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 23, fontWeight: 700, fontFamily: MONO, color: '#1c1917', transition: 'border-color 0.15s ease', position: 'relative', cursor: 'text' }}
-                  >
-                    {ch.trim() || ''}
-                    {isCursor && <div style={{ position: 'absolute', bottom: 10, width: 16, height: 3, backgroundColor: YELLOW, borderRadius: 2, animation: 'bcBlink 1.05s steps(2) infinite' }} />}
+          <h1 className="bc-fu2" style={{ fontFamily: SERIF, fontWeight: 400, fontSize: 'clamp(40px, 13vw, 52px)', lineHeight: 1.02, letterSpacing: '-0.02em', color: theme.ink, margin: 0 }}>
+            Never get lost in the aisles <span style={{ whiteSpace: 'nowrap' }}>again<Crumb size="0.18em" /></span>
+          </h1>
+          <p className="bc-fu3" style={{ fontSize: 16, lineHeight: 1.55, color: theme.textSecondary, maxWidth: '31ch', margin: '22px 0 0' }}>
+            The smart shopping list. Shared with everyone you shop with, recipes added in a tap, and every shop remembered.
+          </p>
+
+          <div style={{ flex: 3 }} />
+
+          <div ref={landingActionsRef} className="bc-fu4">
+            {joinOpen ? (
+              <>
+                <p style={{ fontSize: 14, color: theme.textSecondary, margin: '0 0 12px' }}>Enter the code from someone you shop with.</p>
+                <div style={{ position: 'relative', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', gap: 7 }} onClick={() => codeInputRef.current && codeInputRef.current.focus()}>
+                    {codeChars.map((ch, i) => {
+                      const filled = !!ch.trim();
+                      const isCursor = !codeValid && i === joinCode.length;
+                      const edge = isCursor ? `1.5px solid ${YELLOW}` : filled ? `1.5px solid ${theme.ink}` : `1px solid ${theme.border}`;
+                      return (
+                        <div
+                          key={filled ? `f${i}${ch}` : `e${i}`}
+                          className={filled ? 'bc-charpop' : ''}
+                          style={{ flex: 1, height: 54, borderRadius: 12, backgroundColor: theme.field, border: edge, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, fontFamily: MONO, color: theme.ink, transition: 'border-color 0.15s ease', position: 'relative', cursor: 'text' }}
+                        >
+                          {ch.trim() || ''}
+                          {isCursor && <div style={{ position: 'absolute', bottom: 10, width: 16, height: 3, backgroundColor: YELLOW, borderRadius: 2, animation: 'bcBlink 1.05s steps(2) infinite' }} />}
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-            {/* Real input — invisible overlay so the keyboard opens */}
-            <input
-              ref={codeInputRef}
-              type="text"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
-              onKeyDown={(e) => { if (e.key === 'Enter' && codeValid) joinList(); }}
-              maxLength={6}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck="false"
-              aria-label="Share code"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, border: 'none', background: 'transparent', color: 'transparent', caretColor: 'transparent' }}
-            />
+                  {/* Real input, an invisible overlay so the keyboard opens */}
+                  <input
+                    ref={codeInputRef}
+                    type="text"
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && codeValid) joinList(); }}
+                    onFocus={revealActions}
+                    onBlur={() => { if (!joinCode) setJoinOpen(false); }}
+                    maxLength={6}
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    spellCheck="false"
+                    aria-label="Share code"
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, border: 'none', background: 'transparent', color: 'transparent', caretColor: 'transparent' }}
+                  />
+                </div>
+                <button
+                  onClick={joinList}
+                  onMouseDown={holdFocus}
+                  disabled={!codeValid}
+                  className="bc-press"
+                  style={{ ...pillStyle, border: codeValid ? 'none' : `1px solid ${theme.border}`, backgroundColor: codeValid ? YELLOW : 'transparent', color: codeValid ? '#1c1917' : theme.textTertiary, cursor: codeValid ? 'pointer' : 'default', transition: 'background-color 0.25s ease, color 0.25s ease' }}
+                >
+                  Join list
+                </button>
+                <button
+                  onClick={createNewList}
+                  onMouseDown={holdFocus}
+                  className={`bc-press ${createAnim ? 'btn-pop' : ''}`}
+                  style={{ ...textButtonStyle, marginTop: 4 }}
+                >
+                  Start a new list instead
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={createNewList}
+                  className={`bc-press ${createAnim ? 'btn-pop' : ''}`}
+                  style={{ ...pillStyle, border: 'none', backgroundColor: YELLOW, color: '#1c1917' }}
+                >
+                  Start a new list
+                </button>
+                <button onClick={openJoin} className="bc-press" style={{ ...textButtonStyle, marginTop: 4 }}>
+                  Join with a code
+                </button>
+              </>
+            )}
           </div>
 
-          <button
-            onClick={joinList}
-            disabled={!codeValid}
-            className="bc-press"
-            style={{ width: '100%', padding: '18px 0', fontSize: 16, fontWeight: 700, borderRadius: 9999, border: 'none', backgroundColor: codeValid ? YELLOW : THEMES.light.border, color: codeValid ? '#1c1917' : THEMES.light.textTertiary, cursor: codeValid ? 'pointer' : 'default', transition: 'background-color 0.25s ease, color 0.25s ease', marginBottom: 12 }}
-          >
-            Join list
-          </button>
-          <button
-            onClick={createNewList}
-            className={`bc-press w-full ${createAnim ? 'btn-pop' : ''}`}
-            style={{ padding: '17px 0', fontSize: 15, fontWeight: 700, borderRadius: 9999, border: `2px solid ${'#1c1917'}`, backgroundColor: 'transparent', color: '#1c1917', cursor: 'pointer' }}
-          >
-            Start a new one
-          </button>
+          <p style={{ fontSize: 12, textAlign: 'center', color: theme.textSecondary, margin: '6px 0 0' }}>No account. No sign up.</p>
         </div>
       </div>
     );
@@ -6485,7 +6548,7 @@ export default function App() {
       {desktopSidebar}
       <Toast message={toastMessage} visible={showToast} t={theme} />
 
-      {showOnboarding && <OnboardingModal listCode={listId} onComplete={completeOnboarding} t={theme} />}
+      {showOnboarding && <OnboardingModal onComplete={completeOnboarding} t={theme} />}
 
       {/* Offline is already spelled out by the sidebar's sync pill on desktop. */}
       {!isOnline && !isDesktop && (
