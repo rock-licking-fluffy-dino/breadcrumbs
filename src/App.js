@@ -667,6 +667,17 @@ const mergeRecipeIngredient = (list, parsed, categoryId) => {
   return { list: [...list, ingredient], id: ingredient.id };
 };
 
+// The note a list item keeps when a recipe adds to it. No note yet: it takes
+// the new one. Two different notes are joined ("500 g + 400 g"). The same
+// note twice is kept once.
+const mergeItemNote = (existing, incoming) => {
+  const a = String(existing || '').trim();
+  const b = String(incoming || '').trim();
+  if (!a) return b;
+  if (!b || a.toLowerCase() === b.toLowerCase()) return a;
+  return `${a} + ${b}`;
+};
+
 // ── Recipe links ──────────────────────────────────────────────────────────
 // A recipe's sourceUrl, parsed, or null unless it is a real http(s) link —
 // it becomes an href, so nothing else gets through.
@@ -4278,7 +4289,8 @@ export default function App() {
   };
 
   // `factor` is target servings ÷ saved servings, from the recipe sheet.
-  // Only the ×N is scaled; notes never reach the list.
+  // The ×N and the note are both scaled. A note only goes on an item when
+  // there is one; an item already on the list merges it with mergeItemNote.
   const addRecipeToList = async (recipe, factor = 1) => {
     triggerHaptic('success');
     setAddingRecipeId(recipe.id);
@@ -4286,24 +4298,31 @@ export default function App() {
     let newItems = [...items];
     for (const ingredient of ingredients) {
       const quantity = scaleIngredientQuantity(ingredient.quantity || 1, factor);
+      const note = scaleIngredientNote(ingredient.note, factor).trim();
       const existingItem = newItems.find(i =>
         i.name.toLowerCase() === ingredient.name.toLowerCase() &&
         i.category === ingredient.category &&
         !i.checked
       );
       if (existingItem) {
-        newItems = newItems.map(i =>
-          i.id === existingItem.id ? { ...i, quantity: (i.quantity || 1) + quantity } : i
-        );
+        newItems = newItems.map(i => {
+          if (i.id !== existingItem.id) return i;
+          const merged = { ...i, quantity: (i.quantity || 1) + quantity };
+          const mergedNote = mergeItemNote(i.note, note);
+          if (mergedNote) merged.note = mergedNote;
+          return merged;
+        });
       } else {
-        newItems.push({
+        const newItem = {
           id: generateId(),
           name: ingredient.name,
           category: ingredient.category,
           checked: false,
           quantity,
           addedAt: Date.now()
-        });
+        };
+        if (note) newItem.note = note;
+        newItems.push(newItem);
       }
     }
     setItems(newItems);
@@ -4688,6 +4707,10 @@ export default function App() {
                             <span style={{ fontSize: 11, color: theme.textSecondary, border: `1px solid ${theme.border}`, borderRadius: 9999, padding: '2px 8px', marginLeft: 8, display: 'inline-block', animation: 'fadeIn 0.2s ease-out', whiteSpace: 'nowrap', fontWeight: 500 }}>
                               {categories.find(c => c.id === item.category)?.name || item.category}
                             </span>
+                          )}
+                          {/* A note from a recipe, under the name. It recedes with the name when ticked. */}
+                          {item.note && (
+                            <span style={{ display: 'block', fontSize: 12.5, fontWeight: 400, lineHeight: 1.35, marginTop: 2, color: item.checked ? theme.textTicked : theme.textSecondary, transition: 'color 0.25s ease', overflowWrap: 'anywhere' }}>{item.note}</span>
                           )}
                         </span>
                       )}
@@ -6842,4 +6865,4 @@ export default function App() {
 
 
 // Pure helpers, exported for the tests.
-export { parseIngredientLine, findCategoryForItem, scaleIngredientQuantity, scaleIngredientNote };
+export { parseIngredientLine, findCategoryForItem, scaleIngredientQuantity, scaleIngredientNote, mergeItemNote };
