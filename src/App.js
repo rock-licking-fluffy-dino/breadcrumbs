@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, updateDoc, onSnapshot, getDoc, collection, getDocs } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+import { splitMethod, MAX_METHOD_LENGTH } from './lib/splitMethod';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -2627,6 +2628,7 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
   const servings = recipeServings(recipe);
   const [target, setTarget] = useState(servings);
   const factor = servings && target ? target / servings : 1;
+  const methodSteps = splitMethod(recipe.method);
   const step = (delta) => {
     triggerHaptic('light');
     setTarget((current) => clampNum(1, (current || servings) + delta, 50));
@@ -2698,6 +2700,20 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
           })}
         </div>
       ))}
+
+      {methodSteps.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <SectionHeader as="h3" n={groups.length + 1} name="Method" right={methodSteps.length} t={t} />
+          <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            {methodSteps.map((methodStep, i) => (
+              <li key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 12, padding: '12px 0', borderBottom: i === methodSteps.length - 1 ? 'none' : `1px solid ${t.borderLight}` }}>
+                <span aria-hidden="true" style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, color: t.textSecondary, minWidth: 20, flexShrink: 0 }}>{i + 1}</span>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 15.5, lineHeight: 1.55, color: t.ink, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>{methodStep}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       <button
         onClick={() => onAdd(recipe, factor)}
@@ -3041,6 +3057,8 @@ export default function App() {
   const [newRecipeServings, setNewRecipeServings] = useState(null);
   // The page a recipe came from, kept apart from notes / "Source (optional)".
   const [newRecipeSourceUrl, setNewRecipeSourceUrl] = useState('');
+  // The method as typed, one string. Split into steps only when shown.
+  const [newRecipeMethod, setNewRecipeMethod] = useState('');
   // The site name while the editor holds a fresh import, for its banner.
   const [importedFrom, setImportedFrom] = useState(null);
   const [showImportRecipe, setShowImportRecipe] = useState(false);
@@ -4164,6 +4182,7 @@ export default function App() {
     setNewRecipeItemText('');
     setNewRecipeServings(null);
     setNewRecipeSourceUrl('');
+    setNewRecipeMethod('');
     setImportedFrom(null);
     setRecipeNoMatch(null);
     setEditingIngredientId(null);
@@ -4176,12 +4195,14 @@ export default function App() {
     if (!newRecipeName.trim() || newRecipeIngredients.length === 0 || savingRecipe) return;
     setSavingRecipe(true);
     triggerHaptic('success');
-    // `servings` and `sourceUrl` are left off entirely when unset — never
-    // null, 0 or ''.
+    // `servings`, `sourceUrl` and `method` are left off entirely when unset:
+    // never null, 0 or ''.
+    const method = newRecipeMethod.trim().slice(0, MAX_METHOD_LENGTH);
     const withOptionalFields = (recipe) => {
-      const { servings: _previousServings, sourceUrl: _previousSourceUrl, ...rest } = recipe;
-      const result = newRecipeServings === null ? rest : { ...rest, servings: newRecipeServings };
-      return newRecipeSourceUrl ? { ...result, sourceUrl: newRecipeSourceUrl } : result;
+      const { servings: _previousServings, sourceUrl: _previousSourceUrl, method: _previousMethod, ...rest } = recipe;
+      const withServings = newRecipeServings === null ? rest : { ...rest, servings: newRecipeServings };
+      const result = newRecipeSourceUrl ? { ...withServings, sourceUrl: newRecipeSourceUrl } : withServings;
+      return method ? { ...result, method } : result;
     };
     // An imported ingredient still under "Needs an aisle" is saved in Other.
     // A category is never saved as null.
@@ -4220,6 +4241,7 @@ export default function App() {
     setNewRecipeIngredients([...(recipe.ingredients || [])]);
     setNewRecipeServings(recipeServings(recipe));
     setNewRecipeSourceUrl(parseRecipeLink(recipe.sourceUrl) ? recipe.sourceUrl : '');
+    setNewRecipeMethod(typeof recipe.method === 'string' ? recipe.method : '');
     setImportedFrom(null);
     setNewRecipeItemText('');
     setRecipeNoMatch(null);
@@ -5013,6 +5035,29 @@ export default function App() {
     </div>
   );
 
+  // Free text, kept as typed. The recipe sheet splits it into steps.
+  const recipeMethodAtCap = newRecipeMethod.length >= MAX_METHOD_LENGTH;
+  const recipeMethodField = (
+    <div>
+      <label htmlFor="bc-recipe-method" style={{ ...recipeFieldLabelStyle, display: 'block', marginBottom: isDesktop ? 7 : 6 }}>Method (optional)</label>
+      <textarea
+        id="bc-recipe-method"
+        value={newRecipeMethod}
+        onChange={(e) => setNewRecipeMethod(e.target.value.slice(0, MAX_METHOD_LENGTH))}
+        maxLength={MAX_METHOD_LENGTH}
+        rows={6}
+        placeholder="One step per paragraph. Leave a blank line between steps."
+        className="w-full focus:outline-none"
+        style={{ display: 'block', boxSizing: 'border-box', resize: 'vertical', backgroundColor: theme.field, border: `1px solid ${theme.border}`, borderRadius: 14, padding: '12px 14px', color: INK, fontFamily: SANS, fontSize: isDesktop ? 14.5 : 16, fontWeight: 500, lineHeight: 1.5 }}
+      />
+      {recipeMethodAtCap && (
+        <p role="status" style={{ fontSize: 12.5, color: theme.textSecondary, margin: '8px 0 0', lineHeight: 1.45 }}>
+          That's the 5,000 character limit for a method.
+        </p>
+      )}
+    </div>
+  );
+
   // ── Recipe list ──
   const RECIPE_FILTERS = [['all', 'All'], ['wantToCook', 'Want to cook'], ['favourites', 'Favourites']];
   const flagFilteredRecipes = recipeFilter === 'favourites'
@@ -5354,6 +5399,10 @@ export default function App() {
                       ))}
                     </div>
                   )}
+
+                  <div style={{ backgroundColor: theme.bgSecondary, border: `1.5px solid ${theme.border}`, borderRadius: 20, padding: '16px 18px 18px', boxShadow: theme.cardShadow, marginTop: recipeEditorGroups.length > 0 ? 22 : 0 }}>
+                    {recipeMethodField}
+                  </div>
                 </div>
               </div>
               </div>
@@ -5401,6 +5450,9 @@ export default function App() {
                   {group.ingredients.map(renderRecipeIngredientRow)}
                 </div>
               ))}
+
+              {/* Method */}
+              <div style={{ marginTop: recipeEditorGroups.length > 0 ? 26 : 4 }}>{recipeMethodField}</div>
             </div>
             )
           ) : (
