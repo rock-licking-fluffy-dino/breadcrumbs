@@ -2632,6 +2632,298 @@ const stepperButtonStyle = (t) => ({
   border: 'none', cursor: 'pointer', fontSize: 14, flexShrink: 0, padding: 0
 });
 
+// ── Screen wake lock ──────────────────────────────────────────────────────
+// Keeps the screen on while cook mode is open, where the browser has the
+// Screen Wake Lock API. The browser drops the lock whenever the page is
+// hidden, so it is asked for again on the way back. Every failure is silent:
+// an unsupported browser just dims as it always has. Returns whether the
+// lock is held right now, which is when "Screen stays on" shows.
+const useScreenWakeLock = () => {
+  const [held, setHeld] = useState(false);
+  useEffect(() => {
+    const api = typeof navigator !== 'undefined' ? navigator.wakeLock : null;
+    if (!api || typeof api.request !== 'function') return undefined;
+    let sentinel = null;
+    let asking = false;
+    let open = true;
+    const drop = (lock) => {
+      try { Promise.resolve(lock.release()).catch(() => {}); } catch (e) { /* already gone */ }
+    };
+    const onRelease = () => { if (open) setHeld(false); };
+    const request = async () => {
+      if (!open || asking || document.visibilityState !== 'visible') return;
+      if (sentinel && !sentinel.released) return;
+      asking = true;
+      try {
+        const lock = await api.request('screen');
+        if (!open) { drop(lock); return; }
+        sentinel = lock;
+        if (typeof lock.addEventListener === 'function') lock.addEventListener('release', onRelease);
+        setHeld(true);
+      } catch (e) {
+        if (open) setHeld(false);
+      } finally {
+        asking = false;
+      }
+    };
+    const onVisibility = () => { if (document.visibilityState === 'visible') request(); };
+    request();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      open = false;
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (sentinel && !sentinel.released) drop(sentinel);
+    };
+  }, []);
+  return held;
+};
+
+const CookArrow = ({ back = false }) => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ flexShrink: 0 }}>
+    <path d={back ? 'M19 12H5M11 6l-6 6 6 6' : 'M5 12h14M13 6l6 6-6 6'} />
+  </svg>
+);
+
+// Cook mode's progress: one crumb per step, joined by the hairline and
+// closed by the house. Done steps hollow out, the current one is larger, and
+// the house lights up once every step is done (`current` equals `total`).
+// Long methods shrink the crumbs so they still fit one line.
+const CookTrail = ({ t, total, current }) => {
+  const [ref, width] = useElementWidth();
+  const slot = Math.max(40, (width || 320) - 30) / Math.max(1, total);
+  const dot = Math.round(clampNum(3, slot * 0.55, 12));
+  return (
+    <div ref={ref} aria-hidden="true" style={{ position: 'relative', marginTop: 14, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'space-between', overflow: 'hidden' }}>
+      <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 1, marginTop: -0.5, backgroundColor: t.borderLight }} />
+      {Array.from({ length: total }, (_, i) => (
+        <ObCrumb key={i} t={t} toGet={i >= current} size={i === current ? Math.round(dot * 1.5) : dot} />
+      ))}
+      <span style={{ position: 'relative', display: 'flex', paddingLeft: 4, backgroundColor: t.bg }}>
+        <TrailHome lit={current >= total} t={t} size={20} />
+      </span>
+    </div>
+  );
+};
+
+// ── Cook mode ─────────────────────────────────────────────────────────────
+// A full-screen walk through one recipe: gather the ingredients, then one
+// step per screen, then done. It only reads the recipe. Ticks, servings and
+// the step live here and go when it closes, so it always opens at Gather.
+// Buttons only: a wet hand swipes by accident.
+const CookMode = ({ recipe, steps, initialServings, t, onClose }) => {
+  const servings = recipeServings(recipe);
+  const [target, setTarget] = useState(initialServings || servings);
+  const [got, setGot] = useState({});
+  const [phase, setPhase] = useState('gather');
+  const [stepIndex, setStepIndex] = useState(0);
+  const awake = useScreenWakeLock();
+  const bodyRef = useRef(null);
+  const focusRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+  const factor = servings && target ? target / servings : 1;
+  const total = steps.length;
+  const gotCount = ingredients.filter(i => got[i.id]).length;
+  const pad = (n) => String(n).padStart(2, '0');
+
+  // Escape closes, as the other full-screen layers let the keyboard steer.
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); onCloseRef.current(); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  // The recipe sheet behind is still mounted, so hold the page still.
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, []);
+
+  // Each screen starts at its top. A new screen takes focus at its heading,
+  // since the button that led there may be gone.
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+  }, [phase, stepIndex]);
+  useEffect(() => {
+    if (focusRef.current) focusRef.current.focus({ preventScroll: true });
+  }, [phase]);
+
+  const changeServings = (delta) => {
+    triggerHaptic('light');
+    setTarget((current) => clampNum(1, (current || servings) + delta, 50));
+  };
+  const toggleGot = (id) => {
+    triggerHaptic('light');
+    setGot((current) => ({ ...current, [id]: !current[id] }));
+  };
+  const start = () => { triggerHaptic('light'); setStepIndex(0); setPhase('steps'); };
+  const next = () => {
+    triggerHaptic('light');
+    if (stepIndex < total - 1) setStepIndex(stepIndex + 1);
+    else setPhase('done');
+  };
+  const back = () => {
+    triggerHaptic('light');
+    if (phase === 'done') setPhase('steps');
+    else if (stepIndex > 0) setStepIndex(stepIndex - 1);
+    else setPhase('gather');
+  };
+
+  const roundButton = {
+    flexShrink: 0, width: 58, height: 58, padding: 0, boxSizing: 'border-box', borderRadius: '50%',
+    border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.ink,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+  };
+  const wideButton = {
+    flex: 1, minWidth: 0, height: 58, borderRadius: 9999, fontFamily: SANS, fontSize: 15, fontWeight: 700,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer'
+  };
+  const primaryButton = { ...wideButton, border: 'none', backgroundColor: YELLOW, color: '#1c1917' };
+  const smallCaps = { fontSize: 10.5, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.textSecondary };
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Cook ${recipe.name}`}
+      style={{ position: 'fixed', inset: 0, zIndex: 240, backgroundColor: t.bg, color: t.ink, fontFamily: SANS, display: 'flex', flexDirection: 'column', animation: 'fadeIn 0.2s ease-out' }}
+    >
+      <div style={{ position: 'relative', flex: 1, minHeight: 0, width: '100%', maxWidth: 600, margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: 'max(12px, env(safe-area-inset-top, 0px)) 20px 0', flexShrink: 0 }}>
+          <button
+            onClick={onClose}
+            aria-label="Close cook mode"
+            className="bc-press bc-icon-btn"
+            style={{ width: 44, height: 44, padding: 0, boxSizing: 'border-box', borderRadius: '50%', border: `1px solid ${t.border}`, background: 'none', color: t.ink, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          </button>
+          {awake && (
+            <span style={{ ...smallCaps, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+              </svg>
+              Screen stays on
+            </span>
+          )}
+        </div>
+
+        {phase !== 'gather' && (
+          <div style={{ padding: '22px 20px 0', flexShrink: 0 }}>
+            <p style={{ ...contextLineStyle(t), color: t.textSecondary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{recipe.name}</p>
+            <CookTrail t={t} total={total} current={phase === 'done' ? total : stepIndex} />
+          </div>
+        )}
+
+        <div ref={bodyRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 20px calc(130px + env(safe-area-inset-bottom, 0px))' }}>
+          {phase === 'gather' && (
+            <>
+              <p style={{ ...contextLineStyle(t), color: t.textSecondary, marginTop: 22 }}>Cook mode</p>
+              <h2 ref={focusRef} tabIndex={-1} style={{ ...pageTitleStyle(t), marginTop: 8, outline: 'none', overflowWrap: 'anywhere' }}>{recipe.name}</h2>
+              <p style={{ ...smallCaps, margin: '12px 0 0' }}>
+                {total} {plural(total, 'step', 'steps')}
+                {ingredients.length > 0 && ` · ${ingredients.length} ${plural(ingredients.length, 'ingredient', 'ingredients')}`}
+              </p>
+
+              {servings && (
+                <div style={{ marginTop: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 64, borderTop: `1px solid ${t.borderLight}`, borderBottom: `1px solid ${t.borderLight}` }}>
+                  <span style={{ fontSize: 17, fontWeight: 500, color: t.ink }}>Serves</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <button onClick={() => changeServings(-1)} disabled={target <= 1} aria-label="Fewer servings" className="bc-press" style={{ ...stepperButtonStyle(t), width: 44, height: 44, fontSize: 18, opacity: target <= 1 ? 0.4 : 1 }}>−</button>
+                    <span aria-live="polite" style={{ minWidth: 30, textAlign: 'center', fontFamily: MONO, fontSize: 20, fontWeight: 600, color: t.ink }}>{target}</span>
+                    <button onClick={() => changeServings(1)} disabled={target >= 50} aria-label="More servings" className="bc-press" style={{ ...stepperButtonStyle(t), width: 44, height: 44, fontSize: 18, opacity: target >= 50 ? 0.4 : 1 }}>+</button>
+                  </div>
+                </div>
+              )}
+
+              {ingredients.length > 0 && (
+                <>
+                  <SectionHeader n={1} name="Gather" right={`${gotCount}/${ingredients.length}`} t={t} style={{ marginTop: 8 }} />
+                  {ingredients.map((ingredient) => {
+                    const on = !!got[ingredient.id];
+                    const note = scaleIngredientNote(ingredient.note, factor);
+                    return (
+                      <button
+                        key={ingredient.id}
+                        onClick={() => toggleGot(ingredient.id)}
+                        aria-pressed={on}
+                        style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', minHeight: 50, boxSizing: 'border-box', padding: '11px 0', margin: 0, border: 'none', borderBottom: `1px solid ${t.borderLight}`, background: 'none', color: t.ink, fontFamily: SANS, textAlign: 'left', cursor: 'pointer' }}
+                      >
+                        <span aria-hidden="true" style={{ flexShrink: 0, width: 24, height: 24, boxSizing: 'border-box', borderRadius: '50%', border: `1.5px solid ${on ? '#1c1917' : t.ink}`, backgroundColor: on ? YELLOW : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background-color 0.18s ease' }}>
+                          {on && <ObTick color="#1c1917" size={13} width={3} />}
+                        </span>
+                        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                          <span style={{ fontSize: 17, lineHeight: 1.3, fontWeight: 500, color: on ? t.textTicked : t.ink, textDecoration: on ? 'line-through' : 'none', overflowWrap: 'anywhere' }}>{ingredient.name}</span>
+                          {note && <span style={{ fontSize: 13, lineHeight: 1.3, color: on ? t.textTicked : t.textSecondary, overflowWrap: 'anywhere' }}>{note}</span>}
+                        </span>
+                        <span style={{ flexShrink: 0, fontFamily: MONO, fontSize: 13, fontWeight: 600, color: t.textSecondary }}>×{scaleIngredientQuantity(ingredient.quantity || 1, factor)}</span>
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+            </>
+          )}
+
+          {phase === 'steps' && (
+            <div ref={focusRef} tabIndex={-1} aria-live="polite" aria-atomic="true" style={{ outline: 'none', paddingTop: 14 }}>
+              <SectionHeader n={stepIndex + 1} name="Step" right={`${pad(stepIndex + 1)} / ${pad(total)}`} t={t} />
+              <p style={{ margin: '20px 0 0', fontFamily: SERIF, fontSize: 33, lineHeight: 1.14, fontWeight: 400, letterSpacing: '-0.01em', color: t.ink, whiteSpace: 'pre-line', overflowWrap: 'anywhere' }}>
+                {steps[stepIndex]}
+              </p>
+            </div>
+          )}
+
+          {phase === 'done' && (
+            <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <TrailHome lit t={t} size={56} />
+              <h2 ref={focusRef} tabIndex={-1} style={{ ...pageTitleStyle(t), marginTop: 28, outline: 'none' }}>Time to eat.</h2>
+              <p style={{ margin: '14px 0 0', fontSize: 15.5, lineHeight: 1.55, color: t.textSecondary }}>
+                {total === 1 ? 'The step is done.' : `All ${total} steps done.`}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, display: 'flex', gap: 10, padding: '28px 20px max(28px, calc(env(safe-area-inset-bottom, 0px) + 16px))', background: `linear-gradient(to top, ${t.bg} 68%, transparent)` }}>
+          {phase === 'gather' ? (
+            <button onClick={start} className="bc-press bc-cta" style={primaryButton}>
+              Start cooking
+              <CookArrow />
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={back}
+                aria-label={phase === 'done' ? 'Back to the last step' : stepIndex === 0 ? 'Back to ingredients' : 'Previous step'}
+                className="bc-press bc-icon-btn"
+                style={roundButton}
+              >
+                <CookArrow back />
+              </button>
+              {phase === 'steps' ? (
+                <button onClick={next} className="bc-press bc-cta" style={primaryButton}>
+                  {stepIndex === total - 1 ? 'Finish' : 'Next step'}
+                  <CookArrow />
+                </button>
+              ) : (
+                <button onClick={onClose} className="bc-press bc-icon-btn" style={{ ...wideButton, border: `1px solid ${t.border}`, backgroundColor: t.bg, color: t.ink }}>
+                  Back to recipe
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── The recipe sheet ──────────────────────────────────────────────────────
 // Read-only. The serving scaler is view-only too: it starts at the saved
 // servings every time the sheet opens and never writes to the recipe.
@@ -2640,6 +2932,12 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
   const [target, setTarget] = useState(servings);
   const factor = servings && target ? target / servings : 1;
   const methodSteps = splitMethod(recipe.method);
+  const [cooking, setCooking] = useState(false);
+  const cookButtonRef = useRef(null);
+  const closeCookMode = () => {
+    setCooking(false);
+    requestAnimationFrame(() => { if (cookButtonRef.current) cookButtonRef.current.focus({ preventScroll: true }); });
+  };
   const step = (delta) => {
     triggerHaptic('light');
     setTarget((current) => clampNum(1, (current || servings) + delta, 50));
@@ -2660,7 +2958,10 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
     );
   };
 
+  // Cook mode sits beside the sheet rather than in it: the sheet's panel is
+  // transformed, which would pin a fixed layer inside it.
   return (
+    <>
     <BottomSheet onClose={onClose} t={t} labelledBy="bc-recipe-heading">
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, margin: '4px 0 18px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -2726,13 +3027,25 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
         </div>
       )}
 
+      <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+      {methodSteps.length > 0 && (
+        <button
+          ref={cookButtonRef}
+          onClick={() => { triggerHaptic('light'); setCooking(true); }}
+          className="bc-press bc-icon-btn"
+          style={{ flex: '0 1 132px', height: 54, borderRadius: 9999, border: `1px solid ${t.border}`, background: 'none', color: t.ink, fontSize: 13.5, fontWeight: 700, cursor: 'pointer' }}
+        >
+          Cook
+        </button>
+      )}
       <button
         onClick={() => onAdd(recipe, factor)}
         className="bc-press bc-cta"
-        style={{ width: '100%', height: 54, marginTop: 6, borderRadius: 9999, border: 'none', backgroundColor: added ? t.ink : YELLOW, color: added ? t.accentOnInk : '#1c1917', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
+        style={{ flex: 1, minWidth: 0, height: 54, borderRadius: 9999, border: 'none', backgroundColor: added ? t.ink : YELLOW, color: added ? t.accentOnInk : '#1c1917', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', transition: 'background-color 0.22s ease, color 0.22s ease' }}
       >
         {added ? 'Added' : 'Add to list'}
       </button>
+      </div>
       <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
         <button
           onClick={() => onEdit(recipe)}
@@ -2752,6 +3065,10 @@ const RecipeSheet = ({ recipe, groups, t, added, onClose, onToggleFlag, onAdd, o
         )}
       </div>
     </BottomSheet>
+    {cooking && (
+      <CookMode recipe={recipe} steps={methodSteps} initialServings={target} t={t} onClose={closeCookMode} />
+    )}
+    </>
   );
 };
 
