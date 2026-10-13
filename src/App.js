@@ -3070,6 +3070,8 @@ export default function App() {
   const [newRecipeSourceUrl, setNewRecipeSourceUrl] = useState('');
   // The method as typed, one string. Split into steps only when shown.
   const [newRecipeMethod, setNewRecipeMethod] = useState('');
+  // True when an imported method was over the cap and its end was left off.
+  const [importedMethodCut, setImportedMethodCut] = useState(false);
   // The site name while the editor holds a fresh import, for its banner.
   const [importedFrom, setImportedFrom] = useState(null);
   const [showImportRecipe, setShowImportRecipe] = useState(false);
@@ -4194,6 +4196,7 @@ export default function App() {
     setNewRecipeServings(null);
     setNewRecipeSourceUrl('');
     setNewRecipeMethod('');
+    setImportedMethodCut(false);
     setImportedFrom(null);
     setRecipeNoMatch(null);
     setEditingIngredientId(null);
@@ -4253,6 +4256,7 @@ export default function App() {
     setNewRecipeServings(recipeServings(recipe));
     setNewRecipeSourceUrl(parseRecipeLink(recipe.sourceUrl) ? recipe.sourceUrl : '');
     setNewRecipeMethod(typeof recipe.method === 'string' ? recipe.method : '');
+    setImportedMethodCut(false);
     setImportedFrom(null);
     setNewRecipeItemText('');
     setRecipeNoMatch(null);
@@ -4278,6 +4282,9 @@ export default function App() {
     setNewRecipeServings(recipeServings(imported));
     setNewRecipeIngredients(ingredients);
     setNewRecipeSourceUrl(parseRecipeLink(imported.sourceUrl) ? imported.sourceUrl : '');
+    // Steps arrive one per paragraph, already within the cap.
+    setNewRecipeMethod(typeof imported.method === 'string' ? imported.method.slice(0, MAX_METHOD_LENGTH) : '');
+    setImportedMethodCut(imported.methodCut === true && typeof imported.method === 'string');
     setImportedFrom(imported.siteName || recipeLinkHost(imported.sourceUrl));
     setShowCreateRecipe(true);
   };
@@ -5073,9 +5080,11 @@ export default function App() {
         className="w-full focus:outline-none"
         style={{ display: 'block', boxSizing: 'border-box', resize: 'vertical', backgroundColor: theme.field, border: `1px solid ${theme.border}`, borderRadius: 14, padding: '12px 14px', color: INK, fontFamily: SANS, fontSize: isDesktop ? 14.5 : 16, fontWeight: 500, lineHeight: 1.5 }}
       />
-      {recipeMethodAtCap && (
+      {(recipeMethodAtCap || importedMethodCut) && (
         <p role="status" style={{ fontSize: 12.5, color: theme.textSecondary, margin: '8px 0 0', lineHeight: 1.45 }}>
-          That's the 5,000 character limit for a method.
+          {importedMethodCut
+            ? "The method is over the 5,000 character limit, so the end was left off. The rest is on the recipe's own page."
+            : "That's the 5,000 character limit for a method."}
         </p>
       )}
     </div>
