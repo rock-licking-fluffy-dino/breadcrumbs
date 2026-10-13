@@ -1,11 +1,13 @@
 // ── Recipe extraction ─────────────────────────────────────────────────────
 // Reads the schema.org Recipe that most recipe sites publish as JSON-LD for
-// Google, and keeps only what Breadcrumbs stores: the name, the servings and
-// the raw ingredient lines. The method, images, nutrition and the rest stay
+// Google, and keeps only what Breadcrumbs stores: the name, the servings, the
+// raw ingredient lines and the method. Images, nutrition and the rest stay
 // on the source page, which the recipe links back to.
 //
 // Pure: no network, no dependencies. Shared by the /api/import-recipe
 // function and its tests.
+
+import { MAX_METHOD_LENGTH } from './splitMethod.js';
 
 const MAX_NAME_LENGTH = 100;
 const MAX_INGREDIENTS = 60;
@@ -132,6 +134,60 @@ const readIngredients = (recipe) => {
     .slice(0, MAX_INGREDIENTS);
 };
 
+// recipeInstructions comes as one string, a list of strings, a list of
+// HowToStep objects, or HowToSection groups (sometimes nested) holding their
+// steps in itemListElement. Each step becomes one paragraph, which is how
+// splitMethod splits a method. A section's name ("For the sauce") goes on
+// its own line at the top of the section's first step, so it shows above
+// that step without being counted as a step itself.
+
+const LINE_BREAK_TAG = /<br\s*\/?>|<\/(?:p|li|div|h[1-6])\s*>/gi;
+const MAX_SECTION_DEPTH = 4;
+
+// A plain string can hold the whole method: each line is a step.
+const splitInstructionText = (text) =>
+  String(text).replace(LINE_BREAK_TAG, '\n').split(/\r\n?|\n/).map(cleanText).filter(Boolean);
+
+const isHowToSection = (node) => {
+  const types = Array.isArray(node['@type']) ? node['@type'] : [node['@type']];
+  return types.some(t => typeof t === 'string' && /(^|[/:])HowToSection$/.test(t.trim())) ||
+    (node.itemListElement !== undefined && !cleanText(node.text));
+};
+
+const readSteps = (node, depth = 0) => {
+  if (node === undefined || node === null || depth > MAX_SECTION_DEPTH) return [];
+  if (Array.isArray(node)) return node.flatMap(child => readSteps(child, depth));
+  if (typeof node === 'string' || typeof node === 'number') return splitInstructionText(node);
+  if (typeof node !== 'object') return [];
+  if (isHowToSection(node)) {
+    const steps = readSteps(node.itemListElement, depth + 1);
+    const name = cleanText(node.name);
+    return name && steps.length ? [`${name}\n${steps[0]}`, ...steps.slice(1)] : steps;
+  }
+  const text = cleanText(node.text) || cleanText(node.name);
+  return text ? [text] : [];
+};
+
+// Steps joined with blank lines, kept within the method cap. Whole steps are
+// left off the end, so a cut falls between steps. Only a first step that is
+// too long on its own is cut part way, at a space.
+const joinMethod = (steps) => {
+  let method = '';
+  for (const step of steps) {
+    const next = method ? `${method}\n\n${step}` : step;
+    if (next.length > MAX_METHOD_LENGTH) {
+      if (!method) {
+        const slice = step.slice(0, MAX_METHOD_LENGTH);
+        const space = slice.lastIndexOf(' ');
+        method = (space > 0 ? slice.slice(0, space) : slice).trim();
+      }
+      return { method, cut: true };
+    }
+    method = next;
+  }
+  return { method, cut: false };
+};
+
 const siteNameFor = (url) => url.hostname.replace(/^www\./i, '');
 
 const extractRecipeFromHtml = (html, pageUrl) => {
@@ -145,6 +201,10 @@ const extractRecipeFromHtml = (html, pageUrl) => {
   try { url = new URL(pageUrl); } catch (e) { url = null; }
   if (url) url.hash = '';
 
+  // No method on the page means no `method` key at all. `methodCut` is only
+  // there when the method was too long and its end was left off.
+  const { method, cut } = joinMethod(readSteps(recipe.recipeInstructions));
+
   const nameSource = Array.isArray(recipe.name) ? recipe.name[0] : recipe.name;
   return {
     ok: true,
@@ -152,6 +212,8 @@ const extractRecipeFromHtml = (html, pageUrl) => {
       name: cleanText(nameSource).slice(0, MAX_NAME_LENGTH).trim(),
       servings: readServings(recipe.recipeYield),
       ingredients,
+      ...(method ? { method } : {}),
+      ...(method && cut ? { methodCut: true } : {}),
       sourceUrl: url ? url.toString() : String(pageUrl || ''),
       siteName: url ? siteNameFor(url) : ''
     }

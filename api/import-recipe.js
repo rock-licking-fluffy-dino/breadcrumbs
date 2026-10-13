@@ -6,7 +6,9 @@
 // anything else.
 //
 // Always answers JSON:
-//   { ok: true, recipe: { name, servings, ingredients, sourceUrl, siteName } }
+//   { ok: true, recipe: { name, servings, ingredients, method?, methodCut?, sourceUrl, siteName } }
+//   method is left off when the page has none. methodCut is true when the
+//   method was over the 5,000 character cap and its end was left off.
 //   { ok: false, reason: 'invalid-url' | 'blocked' | 'timeout' | 'fetch-failed' | 'not-a-recipe' }
 
 import { lookup } from 'node:dns/promises';
