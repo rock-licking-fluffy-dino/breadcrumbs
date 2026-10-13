@@ -1,4 +1,4 @@
-import { parseIngredientLine, findCategoryForItem, scaleIngredientQuantity, scaleIngredientNote } from './App';
+import { parseIngredientLine, findCategoryForItem, scaleIngredientQuantity, scaleIngredientNote, mergeItemNote } from './App';
 
 // App.js sets up Firebase when it loads. None of these tests touch it.
 jest.mock('firebase/app', () => ({ initializeApp: () => ({}) }));
@@ -83,5 +83,26 @@ describe('scaling', () => {
     expect(scaleIngredientNote('400g tins', up)).toBe('400g tins');
     expect(scaleIngredientNote('400g tin', up)).toBe('400g tin');
     expect(scaleIngredientNote('1.5 kg', 1)).toBe('1.5 kg');
+  });
+});
+
+describe('mergeItemNote', () => {
+  test('an item with no note takes the new one', () => {
+    expect(mergeItemNote(undefined, '400 g')).toBe('400 g');
+    expect(mergeItemNote('', 'Maris Piper')).toBe('Maris Piper');
+  });
+
+  test('two different notes are joined', () => {
+    expect(mergeItemNote('500 g', '400 g')).toBe('500 g + 400 g');
+  });
+
+  test('the same note is kept once', () => {
+    expect(mergeItemNote('400 g', '400 g')).toBe('400 g');
+    expect(mergeItemNote('Maris Piper', 'maris piper')).toBe('Maris Piper');
+  });
+
+  test('no new note leaves the old one alone', () => {
+    expect(mergeItemNote('400 g', '')).toBe('400 g');
+    expect(mergeItemNote(undefined, undefined)).toBe('');
   });
 });
